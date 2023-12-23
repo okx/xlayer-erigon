@@ -1,0 +1,19 @@
+datadir : '/Path/to/your/datadirs/hermez-testnet'
+chain : "x1-devnet"
+http : true
+private.api.addr : "localhost:9091"
+zkevm.l2-chain-id: 195
+zkevm.l2-sequencer-rpc-url: "http://18.166.199.45:8545"
+zkevm.l2-datastreamer-url: "18.162.227.25:6900"
+zkevm.l1-chain-id: 11155111
+zkevm.l1-rpc-url: "https://sepolia.infura.io/v3/fbd1e25856e6411bac0f9093979e2563"
+zkevm.l1-contract-address: "0x75af48D023b4dC95A3D7E93f68b463F1Ca3e9881"
+zkevm.l1-block-range: 20000
+zkevm.l1-query-delay: 6000
+zkevm.l1-matic-contract-address: "0xe223519d64C0A49e7C08303c2220251be6b70e1d"
+zkevm.l1-ger-manager-contract-address: "0x99b759ad2D3602B125b6C284EFecDe9b972Ba3Fa"
+zkevm.l1-first-block: 4910131
+zkevm.rpc-ratelimit: 250
+
+externalcl: true
+http.api : ["eth","debug","net","trace","web3","erigon","zkevm"]

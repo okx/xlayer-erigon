@@ -14,6 +14,7 @@ const (
 	HermezMainnetChainName = "hermez-mainnet"
 	HermezTestnetChainName = "hermez-testnet"
 	HermezDevnetChainName  = "hermez-devnet"
+	X1TestnetChainName     = "x1-testnet"
 )
 
 var All = []string{
@@ -29,4 +30,5 @@ var All = []string{
 	HermezMainnetChainName,
 	HermezTestnetChainName,
 	HermezDevnetChainName,
+	X1TestnetChainName,
 }

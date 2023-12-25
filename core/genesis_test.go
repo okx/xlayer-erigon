@@ -68,7 +68,10 @@ func TestHermezBlockRoots(t *testing.T) {
 			t.Errorf("wrong Hermez Testnet genesis state root, got %v, want %v", block.Root(), params.HermezTestnetGenesisHash)
 		}
 	})
+}
 
+func TestX1BlockRoots(t *testing.T) {
+	require := require.New(t)
 	t.Run("X1 Testnet", func(t *testing.T) {
 		block, _, err := core.GenesisToBlock(core.X1TestnetGenesisBlock(), "")
 		require.NoError(err)

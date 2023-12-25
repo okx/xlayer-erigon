@@ -33,10 +33,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rawdbv3"
-	"github.com/ledgerwatch/log/v3"
-	"golang.org/x/exp/slices"
-
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/hexutil"
@@ -682,7 +680,7 @@ func sortedAllocKeys(m types.GenesisAlloc) []string {
 		keys[i] = string(k.Bytes())
 		i++
 	}
-	slices.Sort(keys)
+	//slices.Sort(keys)
 	return keys
 }
 

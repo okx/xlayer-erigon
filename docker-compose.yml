@@ -10,7 +10,7 @@ services:
     ports:
       - 8545:8545 # Executor
     volumes:
-      - ./:/erigon-data
+      - /data/erigon-data/:/erigon-data
       - ./x1config-testnet.yaml:/usr/src/app/config.yaml
     command: >
       cdk-erigon --config=/usr/src/app/config.yaml

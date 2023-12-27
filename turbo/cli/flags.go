@@ -326,10 +326,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	checkFlag(utils.RebuildTreeAfterFlag.Name, cfg.Zk.RebuildTreeAfter)
 	checkFlag(utils.L1BlockRangeFlag.Name, cfg.Zk.L1BlockRange)
 	checkFlag(utils.L1QueryDelayFlag.Name, cfg.Zk.L1QueryDelay)
-	checkFlag(utils.NacosURLsFlag.Name, cfg.Zk.NacosURLs)
-	checkFlag(utils.NacosNamespaceIdFlag.Name, cfg.Zk.NacosNamespaceId)
-	checkFlag(utils.NacosApplicationNameFlag.Name, cfg.Zk.NacosApplicationName)
-	checkFlag(utils.NacosExternalListenAddrFlag.Name, cfg.Zk.NacosExternalListenAddr)
 }
 
 func ApplyFlagsForEthConfigCobra(f *pflag.FlagSet, cfg *ethconfig.Config) {

@@ -320,6 +320,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/go-errors/errors v1.4.2 // indirect
 )
 
 replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12

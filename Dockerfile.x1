@@ -22,7 +22,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
     nlohmann-json3-dev libsecp256k1-dev libomp-dev libpqxx-dev libssl-dev \
     libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev wget && \
     rm -fr /var/cache/apt/*
-RUN wget https://go.dev/dl/go1.19.2.linux-amd64.tar.gz && tar -zxvf go1.19.2.linux-amd64.tar.gz -C /usr/local/ && rm go1.19.2.linux-amd64.tar.gz && export PATH=/usr/local/go/bin:${PATH}
 
-COPY --from=build /src/build/bin/cdk-erigon /app/cdk-erigon
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx2.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx512.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libomp.so.5 /lib/
+
+COPY --from=build /src/build/bin/cdk-erigon /usr/local/bin/cdk-erigon
 COPY --from=build /src/x1config-testnet.yaml.example /app/config.yaml

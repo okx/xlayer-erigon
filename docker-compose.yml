@@ -6,7 +6,7 @@ networks:
 services:
   x1-erigon:
     container_name: x1-erigon
-    image: cdk-erigon
+    image: x1-erigon
     ports:
       - 8545:8545 # Executor
     volumes:

@@ -14,6 +14,10 @@ zkevm.l1-matic-contract-address: "0x3F4B6664338F23d2397c953f2AB4Ce8031663f80"
 zkevm.l1-ger-manager-contract-address: "0x66E61bA00F58b857A9DD2C500F3aBc424A46BD20"
 zkevm.l1-first-block: 4648290
 zkevm.rpc-ratelimit: 250
+zkevm.nacos-urls: ""
+zkevm.nacos-namespace-id: ""
+zkevm.nacos-application-name: ""
+zkevm.nacos-external-listen-addr: ""
 
 externalcl: true
 http.api : ["eth","debug","net","trace","web3","erigon","zkevm"]

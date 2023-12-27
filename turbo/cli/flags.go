@@ -307,6 +307,10 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		RebuildTreeAfter:            ctx.Uint64(utils.RebuildTreeAfterFlag.Name),
 		L1BlockRange:                ctx.Uint64(utils.L1BlockRangeFlag.Name),
 		L1QueryDelay:                ctx.Uint64(utils.L1QueryDelayFlag.Name),
+		NacosURLs:                   ctx.String(utils.NacosURLsFlag.Name),
+		NacosNamespaceId:            ctx.String(utils.NacosNamespaceIdFlag.Name),
+		NacosApplicationName:        ctx.String(utils.NacosApplicationNameFlag.Name),
+		NacosExternalListenAddr:     ctx.String(utils.NacosExternalListenAddrFlag.Name),
 	}
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.Zk.L2ChainId)
@@ -322,6 +326,10 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	checkFlag(utils.RebuildTreeAfterFlag.Name, cfg.Zk.RebuildTreeAfter)
 	checkFlag(utils.L1BlockRangeFlag.Name, cfg.Zk.L1BlockRange)
 	checkFlag(utils.L1QueryDelayFlag.Name, cfg.Zk.L1QueryDelay)
+	checkFlag(utils.NacosURLsFlag.Name, cfg.Zk.NacosURLs)
+	checkFlag(utils.NacosNamespaceIdFlag.Name, cfg.Zk.NacosNamespaceId)
+	checkFlag(utils.NacosApplicationNameFlag.Name, cfg.Zk.NacosApplicationName)
+	checkFlag(utils.NacosExternalListenAddrFlag.Name, cfg.Zk.NacosExternalListenAddr)
 }
 
 func ApplyFlagsForEthConfigCobra(f *pflag.FlagSet, cfg *ethconfig.Config) {

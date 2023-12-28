@@ -71,6 +71,9 @@ docker: validate_docker_build_args git-submodules
 		${DOCKER_FLAGS} \
 		.
 
+build-docker: ## Builds a docker image with the binary
+	docker build -t x1-erigon -f ./Dockerfile.x1 .
+
 xdg_data_home :=  ~/.local/share
 ifdef XDG_DATA_HOME
 	xdg_data_home = $(XDG_DATA_HOME)

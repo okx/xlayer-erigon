@@ -1,0 +1,32 @@
+FROM ubuntu:22.04 as build
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get update -y && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential libgmp-dev \
+    libbenchmark-dev nasm nlohmann-json3-dev libsecp256k1-dev libomp-dev \
+    libpqxx-dev git libssl-dev cmake libgrpc++-dev libprotobuf-dev grpc-proto \
+    libsodium-dev protobuf-compiler protobuf-compiler-grpc uuid-dev wget && \
+    rm -fr /var/cache/apt/*
+RUN wget https://go.dev/dl/go1.19.2.linux-amd64.tar.gz && tar -zxvf go1.19.2.linux-amd64.tar.gz -C /usr/local/ && rm go1.19.2.linux-amd64.tar.gz && export PATH=/usr/local/go/bin:${PATH}
+
+WORKDIR /src
+COPY go.mod go.sum /src/
+COPY . /src
+RUN export PATH=/usr/local/go/bin:${PATH} && cd /src && make cdk-erigon
+
+
+FROM ubuntu:22.04 as x1-erigon
+
+WORKDIR /app
+RUN DEBIAN_FRONTEND=noninteractive apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install -y libgmp-dev \
+    nlohmann-json3-dev libsecp256k1-dev libomp-dev libpqxx-dev libssl-dev \
+    libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev wget && \
+    rm -fr /var/cache/apt/*
+
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx2.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx512.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libomp.so.5 /lib/
+
+COPY --from=build /src/build/bin/cdk-erigon /usr/local/bin/cdk-erigon
+COPY --from=build /src/x1config-testnet.yaml.example /app/config.yaml

@@ -33,6 +33,7 @@ import (
 
 	"github.com/holiman/uint256"
 	erigonchain "github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
@@ -695,6 +696,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	if backend.config.Zk != nil {
 		cfg := backend.config.Zk
+
+		if len(cfg.NacosURLs) > 0 {
+			nacos.StartNacosClient(cfg.NacosURLs, cfg.NacosNamespaceId, cfg.NacosApplicationName, cfg.NacosExternalListenAddr)
+		}
 
 		// datastream
 		// Create client

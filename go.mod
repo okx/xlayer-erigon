@@ -12,6 +12,7 @@ require (
 )
 
 require (
+	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/0xPolygonHermez/zkevm-node v0.0.3-RC1
 	github.com/99designs/gqlgen v0.17.29
 	github.com/Giulio2002/bls v0.0.0-20230217173148-c87a29266b6c
@@ -314,6 +315,12 @@ require (
 	modernc.org/token v1.1.0 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
+	github.com/aliyun/alibaba-cloud-sdk-go v1.61.18 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/json-iterator/go v1.1.12 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/go-errors/errors v1.4.2 // indirect
 )
 
 replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12

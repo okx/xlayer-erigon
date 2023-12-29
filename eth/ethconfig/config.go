@@ -270,6 +270,11 @@ type Zk struct {
 	RpcRateLimits               int
 
 	RebuildTreeAfter uint64
+
+	NacosURLs               string
+	NacosNamespaceId        string
+	NacosApplicationName    string
+	NacosExternalListenAddr string
 }
 
 type Sync struct {

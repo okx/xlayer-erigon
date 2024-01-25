@@ -1,18 +1,18 @@
-datadir : '/data/x1-devnet-data/'
+datadir : '/data/x1-erigon-data'
 chain : "x1-devnet"
 http : true
 private.api.addr : "localhost:9091"
 zkevm.l2-chain-id: 195
-zkevm.l2-sequencer-rpc-url: "http://18.166.199.45:8545"
-zkevm.l2-datastreamer-url: "18.162.227.25:6900"
-zkevm.l1-chain-id: 11155111
-zkevm.l1-rpc-url: "https://sepolia.infura.io/v3/fbd1e25856e6411bac0f9093979e2563"
-zkevm.l1-contract-address: "0x75af48D023b4dC95A3D7E93f68b463F1Ca3e9881"
-zkevm.l1-block-range: 20000
-zkevm.l1-query-delay: 6000
-zkevm.l1-matic-contract-address: "0xe223519d64C0A49e7C08303c2220251be6b70e1d"
-zkevm.l1-ger-manager-contract-address: "0x99b759ad2D3602B125b6C284EFecDe9b972Ba3Fa"
-zkevm.l1-first-block: 4910131
+zkevm.l2-sequencer-rpc-url: "http://127.0.0.1:8123"
+zkevm.l2-datastreamer-url: "127.0.0.1:6900"
+zkevm.l1-chain-id: 1001
+zkevm.l1-rpc-url: "http://127.0.0.1:8545"
+zkevm.l1-contract-address: "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+zkevm.l1-block-range: 10
+zkevm.l1-query-delay: 1000
+zkevm.l1-matic-contract-address: "0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b"
+zkevm.l1-ger-manager-contract-address: "0xEd236da21Ff62bC7B62608AdB818da49E8549fa7"
+zkevm.l1-first-block: 271
 zkevm.rpc-ratelimit: 250
 
 externalcl: true

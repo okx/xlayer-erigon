@@ -776,6 +776,8 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 		return HermezCardonaInternalGenesisBlock()
 	case networkname.X1TestnetChainName:
 		return X1TestnetGenesisBlock()
+	case networkname.X1DevnetChainName:
+		return X1DevnetGenesisBlock()
 	default:
 		return nil
 	}

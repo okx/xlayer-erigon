@@ -2,6 +2,7 @@ package zkchainconfig
 
 var chainIds = []uint64{
 	195,    // x1-testnet
+	1001,   // x1-devnet
 	1101,   // mainnet
 	1440,   // devnet
 	1442,   // testnet

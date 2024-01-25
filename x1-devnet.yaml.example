@@ -2,10 +2,10 @@ datadir : '/data/x1-erigon-data'
 chain : "x1-devnet"
 http : true
 private.api.addr : "localhost:9091"
-zkevm.l2-chain-id: 195
+zkevm.l2-chain-id: 1001
 zkevm.l2-sequencer-rpc-url: "http://127.0.0.1:8123"
 zkevm.l2-datastreamer-url: "127.0.0.1:6900"
-zkevm.l1-chain-id: 1001
+zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: "http://127.0.0.1:8545"
 zkevm.l1-contract-address: "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
 zkevm.l1-block-range: 10

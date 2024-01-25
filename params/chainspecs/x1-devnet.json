@@ -1,6 +1,6 @@
 {
   "ChainName": "x1-devent",
-  "chainId": 195,
+  "chainId": 1001,
   "consensus": "ethash",
   "homesteadBlock": 0,
   "daoForkBlock": 0,

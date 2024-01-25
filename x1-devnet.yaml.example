@@ -1,4 +1,4 @@
-datadir : '/Path/to/your/datadirs/hermez-testnet'
+datadir : '/data/x1-devnet-data/'
 chain : "x1-devnet"
 http : true
 private.api.addr : "localhost:9091"

@@ -95,6 +95,14 @@ func TestX1BlockRoots(t *testing.T) {
 			t.Errorf("wrong X1 Testnet genesis state root, got %v, want %v", block.Root(), params.X1TestnetGenesisHash)
 		}
 	})
+
+	t.Run("X1 Devnet", func(t *testing.T) {
+		block, _, err := core.GenesisToBlock(core.X1DevnetGenesisBlock(), "")
+		require.NoError(err)
+		if block.Root() != params.X1DevnetGenesisHash {
+			t.Errorf("wrong X1 Testnet genesis state root, got %v, want %v", block.Root(), params.X1DevnetGenesisHash)
+		}
+	})
 }
 
 func TestGenesisBlockRoots(t *testing.T) {

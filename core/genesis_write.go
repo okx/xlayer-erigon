@@ -509,6 +509,16 @@ func X1TestnetGenesisBlock() *types.Genesis {
 	}
 }
 
+func X1DevnetGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.X1DevnetChainConfig,
+		Timestamp:  1702559645,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/x1-devnet.json"),
+	}
+}
+
 // Pre-calculated version of:
 //
 //	DevnetSignPrivateKey = crypto.HexToECDSA(sha256.Sum256([]byte("erigon devnet key")))

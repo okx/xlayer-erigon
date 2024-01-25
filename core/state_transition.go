@@ -22,8 +22,8 @@ import (
 	"github.com/holiman/uint256"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
-	"github.com/ledgerwatch/erigon-lib/txpool"
 	types2 "github.com/ledgerwatch/erigon-lib/types"
+	"github.com/ledgerwatch/erigon/zk/txpool"
 
 	"github.com/ledgerwatch/erigon/common"
 	cmath "github.com/ledgerwatch/erigon/common/math"
@@ -157,16 +157,6 @@ func NewStateTransition(evm vm.VMInterface, msg Message, gp *GasPool) *StateTran
 
 	gas := msg.GasPrice()
 
-	// check if we have an effective gas price percentage in the message and apply it
-	ep := msg.EffectiveGasPricePercentage()
-	if ep > zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED {
-		val := gas.Clone()
-		epi := new(uint256.Int).SetUint64(uint64(ep))
-		epi = epi.Add(epi, u256.Num1)
-		val = val.Mul(val, epi)
-		gas = gas.Div(val, zktypes.EFFECTIVE_GAS_PRICE_MAX_VAL)
-	}
-
 	return &StateTransition{
 		gp:        gp,
 		evm:       evm,
@@ -183,6 +173,16 @@ func NewStateTransition(evm vm.VMInterface, msg Message, gp *GasPool) *StateTran
 
 		isBor: isBor,
 	}
+}
+
+func CalculateEffectiveGas(gas *uint256.Int, ep uint8) *uint256.Int {
+	val := gas.Clone()
+	epi := new(uint256.Int).SetUint64(uint64(ep))
+	epi = epi.Add(epi, u256.Num1)
+	val = val.Mul(val, epi)
+	gas = gas.Div(val, zktypes.EFFECTIVE_GAS_PRICE_MAX_VAL)
+
+	return gas
 }
 
 // ApplyMessage computes the new state by applying the given message

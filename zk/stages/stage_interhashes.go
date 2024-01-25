@@ -3,6 +3,7 @@ package stages
 import (
 	"fmt"
 
+	"github.com/ledgerwatch/erigon-lib/common"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -29,7 +30,8 @@ import (
 	"github.com/ledgerwatch/erigon/core/systemcontracts"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/sync_stages"
+	"github.com/ledgerwatch/erigon/eth/stagedsync"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/turbo/services"
 	"github.com/ledgerwatch/erigon/turbo/stages/headerdownload"
 	"github.com/ledgerwatch/erigon/turbo/trie"
@@ -67,7 +69,7 @@ func StageZkInterHashesCfg(db kv.RwDB, checkRoot, saveNewHashesToDB, badBlockHal
 	}
 }
 
-func SpawnZkIntermediateHashesStage(s *sync_stages.StageState, u sync_stages.Unwinder, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context, quiet bool) (libcommon.Hash, error) {
+func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwinder, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context, quiet bool) (libcommon.Hash, error) {
 	logPrefix := s.LogPrefix()
 
 	quit := ctx.Done()
@@ -125,7 +127,7 @@ func SpawnZkIntermediateHashesStage(s *sync_stages.StageState, u sync_stages.Unw
 		}
 	} else {
 		// increment to latest executed block
-		incrementTo, err := sync_stages.GetStageProgress(tx, sync_stages.Execution)
+		incrementTo, err := stages.GetStageProgress(tx, stages.Execution)
 		if err != nil {
 			return trie.EmptyRoot, err
 		}
@@ -177,7 +179,7 @@ func SpawnZkIntermediateHashesStage(s *sync_stages.StageState, u sync_stages.Unw
 	return root, err
 }
 
-func UnwindZkIntermediateHashesStage(u *sync_stages.UnwindState, s *sync_stages.StageState, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context) (err error) {
+func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.StageState, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context) (err error) {
 	quit := ctx.Done()
 	useExternalTx := tx != nil
 	if !useExternalTx {
@@ -218,7 +220,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 	log.Info(fmt.Sprintf("[%s] Regeneration trie hashes started", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Regeneration ended", logPrefix))
 
-	if err := sync_stages.SaveStageProgress(db, sync_stages.IntermediateHashes, 0); err != nil {
+	if err := stages.SaveStageProgress(db, stages.IntermediateHashes, 0); err != nil {
 		log.Warn(fmt.Sprint("regenerate SaveStageProgress to zero error: ", err))
 	}
 
@@ -316,7 +318,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 	return libcommon.BigToHash(root), nil
 }
 
-func zkIncrementIntermediateHashes(logPrefix string, s *sync_stages.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, to uint64, cfg ZkInterHashesCfg, expectedRootHash *libcommon.Hash, quit <-chan struct{}) (libcommon.Hash, error) {
+func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, to uint64, cfg ZkInterHashesCfg, expectedRootHash *libcommon.Hash, quit <-chan struct{}) (libcommon.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Increment trie hashes started", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 	defer log.Info(fmt.Sprintf("[%s] Increment ended", logPrefix))
 
@@ -335,11 +337,6 @@ func zkIncrementIntermediateHashes(logPrefix string, s *sync_stages.StageState, 
 	defer sc.Close()
 
 	// progress printer
-	total := to - s.BlockNumber + 1
-
-	progressChan, stopProgressPrinter := zk.ProgressPrinter(fmt.Sprintf("[%s] Progress inserting values", logPrefix), total)
-	defer stopProgressPrinter()
-
 	accChanges := make(map[libcommon.Address]*accounts.Account)
 	codeChanges := make(map[libcommon.Address]string)
 	storageChanges := make(map[libcommon.Address]map[string]string)
@@ -406,29 +403,39 @@ func zkIncrementIntermediateHashes(logPrefix string, s *sync_stages.StageState, 
 		if err != nil {
 			return trie.EmptyRoot, err
 		}
-
-		// update the tree
-		for addr, acc := range accChanges {
-			if err := updateAccInTree(dbSmt, addr, acc); err != nil {
-				return trie.EmptyRoot, err
-			}
-		}
-		for addr, code := range codeChanges {
-			if err := dbSmt.SetContractBytecode(addr.String(), code); err != nil {
-				return trie.EmptyRoot, err
-			}
-		}
-
-		for addr, storage := range storageChanges {
-			if _, err := dbSmt.SetContractStorage(addr.String(), storage); err != nil {
-				return trie.EmptyRoot, err
-			}
-		}
-
-		progressChan <- i - s.BlockNumber + 1
 	}
 
-	log.Info(fmt.Sprintf("[%s] Regeneration trie hashes finished", logPrefix))
+	total := len(accChanges) + len(codeChanges) + len(storageChanges)
+
+	progressChan, stopProgressPrinter := zk.ProgressPrinter(fmt.Sprintf("[%s] Progress inserting values", logPrefix), uint64(total))
+
+	// update the tree
+	for addr, acc := range accChanges {
+		if err := updateAccInTree(dbSmt, addr, acc); err != nil {
+			stopProgressPrinter()
+			return trie.EmptyRoot, err
+		}
+		progressChan <- 1
+	}
+
+	for addr, code := range codeChanges {
+		if err := dbSmt.SetContractBytecode(addr.String(), code); err != nil {
+			stopProgressPrinter()
+			return trie.EmptyRoot, err
+		}
+		progressChan <- 1
+	}
+
+	for addr, storage := range storageChanges {
+		if _, err := dbSmt.SetContractStorage(addr.String(), storage); err != nil {
+			stopProgressPrinter()
+			return trie.EmptyRoot, err
+		}
+		progressChan <- 1
+	}
+	stopProgressPrinter()
+
+	log.Info(fmt.Sprintf("[%s] Regeneration trie hashes finished. Commiting batch", logPrefix))
 
 	if err := verifyLastHash(dbSmt, expectedRootHash, &cfg, logPrefix); err != nil {
 		eridb.RollbackBatch()
@@ -469,11 +476,6 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, cfg ZkInterHashe
 	}
 	defer sc.Close()
 
-	accChanges := make(map[libcommon.Address]*accounts.Account)
-	accDeletes := make([]libcommon.Address, 0)
-	codeChanges := make(map[libcommon.Address]string)
-	storageChanges := make(map[libcommon.Address]map[string]string)
-
 	currentPsr := state2.NewPlainStateReader(db)
 
 	total := from - to + 1
@@ -483,8 +485,13 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, cfg ZkInterHashe
 	// walk backwards through the blocks, applying state changes, and deletes
 	// PlainState contains data AT the block
 	// History tables contain data BEFORE the block - so need a +1 offset
+	accDeletes := make([]libcommon.Address, 0)
 
 	for i := from; i >= to+1; i-- {
+
+		accChanges := make(map[libcommon.Address]*accounts.Account)
+		codeChanges := make(map[libcommon.Address]string)
+		storageChanges := make(map[libcommon.Address]map[string]string)
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 
 		// collect changes to accounts and code
@@ -701,11 +708,17 @@ func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string,
 	if !valueContractCode.IsZero() {
 		keys = append(keys, keyContractCode)
 		db.InsertAccountValue(keyContractCode, *valueContractCode)
+
+		ks := utils.EncodeKeySource(utils.SC_CODE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		db.InsertKeySource(keyContractCode, ks)
 	}
 
 	if !valueContractLength.IsZero() {
 		keys = append(keys, keyContractLength)
 		db.InsertAccountValue(keyContractLength, *valueContractLength)
+
+		ks := utils.EncodeKeySource(utils.SC_LENGTH, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		db.InsertKeySource(keyContractLength, ks)
 	}
 
 	return keys, nil
@@ -741,6 +754,11 @@ func insertContractStorageToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, 
 		if !parsedValue.IsZero() {
 			keys = append(keys, keyStoragePosition)
 			db.InsertAccountValue(keyStoragePosition, *parsedValue)
+
+			sp, _ := utils.StrValToBigInt(k)
+
+			ks := utils.EncodeKeySource(utils.SC_STORAGE, utils.ConvertHexToAddress(ethAddr), common.BigToHash(sp))
+			db.InsertKeySource(keyStoragePosition, ks)
 		}
 	}
 
@@ -772,10 +790,16 @@ func insertAccountStateToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, bal
 	if !valueBalance.IsZero() {
 		keys = append(keys, keyBalance)
 		db.InsertAccountValue(keyBalance, *valueBalance)
+
+		ks := utils.EncodeKeySource(utils.KEY_BALANCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		db.InsertKeySource(keyBalance, ks)
 	}
 	if !valueNonce.IsZero() {
 		keys = append(keys, keyNonce)
 		db.InsertAccountValue(keyNonce, *valueNonce)
+
+		ks := utils.EncodeKeySource(utils.KEY_NONCE, utils.ConvertHexToAddress(ethAddr), common.Hash{})
+		db.InsertKeySource(keyNonce, ks)
 	}
 	return keys, nil
 }

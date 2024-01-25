@@ -62,7 +62,8 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/services"
 	"github.com/ledgerwatch/erigon/turbo/snapshotsync"
 
-	// Force-load native and js packages, to trigger registration
+	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
+
 	_ "github.com/ledgerwatch/erigon/eth/tracers/js"
 	_ "github.com/ledgerwatch/erigon/eth/tracers/native"
 )
@@ -609,6 +610,21 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	}()
 	<-ctx.Done()
 	log.Info("Exiting...")
+	return nil
+}
+
+func StartDataStream(server *datastreamer.StreamServer) error {
+	if server == nil {
+		// no stream server to start, we might not have the right flags set to create one
+		return nil
+	}
+
+	log.Info("Starting data stream server...")
+	err := server.Start()
+	if err != nil {
+		return fmt.Errorf("failed to start data stream server, error: %w", err)
+	}
+
 	return nil
 }
 

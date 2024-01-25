@@ -405,12 +405,22 @@ var (
 	RebuildTreeAfterFlag = cli.Uint64Flag{
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
-		Value: 100,
+		Value: 10000,
 	}
 	RpcRateLimitsFlag = cli.IntFlag{
 		Name:  "zkevm.rpc-ratelimit",
 		Usage: "RPC rate limit in requests per second.",
 		Value: 0,
+	}
+	DataStreamPort = cli.UintFlag{
+		Name:  "zkevm.data-stream-port",
+		Usage: "Define the port used for the zkevm data stream",
+		Value: 0,
+	}
+	DataStreamHost = cli.StringFlag{
+		Name:  "zkevm.data-stream-host",
+		Usage: "Define the host used for the zkevm data stream",
+		Value: "",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",

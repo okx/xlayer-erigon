@@ -33,10 +33,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv/rawdbv3"
-	"github.com/ledgerwatch/log/v3"
-	"golang.org/x/exp/slices"
-
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/hexutil"
@@ -461,23 +459,53 @@ func HermezTestnetGenesisBlock() *types.Genesis {
 	}
 }
 
-func HermezDevnetGenesisBlock() *types.Genesis {
+func HermezBlueberryGenesisBlock() *types.Genesis {
 	return &types.Genesis{
-		Config:     params.HermezDevnetChainConfig,
+		Config:     params.HermezBlueberryChainConfig,
 		Timestamp:  1676996964,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),
-		Alloc:      readPrealloc("allocs/hermez-devnet.json"),
+		Alloc:      readPrealloc("allocs/hermez-blueberry.json"),
 	}
 }
 
-func X1DevnetGenesisBlock() *types.Genesis {
+func HermezCardonaGenesisBlock() *types.Genesis {
 	return &types.Genesis{
-		Config:     params.X1DevnetChainConfig,
-		Timestamp:  1702894608,
+		Config:     params.HermezCardonaChainConfig,
+		Timestamp:  1676996964,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),
-		Alloc:      readPrealloc("allocs/x1-devnet.json"),
+		Alloc:      readPrealloc("allocs/hermez-cardona.json"),
+	}
+}
+
+func HermezCardonaInternalGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.HermezCardonaInternalChainConfig,
+		Timestamp:  1676996964,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/hermez-cardona-internal.json"),
+	}
+}
+
+func HermezLocalDevnetGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.HermezLocalDevnetChainConfig,
+		Timestamp:  1676996964,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/hermez-dev.json"),
+	}
+}
+
+func X1TestnetGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.X1TestnetChainConfig,
+		Timestamp:  1699369668,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/x1-testnet.json"),
 	}
 }
 
@@ -682,7 +710,7 @@ func sortedAllocKeys(m types.GenesisAlloc) []string {
 		keys[i] = string(k.Bytes())
 		i++
 	}
-	slices.Sort(keys)
+	//slices.Sort(keys)
 	return keys
 }
 
@@ -726,12 +754,18 @@ func GenesisBlockByChainName(chain string) *types.Genesis {
 		return ChiadoGenesisBlock()
 	case networkname.HermezMainnetChainName:
 		return HermezMainnetGenesisBlock()
+	case networkname.HermezLocalDevnetChainName:
+		return HermezLocalDevnetGenesisBlock()
 	case networkname.HermezTestnetChainName:
 		return HermezTestnetGenesisBlock()
-	case networkname.HermezDevnetChainName:
-		return HermezDevnetGenesisBlock()
-	case networkname.X1DevnetChainName:
-		return X1DevnetGenesisBlock()
+	case networkname.HermezBlueberryChainName:
+		return HermezBlueberryGenesisBlock()
+	case networkname.HermezCardonaChainName:
+		return HermezCardonaGenesisBlock()
+	case networkname.HermezCardonaInternalChainName:
+		return HermezCardonaInternalGenesisBlock()
+	case networkname.X1TestnetChainName:
+		return X1TestnetGenesisBlock()
 	default:
 		return nil
 	}

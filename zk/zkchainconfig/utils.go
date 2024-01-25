@@ -1,10 +1,13 @@
 package zkchainconfig
 
 var chainIds = []uint64{
-	195,
-	1101,
-	1440,
-	1442,
+	195,    // x1-testnet
+	1101,   // mainnet
+	1440,   // devnet
+	1442,   // testnet
+	2440,   // cardona internal
+	2442,   // cardona
+	999999, // local devnet
 }
 
 func IsZk(chainId uint64) bool {

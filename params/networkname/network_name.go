@@ -1,20 +1,23 @@
 package networkname
 
 const (
-	MainnetChainName       = "mainnet"
-	SepoliaChainName       = "sepolia"
-	RinkebyChainName       = "rinkeby"
-	GoerliChainName        = "goerli"
-	DevChainName           = "dev"
-	MumbaiChainName        = "mumbai"
-	BorMainnetChainName    = "bor-mainnet"
-	BorDevnetChainName     = "bor-devnet"
-	GnosisChainName        = "gnosis"
-	ChiadoChainName        = "chiado"
-	HermezMainnetChainName = "hermez-mainnet"
-	HermezTestnetChainName = "hermez-testnet"
-	HermezDevnetChainName  = "hermez-devnet"
-	X1DevnetChainName      = "x1-devnet"
+	MainnetChainName               = "mainnet"
+	SepoliaChainName               = "sepolia"
+	RinkebyChainName               = "rinkeby"
+	GoerliChainName                = "goerli"
+	DevChainName                   = "dev"
+	MumbaiChainName                = "mumbai"
+	BorMainnetChainName            = "bor-mainnet"
+	BorDevnetChainName             = "bor-devnet"
+	GnosisChainName                = "gnosis"
+	ChiadoChainName                = "chiado"
+	HermezMainnetChainName         = "hermez-mainnet"
+	HermezLocalDevnetChainName     = "hermez-dev"
+	HermezTestnetChainName         = "hermez-testnet"
+	HermezBlueberryChainName       = "hermez-blueberry"
+	HermezCardonaChainName         = "hermez-cardona"
+	HermezCardonaInternalChainName = "hermez-cardona-internal"
+	X1TestnetChainName             = "x1-testnet"
 )
 
 var All = []string{
@@ -28,7 +31,10 @@ var All = []string{
 	GnosisChainName,
 	ChiadoChainName,
 	HermezMainnetChainName,
+	HermezLocalDevnetChainName,
 	HermezTestnetChainName,
-	HermezDevnetChainName,
-	X1DevnetChainName,
+	HermezBlueberryChainName,
+	HermezCardonaChainName,
+	HermezCardonaInternalChainName,
+	X1TestnetChainName,
 }

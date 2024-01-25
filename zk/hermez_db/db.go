@@ -123,6 +123,21 @@ func (db *HermezDbReader) GetL2BlockNosByBatch(batchNo uint64) ([]uint64, error)
 	return blockNos, err
 }
 
+func (db *HermezDbReader) GetLatestDownloadedBatchNo() (uint64, error) {
+	c, err := db.tx.Cursor(BLOCKBATCHES)
+	if err != nil {
+		return 0, err
+	}
+	defer c.Close()
+
+	_, v, err := c.Last()
+	if err != nil {
+		return 0, err
+	}
+	return BytesToUint64(v), nil
+
+}
+
 func (db *HermezDbReader) GetHighestBlockInBatch(batchNo uint64) (uint64, error) {
 	blocks, err := db.GetL2BlockNosByBatch(batchNo)
 	if err != nil {
@@ -352,6 +367,22 @@ func (db *HermezDbReader) GetBatchGlobalExitRoots(fromBatchNum, toBatchNum uint6
 	}
 
 	return gers, err
+}
+
+func (db *HermezDbReader) GetBatchGlobalExitRoot(batchNum uint64) (*dstypes.GerUpdate, error) {
+	gerUpdateBytes, err := db.tx.GetOne(GLOBAL_EXIT_ROOTS_BATCHES, Uint64ToBytes(batchNum))
+	if err != nil {
+		return nil, err
+	}
+	if len(gerUpdateBytes) == 0 {
+		// no ger update for this batch
+		return nil, nil
+	}
+	gerUpdate, err := dstypes.DecodeGerUpdate(gerUpdateBytes)
+	if err != nil {
+		return nil, err
+	}
+	return gerUpdate, nil
 }
 
 func (db *HermezDb) DeleteBatchGlobalExitRoots(fromBatchNum, toBatchNum uint64) error {

@@ -5,13 +5,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"math/big"
 	"os"
 	"runtime"
 	"time"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/iden3/go-iden3-crypto/keccak256"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/cmp"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
@@ -24,8 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/temporal/historyv2"
 	libstate "github.com/ledgerwatch/erigon-lib/state"
 	"github.com/ledgerwatch/log/v3"
-
-	"github.com/holiman/uint256"
 
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/tracers/logger"
@@ -45,15 +41,15 @@ import (
 	"github.com/ledgerwatch/erigon/eth/calltracer"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/ethconfig/estimate"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/ethdb"
 	"github.com/ledgerwatch/erigon/ethdb/olddb"
 	"github.com/ledgerwatch/erigon/ethdb/prune"
-	"github.com/ledgerwatch/erigon/sync_stages"
 	"github.com/ledgerwatch/erigon/turbo/services"
 	"github.com/ledgerwatch/erigon/turbo/shards"
 	"github.com/ledgerwatch/erigon/turbo/snapshotsync"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
-	"github.com/ledgerwatch/erigon/zk/stages"
+	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 const (
@@ -61,9 +57,6 @@ const (
 
 	// stateStreamLimit - don't accumulate state changes if jump is bigger than this amount of blocks
 	stateStreamLimit uint64 = 1_000
-
-	GLOBAL_EXIT_ROOT_STORAGE_POS        = 0
-	ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2 = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 )
 
 type HasChangeSetWriter interface {
@@ -182,7 +175,7 @@ func executeBlock(
 
 	for _, ger := range gers {
 		// [zkevm] - add GER if there is one for this batch
-		if err := writeGlobalExitRoot(stateReader, stateWriter, ger.GlobalExitRoot, ger.Timestamp); err != nil {
+		if err := utils.WriteGlobalExitRoot(stateReader, stateWriter, ger.GlobalExitRoot, ger.Timestamp); err != nil {
 			return err
 		}
 	}
@@ -256,53 +249,6 @@ func executeBlock(
 	return nil
 }
 
-func writeGlobalExitRoot(stateReader state.StateReader, stateWriter state.WriterWithChangeSets, ger common.Hash, timestamp uint64) error {
-	empty := common.Hash{}
-	if ger == empty {
-		return errors.New("empty Global Exit Root")
-	}
-
-	old := common.Hash{}.Big()
-	emptyUint256, overflow := uint256.FromBig(old)
-	if overflow {
-		return errors.New("AddGlobalExitRoot: overflow")
-	}
-
-	exitBig := new(big.Int).SetInt64(int64(timestamp))
-	headerTime, overflow := uint256.FromBig(exitBig)
-	if overflow {
-		return errors.New("AddGlobalExitRoot: overflow")
-	}
-
-	//get Global Exit Root position
-	gerb := make([]byte, 32)
-	binary.BigEndian.PutUint64(gerb, GLOBAL_EXIT_ROOT_STORAGE_POS)
-
-	// concat global exit root and global_exit_root_storage_pos
-	rootPlusStorage := append(ger[:], gerb...)
-	globalExitRootPosBytes := keccak256.Hash(rootPlusStorage)
-	gerp := common.BytesToHash(globalExitRootPosBytes[:])
-
-	addr := common.HexToAddress(ADDRESS_GLOBAL_EXIT_ROOT_MANAGER_L2)
-
-	// if root already has a timestamp - don't update it
-	prevTs, err := stateReader.ReadAccountStorage(addr, uint64(1), &gerp)
-	if err != nil {
-		return err
-	}
-	a := new(big.Int).SetBytes(prevTs)
-	if a.Cmp(big.NewInt(0)) != 0 {
-		return nil
-	}
-
-	// write global exit root to state
-	if err := stateWriter.WriteAccountStorage(addr, uint64(1), &gerp, emptyUint256, headerTime); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func newStateReaderWriter(
 	batch ethdb.Database,
 	tx kv.RwTx,
@@ -338,7 +284,7 @@ func newStateReaderWriter(
 
 // ================ Erigon3 ================
 
-func ExecBlockV3(s *sync_stages.StageState, u sync_stages.Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) (err error) {
+func ExecBlockV3(s *StageState, u Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) (err error) {
 	workersCount := cfg.syncCfg.ExecWorkerCount
 	//workersCount := 2
 	if !initialCycle {
@@ -407,7 +353,7 @@ func reconstituteBlock(agg *libstate.AggregatorV3, db kv.RoDB, tx kv.Tx) (n uint
 	return
 }
 
-func unwindExec3(u *sync_stages.UnwindState, s *sync_stages.StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, accumulator *shards.Accumulator) (err error) {
+func unwindExec3(u *UnwindState, s *StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, accumulator *shards.Accumulator) (err error) {
 	cfg.agg.SetLogPrefix(s.LogPrefix())
 	rs := state.NewStateV3(cfg.dirs.Tmp)
 	// unwind all txs of u.UnwindPoint block. 1 txn in begin/end of block - system txs
@@ -437,13 +383,13 @@ func unwindExec3(u *sync_stages.UnwindState, s *sync_stages.StageState, tx kv.Rw
 
 func senderStageProgress(tx kv.Tx, db kv.RoDB) (prevStageProgress uint64, err error) {
 	if tx != nil {
-		prevStageProgress, err = sync_stages.GetStageProgress(tx, sync_stages.Senders)
+		prevStageProgress, err = stages.GetStageProgress(tx, stages.Senders)
 		if err != nil {
 			return prevStageProgress, err
 		}
 	} else {
 		if err = db.View(context.Background(), func(tx kv.Tx) error {
-			prevStageProgress, err = sync_stages.GetStageProgress(tx, sync_stages.Senders)
+			prevStageProgress, err = stages.GetStageProgress(tx, stages.Senders)
 			if err != nil {
 				return err
 			}
@@ -457,7 +403,7 @@ func senderStageProgress(tx kv.Tx, db kv.RoDB) (prevStageProgress uint64, err er
 
 // ================ Erigon3 End ================
 
-func SpawnExecuteBlocksStage(s *sync_stages.StageState, u sync_stages.Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool, quiet bool) (err error) {
+func SpawnExecuteBlocksStage(s *StageState, u Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool, quiet bool) (err error) {
 	if cfg.historyV3 {
 		if err = ExecBlockV3(s, u, tx, toBlock, ctx, cfg, initialCycle); err != nil {
 			return err
@@ -475,7 +421,7 @@ func SpawnExecuteBlocksStage(s *sync_stages.StageState, u sync_stages.Unwinder, 
 		defer tx.Rollback()
 	}
 
-	shouldShortCircuit, noProgressTo, err := stages.ShouldShortCircuitExecution(tx)
+	shouldShortCircuit, noProgressTo, err := utils.ShouldShortCircuitExecution(tx)
 	if err != nil {
 		return err
 	}
@@ -483,11 +429,11 @@ func SpawnExecuteBlocksStage(s *sync_stages.StageState, u sync_stages.Unwinder, 
 		return nil
 	}
 
-	prevStageProgress, errStart := sync_stages.GetStageProgress(tx, sync_stages.Senders)
+	prevStageProgress, errStart := stages.GetStageProgress(tx, stages.Senders)
 	if errStart != nil {
 		return errStart
 	}
-	nextStageProgress, err := sync_stages.GetStageProgress(tx, sync_stages.HashState)
+	nextStageProgress, err := stages.GetStageProgress(tx, stages.HashState)
 	if err != nil {
 		return err
 	}
@@ -708,7 +654,7 @@ Loop:
 			logBlock, logTx, logTime = logProgress(logPrefix, total, initialBlock, logBlock, logTime, blockNum, logTx, lastLogTx, gas, float64(currentStateGas)/float64(gasState), batch)
 			gas = 0
 			tx.CollectMetrics()
-			sync_stages.Metrics[sync_stages.Execution].Set(blockNum)
+			Metrics[stages.Execution].Set(blockNum)
 		}
 	}
 
@@ -765,7 +711,7 @@ func logProgress(logPrefix string, total, initialBlock, prevBlock uint64, prevTi
 	return currentBlock, currentTx, currentTime
 }
 
-func UnwindExecutionStage(u *sync_stages.UnwindState, s *sync_stages.StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) (err error) {
+func UnwindExecutionStage(u *UnwindState, s *StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) (err error) {
 	if u.UnwindPoint >= s.BlockNumber {
 		return nil
 	}
@@ -795,7 +741,7 @@ func UnwindExecutionStage(u *sync_stages.UnwindState, s *sync_stages.StageState,
 	return nil
 }
 
-func unwindExecutionStage(u *sync_stages.UnwindState, s *sync_stages.StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) error {
+func unwindExecutionStage(u *UnwindState, s *StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) error {
 	logPrefix := s.LogPrefix()
 	stateBucket := kv.PlainState
 	storageKeyLength := length.Addr + length.Incarnation + length.Hash
@@ -943,7 +889,7 @@ func recoverCodeHashPlain(acc *accounts.Account, db kv.Tx, key []byte) {
 	}
 }
 
-func PruneExecutionStage(s *sync_stages.PruneState, tx kv.RwTx, cfg ExecuteBlockCfg, ctx context.Context, initialCycle bool) (err error) {
+func PruneExecutionStage(s *PruneState, tx kv.RwTx, cfg ExecuteBlockCfg, ctx context.Context, initialCycle bool) (err error) {
 	logPrefix := s.LogPrefix()
 	useExternalTx := tx != nil
 	if !useExternalTx {

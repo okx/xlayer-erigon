@@ -14,13 +14,12 @@ import (
 
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/hexutil"
-	"github.com/ledgerwatch/erigon/common/u256"
+	"github.com/ledgerwatch/erigon/core"
 	eritypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/rpc"
-	"github.com/ledgerwatch/erigon/sync_stages"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
-	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 )
 
@@ -70,7 +69,7 @@ func (api *ZkEvmAPIImpl) ConsolidatedBlockNumber(ctx context.Context) (hexutil.U
 	}
 	defer tx.Rollback()
 
-	highestVerifiedBatchNo, err := sync_stages.GetStageProgress(tx, sync_stages.L1VerificationsBatchNo)
+	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
 	if err != nil {
 		return hexutil.Uint64(0), err
 	}
@@ -96,7 +95,7 @@ func (api *ZkEvmAPIImpl) IsBlockConsolidated(ctx context.Context, blockNumber rp
 		return false, err
 	}
 
-	highestVerifiedBatchNo, err := sync_stages.GetStageProgress(tx, sync_stages.L1VerificationsBatchNo)
+	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
 	if err != nil {
 		return false, err
 	}
@@ -190,7 +189,7 @@ func (api *ZkEvmAPIImpl) VerifiedBatchNumber(ctx context.Context) (hexutil.Uint6
 	}
 	defer tx.Rollback()
 
-	highestVerifiedBatchNo, err := sync_stages.GetStageProgress(tx, sync_stages.L1VerificationsBatchNo)
+	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
 	if err != nil {
 		return hexutil.Uint64(0), err
 	}
@@ -534,13 +533,8 @@ func convertReceipt(
 	}
 
 	var effectiveGasPrice *types.ArgBig
-	gas := gasPrice.Clone()
-	if effectiveGasPricePercentage > zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED && gasPrice != nil {
-		clone := gasPrice.Clone()
-		effectiveGasPricePerc := new(uint256.Int).SetUint64(uint64(effectiveGasPricePercentage))
-		effectiveGasPricePerc.Add(effectiveGasPricePerc, u256.Num1)
-		clone.Mul(clone, effectiveGasPricePerc)
-		gas.Div(clone, zktypes.EFFECTIVE_GAS_PRICE_MAX_VAL)
+	if gasPrice != nil {
+		gas := core.CalculateEffectiveGas(gasPrice, effectiveGasPricePercentage)
 		asBig := types.ArgBig(*gas.ToBig())
 		effectiveGasPrice = &asBig
 	}

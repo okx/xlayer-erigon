@@ -12,7 +12,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/erigon-lib/txpool"
+	"github.com/ledgerwatch/erigon/zk/txpool"
 
 	"github.com/ledgerwatch/erigon/common/debug"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -22,7 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethutils"
 	"github.com/ledgerwatch/erigon/params"
-	"github.com/ledgerwatch/erigon/sync_stages"
 )
 
 type MiningBlock struct {
@@ -90,7 +89,7 @@ var maxTransactions uint16 = 1000
 // SpawnMiningCreateBlockStage
 // TODO:
 // - resubmitAdjustCh - variable is not implemented
-func SpawnMiningCreateBlockStage(s *sync_stages.StageState, tx kv.RwTx, cfg MiningCreateBlockCfg, quit <-chan struct{}) (err error) {
+func SpawnMiningCreateBlockStage(s *StageState, tx kv.RwTx, cfg MiningCreateBlockCfg, quit <-chan struct{}) (err error) {
 	current := cfg.miner.MiningBlock
 	txPoolLocals := []libcommon.Address{} //txPoolV2 has no concept of local addresses (yet?)
 	coinbase := cfg.miner.MiningConfig.Etherbase

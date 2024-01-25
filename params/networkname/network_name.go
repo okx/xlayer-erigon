@@ -38,4 +38,5 @@ var All = []string{
 	HermezCardonaChainName,
 	HermezCardonaInternalChainName,
 	X1TestnetChainName,
+	X1DevnetChainName,
 }

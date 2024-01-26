@@ -12,7 +12,7 @@ zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 1000
 zkevm.l1-matic-contract-address: "0xCe9c6Efa7bBF84d4BB7A7a17619745cb98aCb0D6"
 zkevm.l1-ger-manager-contract-address: "0x1ab08991e5Ca35cb4D8fb8FcEd22817EfE092702"
-zkevm.l1-first-block: 271
+zkevm.l1-first-block: 5045753
 zkevm.rpc-ratelimit: 250
 
 externalcl: true

@@ -2,16 +2,16 @@ datadir : '/data/x1-erigon-data'
 chain : "x1-devnet"
 http : true
 private.api.addr : "localhost:9091"
-zkevm.l2-chain-id: 1001
+zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url: "http://127.0.0.1:8123"
 zkevm.l2-datastreamer-url: "127.0.0.1:6900"
-zkevm.l1-chain-id: 1337
-zkevm.l1-rpc-url: "http://127.0.0.1:8545"
-zkevm.l1-contract-address: "0x0D9088C72Cd4F08e9dDe474D8F5394147f64b22C"
+zkevm.l1-chain-id: 11155111
+zkevm.l1-rpc-url: "https://rpc.ankr.com/eth_sepolia/xxxxxx"
+zkevm.l1-contract-address: "0x8288042CDcFf6C1F158D3bc357fF2ffF4e959E28"
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 1000
-zkevm.l1-matic-contract-address: "0xcFE6D77a653b988203BfAc9C6a69eA9D583bdC2b"
-zkevm.l1-ger-manager-contract-address: "0xEd236da21Ff62bC7B62608AdB818da49E8549fa7"
+zkevm.l1-matic-contract-address: "0xCe9c6Efa7bBF84d4BB7A7a17619745cb98aCb0D6"
+zkevm.l1-ger-manager-contract-address: "0x1ab08991e5Ca35cb4D8fb8FcEd22817EfE092702"
 zkevm.l1-first-block: 271
 zkevm.rpc-ratelimit: 250
 

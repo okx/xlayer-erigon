@@ -80,13 +80,13 @@ func HermezESTestGenesisBlock() *types.Genesis {
 	}
 }
 
-func X1TestnetGenesisBlock() *types.Genesis {
+func XLayerTestnetGenesisBlock() *types.Genesis {
 	return &types.Genesis{
-		Config:     params.X1TestnetChainConfig,
+		Config:     params.XLayerTestnetChainConfig,
 		Timestamp:  1699369668,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),
-		Alloc:      readPrealloc("allocs/x1-testnet.json"),
+		Alloc:      readPrealloc("allocs/xlayer-testnet.json"),
 	}
 }
 

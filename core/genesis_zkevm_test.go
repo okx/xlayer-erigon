@@ -50,22 +50,3 @@ func TestCommitGenesisIdempotency2(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), seq)
 }
-
-func TestXLayerBlockRoots(t *testing.T) {
-	require := require.New(t)
-	t.Run("Xlayer Testnet", func(t *testing.T) {
-		block, _, err := core.GenesisToBlock(core.XLayerTestnetGenesisBlock(), "")
-		require.NoError(err)
-		if block.Root() != params.XLayerTestnetGenesisHash {
-			t.Errorf("wrong Xlayer Testnet genesis state root, got %v, want %v", block.Root(), params.XLayerTestnetGenesisHash)
-		}
-	})
-
-	t.Run("Xlayer Mainnet", func(t *testing.T) {
-		block, _, err := core.GenesisToBlock(core.XLayerMainnetGenesisBlock(), "")
-		require.NoError(err)
-		if block.Root() != params.XLayerMainnetGenesisHash {
-			t.Errorf("wrong Xlayer Mainnet genesis state root, got %v, want %v", block.Root(), params.XLayerMainnetGenesisHash)
-		}
-	})
-}

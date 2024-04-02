@@ -90,6 +90,16 @@ func XLayerTestnetGenesisBlock() *types.Genesis {
 	}
 }
 
+func XLayerMainnetGenesisBlock() *types.Genesis {
+	return &types.Genesis{
+		Config:     params.XLayerMainnetChainConfig,
+		Timestamp:  1711785755,
+		GasLimit:   0x0,
+		Difficulty: big.NewInt(0x0),
+		Alloc:      readPrealloc("allocs/xlayer-mainnet.json"),
+	}
+}
+
 func processAccount(s *smt.SMT, root *big.Int, a *types.GenesisAccount, addr libcommon.Address) (*big.Int, error) {
 
 	// store the account balance and nonce

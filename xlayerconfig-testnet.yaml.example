@@ -1,9 +1,9 @@
-datadir: /path/to/datadirs/xlayer-testnet
+datadir: /data/erigon-data/xlayer-testnet
 chain: xlayer-testnet
 http: true
 private.api.addr: localhost:9091
 zkevm.l2-chain-id: 195
-zkevm.l2-sequencer-rpc-url: https://xlayerrpc.okx.com
+zkevm.l2-sequencer-rpc-url: https://testrpc.xlayer.tech
 zkevm.l2-datastreamer-url: teststream.xlayer.tech:8800
 zkevm.l1-chain-id: 11155111
 zkevm.l1-rpc-url: https://rpc.ankr.com/eth_sepolia/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
@@ -17,7 +17,7 @@ zkevm.l1-first-block: 4648290
 zkevm.l1-block-range: 100
 zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 250
-zkevm.datastream-version: 1
+zkevm.datastream-version: 2
 
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]

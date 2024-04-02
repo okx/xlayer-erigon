@@ -333,8 +333,10 @@ func ChainConfigByGenesisHash(genesisHash libcommon.Hash) *chain.Config {
 		return HermezESTestChainConfig
 	case genesisHash == HermezCardonaGenesisHash:
 		return HermezCardonaChainConfig
-	case genesisHash == HermezCardonaInternalGenesisHash:
-		return HermezBaliChainConfig
+	case genesisHash == XLayerTestnetGenesisHash:
+		return XLayerTestnetChainConfig
+	case genesisHash == XLayerMainnetGenesisHash:
+		return XLayerMainnetChainConfig
 	default:
 		panic(fmt.Sprintf("Unknown genesis hash: %s", genesisHash.Hex()))
 		return nil

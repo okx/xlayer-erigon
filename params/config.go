@@ -65,7 +65,8 @@ var (
 	HermezESTestGenesisHash            = libcommon.HexToHash("0x8c630b598fab24a99b59cdd8257f41b35d0aca992f13cd381c7591f5e89eec58")
 	HermezCardonaGenesisHash           = libcommon.HexToHash("0x676c1a76a6c5855a32bdf7c61977a0d1510088a4eeac1330466453b3d08b60b9")
 	HermezCardonaInternalGenesisHash   = libcommon.HexToHash("0x7311011ce6ab98ef0a15e44fe29f7680909588322534d1736361daa678543038")
-	X1TestnetGenesisHash               = libcommon.HexToHash("0x0ffb92e130f1acaabd8b12aa1bb409b46561ef7568cb8aa7eb8d102a6ab76566")
+	XLayerTestnetGenesisHash           = libcommon.HexToHash("0x0ffb92e130f1acaabd8b12aa1bb409b46561ef7568cb8aa7eb8d102a6ab76566")
+	XLayerMainnetGenesisHash           = libcommon.HexToHash("0x11f32f605beb94a1acb783cb3b6da6d7975461ce3addf441e7ad60c2ec95e88f")
 	HermezEtrogGenesisHash             = libcommon.HexToHash("0xccfed260e3ef666b058dcd577551de8e00c743c47774a39ca7dbcd9214ba370a")
 )
 
@@ -152,7 +153,9 @@ var (
 
 	HermezBaliChainConfig = readChainSpec("chainspecs/hermez-bali.json")
 
-	X1TestnetChainConfig = readChainSpec("chainspecs/x1-testnet.json")
+	XLayerTestnetChainConfig = readChainSpec("chainspecs/xlayer-testnet.json")
+
+	XLayerMainnetChainConfig = readChainSpec("chainspecs/xlayer-mainnet.json")
 
 	CliqueSnapshot = NewSnapshotConfig(10, 1024, 16384, true, "")
 
@@ -248,8 +251,10 @@ func ChainConfigByChainName(chain string) *chain.Config {
 		return HermezCardonaChainConfig
 	case networkname.HermezBaliChainName:
 		return HermezBaliChainConfig
-	case networkname.X1TestnetChainName:
-		return X1TestnetChainConfig
+	case networkname.XLayerTestnetChainName:
+		return XLayerTestnetChainConfig
+	case networkname.XLayerMainnetChainName:
+		return XLayerMainnetChainConfig
 	default:
 		return nil
 	}
@@ -289,8 +294,10 @@ func GenesisHashByChainName(chain string) *libcommon.Hash {
 		return &HermezCardonaGenesisHash
 	case networkname.HermezBaliChainName:
 		return &HermezCardonaInternalGenesisHash
-	case networkname.X1TestnetChainName:
-		return &X1TestnetGenesisHash
+	case networkname.XLayerTestnetChainName:
+		return &XLayerTestnetGenesisHash
+	case networkname.XLayerMainnetChainName:
+		return &XLayerMainnetGenesisHash
 	default:
 		return nil
 	}
@@ -326,8 +333,10 @@ func ChainConfigByGenesisHash(genesisHash libcommon.Hash) *chain.Config {
 		return HermezESTestChainConfig
 	case genesisHash == HermezCardonaGenesisHash:
 		return HermezCardonaChainConfig
-	case genesisHash == HermezCardonaInternalGenesisHash:
-		return HermezBaliChainConfig
+	case genesisHash == XLayerTestnetGenesisHash:
+		return XLayerTestnetChainConfig
+	case genesisHash == XLayerMainnetGenesisHash:
+		return XLayerMainnetChainConfig
 	default:
 		panic(fmt.Sprintf("Unknown genesis hash: %s", genesisHash.Hex()))
 		return nil

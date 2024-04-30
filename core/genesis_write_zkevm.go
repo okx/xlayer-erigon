@@ -3,15 +3,15 @@ package core
 import (
 	"math/big"
 
+	"encoding/json"
+	"fmt"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/smt/pkg/smt"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
-	"fmt"
 	"os"
 	"path"
-	"encoding/json"
 )
 
 func HermezMainnetGenesisBlock() *types.Genesis {
@@ -87,7 +87,7 @@ func HermezESTestGenesisBlock() *types.Genesis {
 func XLayerTestnetGenesisBlock() *types.Genesis {
 	return &types.Genesis{
 		Config:     params.XLayerTestnetChainConfig,
-		Timestamp:  1699369668,
+		Timestamp:  1714452072,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),
 		Alloc:      readPrealloc("allocs/xlayer-testnet.json"),

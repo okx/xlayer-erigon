@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"github.com/ledgerwatch/log/v3"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -81,6 +82,7 @@ func getNextL1BatchData(batchNumber uint64, forkId uint64, hermezDb *hermez_db.H
 
 	decodedBlockData, err := zktx.DecodeBatchL2Blocks(batchL2Data, forkId)
 	if err != nil {
+		log.Error("Failed to decode batch data", "batch", batchNumber, "error", err)
 		return nil, common.Address{}, true, err
 	}
 

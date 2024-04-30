@@ -1,18 +1,18 @@
 package stages
 
 import (
+	"context"
+	"fmt"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
-	"context"
-	"github.com/ledgerwatch/log/v3"
-	"fmt"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/zk/syncer"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
-	"time"
+	"github.com/ledgerwatch/erigon/zk/syncer"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
+	"github.com/ledgerwatch/log/v3"
+	"time"
 )
 
 type SequencerL1BlockSyncCfg struct {
@@ -129,6 +129,7 @@ LOOP:
 
 				decoded, err := zktx.DecodeBatchL2Blocks(batch, cfg.zkCfg.SequencerInitialForkId)
 				if err != nil {
+					log.Error(fmt.Sprintf("[%s] Error decoding L1 batch", logPrefix), "batch", b, "error", err)
 					return err
 				}
 				totalBlocks += len(decoded)

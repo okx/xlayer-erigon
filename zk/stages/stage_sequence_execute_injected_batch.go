@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"github.com/ledgerwatch/log/v3"
 
 	"errors"
 
@@ -69,6 +70,7 @@ func handleInjectedBatch(
 ) (*types.Transaction, *types.Receipt, error) {
 	decodedBlocks, err := zktx.DecodeBatchL2Blocks(injected.Transaction, 5)
 	if err != nil {
+		log.Error("Failed to decode injected batch", "error", err)
 		return nil, nil, err
 	}
 	if len(decodedBlocks) == 0 || len(decodedBlocks) > 1 {

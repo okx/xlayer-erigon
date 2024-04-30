@@ -68,6 +68,7 @@ func handleInjectedBatch(
 	parentBlock *types.Block,
 	forkId uint64,
 ) (*types.Transaction, *types.Receipt, error) {
+	log.Info("forkId", "forkId", forkId)
 	decodedBlocks, err := zktx.DecodeBatchL2Blocks(injected.Transaction, 5)
 	if err != nil {
 		log.Error("Failed to decode injected batch", "error", err)

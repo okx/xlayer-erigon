@@ -21,6 +21,8 @@ zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 250
 zkevm.datastream-version: 2
 
+zkevm.executor-urls: 127.0.0.1:50071
+
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0

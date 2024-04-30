@@ -23,6 +23,8 @@ zkevm.datastream-version: 2
 
 zkevm.executor-urls: 127.0.0.1:50071
 zkevm.sequencer-initial-fork-id: 9
+zkevm.data-stream-host: "localhost"
+zkevm.data-stream-port: 6900
 
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]

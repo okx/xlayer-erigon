@@ -1,6 +1,8 @@
 package types
 
 import (
+	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -105,5 +107,7 @@ func (ib *L1InjectedBatch) Unmarshall(input []byte) error {
 	copy(ib.LastGlobalExitRoot[:], input[80:112])
 	copy(ib.Sequencer[:], input[112:132])
 	ib.Transaction = append([]byte{}, input[132:]...)
+
+	log.Infof(fmt.Sprint("Unmarshall L1InjectedBatch"))
 	return nil
 }

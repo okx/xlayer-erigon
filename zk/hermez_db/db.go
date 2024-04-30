@@ -1,15 +1,16 @@
 package hermez_db
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
+	"encoding/json"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
-	"encoding/json"
 )
 
 const L1VERIFICATIONS = "hermez_l1Verifications"                       // l1blockno, batchno -> l1txhash
@@ -900,12 +901,14 @@ func (db *HermezDb) WriteL1InjectedBatch(batch *types.L1InjectedBatch) error {
 
 	k := Uint64ToBytes(nextIndex)
 	v := batch.Marshall()
+	log.Info(fmt.Sprintf("[HermezDbReader] WriteL1InjectedBatch: %v", hex.EncodeToString(v)))
 	return db.tx.Put(L1_INJECTED_BATCHES, k, v)
 }
 
 func (db *HermezDbReader) GetL1InjectedBatch(index uint64) (*types.L1InjectedBatch, error) {
 	k := Uint64ToBytes(index)
 	v, err := db.tx.GetOne(L1_INJECTED_BATCHES, k)
+	log.Info(fmt.Sprintf("[HermezDbReader] GetL1InjectedBatch: %v", hex.EncodeToString(v)))
 	if err != nil {
 		return nil, err
 	}

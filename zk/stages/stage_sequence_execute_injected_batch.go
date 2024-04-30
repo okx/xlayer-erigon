@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"encoding/hex"
 	"github.com/ledgerwatch/log/v3"
 
 	"errors"
@@ -68,7 +69,7 @@ func handleInjectedBatch(
 	parentBlock *types.Block,
 	forkId uint64,
 ) (*types.Transaction, *types.Receipt, error) {
-	log.Info("forkId", "forkId", forkId)
+	log.Info("forkId", "forkId", forkId, "Transaction", hex.EncodeToString(injected.Transaction))
 	decodedBlocks, err := zktx.DecodeBatchL2Blocks(injected.Transaction, forkId)
 	if err != nil {
 		log.Error("Failed to decode injected batch", "error", err)

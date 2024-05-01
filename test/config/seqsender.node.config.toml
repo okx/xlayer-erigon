@@ -28,7 +28,7 @@ MaxPendingTx = 1
 		MaxGasPriceLimit = 0
 		PersistenceFilename = "ethtxmanager.json"
 			[SequenceSender.EthTxManager.Etherman]
-				URL = "xlayer-mock-l1-network:8545"
+				URL = "http://xlayer-mock-l1-network:8545"
 				MultiGasProvider = false
 				L1ChainID = 1337
 				HTTPHeaders = []

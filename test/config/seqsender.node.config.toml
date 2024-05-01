@@ -1,6 +1,6 @@
 [Log]
 Environment = "development" # "production" or "development"
-Level = "info"
+Level = "debug"
 Outputs = ["stderr"]
 
 [SequenceSender]
@@ -15,7 +15,7 @@ MaxPendingTx = 1
 	[SequenceSender.StreamClient]
 		Server = "xlayer-erigon-seq:6900"
 	[SequenceSender.EthTxManager]
-		FrequencyToMonitorTxs = "1s"
+		FrequencyToMonitorTxs = "5s"
 		WaitTxToBeMined = "2m"
 		ConsolidationL1ConfirmationBlocks = 5
 		FinalizationL1ConfirmationBlocks = 10

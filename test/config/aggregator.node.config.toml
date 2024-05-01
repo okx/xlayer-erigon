@@ -2,11 +2,11 @@
 [Aggregator]
 Host = "0.0.0.0"
 Port = 50081
-RetryTime = "5s"
-VerifyProofInterval = "10s"
+RetryTime = "10s"
+VerifyProofInterval = "20s"
 TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
-ProofStatePollingInterval = "5s"
+ProofStatePollingInterval = "15s"
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
@@ -23,16 +23,16 @@ LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 		MaxConns = 200
 	[Aggregator.Log]
 		Environment = "development" # "production" or "development"
-		Level = "info"
+		Level = "debug"
 		Outputs = ["stderr"]
 	[Aggregator.StreamClient]
 		Server = "xlayer-erigon-seq:6900"
 	[Aggregator.EthTxManager]
-		FrequencyToMonitorTxs = "1s"
+		FrequencyToMonitorTxs = "5s"
 		WaitTxToBeMined = "2m"
 		ConsolidationL1ConfirmationBlocks = 5
 		FinalizationL1ConfirmationBlocks = 10
-		WaitReceiptToBeGenerated = "8s"
+		WaitReceiptToBeGenerated = "18s"
 		PrivateKeys = [
 			{Path = "/pk/aggregator.keystore", Password = "testonly"},
 		]

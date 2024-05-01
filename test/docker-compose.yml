@@ -80,7 +80,7 @@ services:
     volumes:
       - ./config/test.erigon.config.yaml:/usr/src/app/config.yaml
     command: >
-      cdk-erigon --config=/usr/src/app/config.yaml
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
   xlayer-stateless-executor:
     container_name: xlayer-stateless-executor

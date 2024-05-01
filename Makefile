@@ -311,4 +311,4 @@ help	:	Makefile
 
 
 build-docker: ## Builds a docker image with the binary
-	docker build -t xlayer-erigon -f ./Dockerfile .
+	docker build -t xlayer-erigon -f ./Dockerfile.xlayer .

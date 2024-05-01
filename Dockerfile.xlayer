@@ -29,4 +29,4 @@ COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gol
 COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v1.0.0/src/vectorizedposeidongold/../../build/linux/libomp.so.5 /lib/
 
 COPY --from=build /src/build/bin/cdk-erigon /usr/local/bin/cdk-erigon
-COPY --from=build /src/x1config-testnet.yaml.example /app/config.yaml
+COPY --from=build /src/xlayerconfig-testnet.yaml /app/config.yaml

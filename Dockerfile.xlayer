@@ -23,10 +23,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt update && \
     libgrpc++-dev libprotobuf-dev grpc-proto libsodium-dev wget && \
     rm -fr /var/cache/apt/*
 
-COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.so /lib/
-COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx2.so /lib/
-COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx512.so /lib/
-COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v0.1.2/src/vectorizedposeidongold/../../build/linux/libomp.so.5 /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v1.0.0/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v1.0.0/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx2.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v1.0.0/src/vectorizedposeidongold/../../build/linux/libvectorizedposeidongold.linux.x86_64.avx512.so /lib/
+COPY --from=build /root/go/pkg/mod/github.com/gateway-fm/vectorized-poseidon-gold@v1.0.0/src/vectorizedposeidongold/../../build/linux/libomp.so.5 /lib/
 
 COPY --from=build /src/build/bin/cdk-erigon /usr/local/bin/cdk-erigon
 COPY --from=build /src/x1config-testnet.yaml.example /app/config.yaml

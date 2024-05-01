@@ -36,6 +36,8 @@ services:
   xlayer-erigon-seq:
     container_name: xlayer-erigon-seq
     image: xlayer-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=1
     ports:
       - 8123:8545
       - 6900:6900

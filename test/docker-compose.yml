@@ -3,6 +3,42 @@ networks:
   default:
     name: xlayer
 services:
+  xlayer-aggregator-db:
+    container_name: xlayer-aggregator-db
+    image: postgres:15
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5434:5432
+    environment:
+      - POSTGRES_USER=aggregator_user
+      - POSTGRES_PASSWORD=aggregator_password
+      - POSTGRES_DB=aggregator_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  xlayer-state-db:
+    container_name: xlayer-state-db
+    image: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./config/sql/init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_USER=state_user
+      - POSTGRES_PASSWORD=state_password
+      - POSTGRES_DB=state_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network
     image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
@@ -57,22 +93,6 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
-  xlayer-state-db:
-    container_name: xlayer-state-db
-    image: postgres
-    ports:
-      - 5432:5432
-    volumes:
-      - ./config/sql/init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
-    environment:
-      - POSTGRES_USER=state_user
-      - POSTGRES_PASSWORD=state_password
-      - POSTGRES_DB=state_db
-    command:
-      - "postgres"
-      - "-N"
-      - "500"
-
   xlayer-seqsender:
     container_name: xlayer-seqsender
     image: hermeznetwork/zkevm-seqsender:v0.1.1-RC1
@@ -99,26 +119,6 @@ services:
       - "-c"
       - "/app/zkevm-aggregator run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml"
 
-  xlayer-aggregator-db:
-    container_name: xlayer-aggregator-db
-    image: postgres:15
-    deploy:
-      resources:
-        limits:
-          memory: 2G
-        reservations:
-          memory: 1G
-    ports:
-      - 5434:5432
-    environment:
-      - POSTGRES_USER=aggregator_user
-      - POSTGRES_PASSWORD=aggregator_password
-      - POSTGRES_DB=aggregator_db
-    command:
-      - "postgres"
-      - "-N"
-      - "500"
-
   xlayer-prover:
     container_name: xlayer-prover
     image: hermeznetwork/zkevm-prover:v6.0.1
@@ -130,8 +130,6 @@ services:
   xlayer-approve:
     container_name: zkevm-approve
     image: hermeznetwork/zkevm-node:v0.6.6
-    environment:
-      - ZKEVM_NODE_STATE_DB_HOST=zkevm-state-db
     volumes:
       - ./sequencer.keystore:/pk/keystore
       - ./config/test.node.config.toml:/app/config.toml

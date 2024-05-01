@@ -75,10 +75,21 @@ services:
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
+      - 9123:8545
+      - 7900:6900
+    volumes:
+      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
+  xlayer-erigon-rpc:
+    container_name: xlayer-erigon-seq
+    image: xlayer-erigon
+    ports:
       - 8123:8545
       - 6900:6900
     volumes:
-      - ./config/test.erigon.config.yaml:/usr/src/app/config.yaml
+      - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 

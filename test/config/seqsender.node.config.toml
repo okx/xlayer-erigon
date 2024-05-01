@@ -1,6 +1,6 @@
 [Log]
 Environment = "development" # "production" or "development"
-Level = "debug"
+Level = "info"
 Outputs = ["stderr"]
 
 [SequenceSender]
@@ -13,7 +13,7 @@ SequencesTxFileName = "sequencesender.json"
 WaitPeriodPurgeTxFile = "60m"
 MaxPendingTx = 1
 	[SequenceSender.StreamClient]
-		Server = "xlayer-erigon-seq:6900"
+		Server = "xlayer-erigon-rpc:6900"
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "5s"
 		WaitTxToBeMined = "2m"

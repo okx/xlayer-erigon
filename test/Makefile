@@ -1,16 +1,18 @@
 .PHONY: run
 run:
+	docker-compose up -d xlayer-mock-l1-network
 	docker-compose up -d xlayer-aggregator-db
 	docker-compose up -d xlayer-state-db
-	docker-compose up -d xlayer-mock-l1-network
+	sleep 3
 	docker-compose up -d xlayer-stateless-executor
 	docker-compose up -d xlayer-prover
+	docker-compose up -d xlayer-approve
 	sleep 3
 	docker-compose up -d xlayer-erigon-seq
-	sleep 10
-	docker-compose up -d xlayer-approve
+	sleep 3
+	docker-compose up -d xlayer-erigon-rpc
+	sleep 3
 	docker-compose up -d xlayer-seqsender
-	sleep 10
 	docker-compose up -d xlayer-aggregator
 
 .PHONY: stop

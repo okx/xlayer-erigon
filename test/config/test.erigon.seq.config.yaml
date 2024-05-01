@@ -21,7 +21,10 @@ zkevm.l1-query-delay: 100
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
-zkevm.executor-urls: http://xlayer-stateless-executor:50071
+zkevm.executor-urls:
+zkevm.executor-strict: false
+zkevm.witness-full: false
+
 zkevm.sequencer-initial-fork-id: 9
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
@@ -33,3 +36,8 @@ http.port: 8545
 http.vhosts: any
 http.corsdomain: any
 ws: true
+
+db.read.concurrency: 20000
+txpool.globalslots: 100000
+txpool.globalbasefeeslots: 100000
+txpool.globalqueue: 100000

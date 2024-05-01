@@ -4,8 +4,8 @@ networks:
     name: xlayer
 
 services:
-  xlayer-erigon:
-    container_name: xlayer-erigon
+  xlayer-erigon-seq:
+    container_name: xlayer-erigon-seq
     image: xlayer-erigon
     ports:
       - 8545:8545

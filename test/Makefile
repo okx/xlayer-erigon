@@ -6,7 +6,7 @@ run:
 	docker-compose up -d xlayer-stateless-executor
 	docker-compose up -d xlayer-prover
 	sleep 3
-	docker-compose up -d xlayer-erigon
+	docker-compose up -d xlayer-erigon-seq
 	sleep 3
 	docker-compose up -d xlayer-seqsender
 	docker-compose up -d xlayer-aggregator
@@ -18,7 +18,7 @@ stop:
 	docker-compose stop xlayer-mock-l1-network
 	docker-compose stop xlayer-stateless-executor
 	docker-compose stop xlayer-prover
-	docker-compose stop xlayer-erigon
+	docker-compose stop xlayer-erigon-seq
 	docker-compose stop xlayer-seqsender
 	docker-compose stop xlayer-aggregator
 
@@ -29,7 +29,7 @@ remove:
 	docker-compose remove xlayer-mock-l1-network
 	docker-compose remove xlayer-stateless-executor
 	docker-compose remove xlayer-prover
-	docker-compose remove xlayer-erigon
+	docker-compose remove xlayer-erigon-seq
 	docker-compose remove xlayer-seqsender
 	docker-compose remove xlayer-aggregator
 

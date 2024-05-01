@@ -13,7 +13,7 @@ SequencesTxFileName = "sequencesender.json"
 WaitPeriodPurgeTxFile = "60m"
 MaxPendingTx = 1
 	[SequenceSender.StreamClient]
-		Server = "xlayer-erigon:6900"
+		Server = "xlayer-erigon-seq:6900"
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "2m"

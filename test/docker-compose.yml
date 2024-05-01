@@ -5,7 +5,7 @@ networks:
 services:
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network
-    image: hermeznetwork/geth-xlayer-contracts:elderberry-fork.9-geth1.13.11
+    image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
     ports:
       - 8545:8545
       - 8546:8546
@@ -32,15 +32,9 @@ services:
       - "--syncmode"
       - "full"
       - "--rpc.allow-unprotected-txs"
-    healthcheck:
-      test: [ "CMD-SHELL", "geth attach --exec 'eth.blockNumber' http://localhost:8545" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
-  xlayer-erigon:
-    container_name: xlayer-erigon
+  xlayer-erigon-seq:
+    container_name: xlayer-erigon-seq
     image: xlayer-erigon
     ports:
       - 8123:8545
@@ -49,9 +43,6 @@ services:
       - ./config/test.erigon.config.yaml:/usr/src/app/config.yaml
     command: >
       cdk-erigon --config=/usr/src/app/config.yaml
-    depends_on:
-      xlayer-mock-l1-network:
-        condition: service_healthy
 
   xlayer-stateless-executor:
     container_name: xlayer-stateless-executor
@@ -63,9 +54,6 @@ services:
       - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      xlayer-state-db:
-        condition: service_healthy
 
   xlayer-state-db:
     container_name: xlayer-state-db
@@ -82,12 +70,6 @@ services:
       - "postgres"
       - "-N"
       - "500"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U state_user -d state_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   xlayer-seqsender:
     container_name: xlayer-seqsender
@@ -135,12 +117,6 @@ services:
       - "postgres"
       - "-N"
       - "500"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U aggregator_user -d aggregator_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
 
   xlayer-prover:
     container_name: xlayer-prover
@@ -149,6 +125,3 @@ services:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      xlayer-state-db:
-        condition: service_healthy

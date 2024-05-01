@@ -68,6 +68,7 @@ var (
 	HermezBaliGenesisHash              = libcommon.HexToHash("0x7311011ce6ab98ef0a15e44fe29f7680909588322534d1736361daa678543038")
 	XLayerTestnetGenesisHash           = libcommon.HexToHash("0xdad3589dbcd55e44383c859a4896630299fff6daa276adcb43329ce3a13ff66c")
 	XLayerMainnetGenesisHash           = libcommon.HexToHash("0x11f32f605beb94a1acb783cb3b6da6d7975461ce3addf441e7ad60c2ec95e88f")
+	XLayerDevGenesisHash               = libcommon.HexToHash("0x2b9d8bf8b04959ac6f0396ee32093142a669b1f21d169ccb3199666e2a9ce946")
 	HermezEtrogGenesisHash             = libcommon.HexToHash("0x5e14aefe391fafa040ee0a0fff6afbc1c230853b9684afb9363f3af081db0192")
 )
 
@@ -155,6 +156,8 @@ var (
 	HermezBaliChainConfig = readChainSpec("chainspecs/hermez-bali.json")
 
 	XLayerTestnetChainConfig = readChainSpec("chainspecs/xlayer-testnet.json")
+
+	XLayerDevChainConfig = readChainSpec("chainspecs/xlayer-dev.json")
 
 	XLayerMainnetChainConfig = readChainSpec("chainspecs/xlayer-mainnet.json")
 
@@ -279,6 +282,8 @@ func ChainConfigByChainName(chain string) *chain.Config {
 		return XLayerTestnetChainConfig
 	case networkname.XLayerMainnetChainName:
 		return XLayerMainnetChainConfig
+	case networkname.XLayerDevChainName:
+		return XLayerDevChainConfig
 	default:
 		return DynamicChainConfig(chain)
 	}
@@ -322,6 +327,8 @@ func GenesisHashByChainName(chain string) *libcommon.Hash {
 		return &XLayerTestnetGenesisHash
 	case networkname.XLayerMainnetChainName:
 		return &XLayerMainnetGenesisHash
+	case networkname.XLayerDevChainName:
+		return &XLayerDevGenesisHash
 	default:
 		return nil
 	}

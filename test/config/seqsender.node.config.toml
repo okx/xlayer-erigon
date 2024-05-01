@@ -13,7 +13,7 @@ SequencesTxFileName = "sequencesender.json"
 WaitPeriodPurgeTxFile = "60m"
 MaxPendingTx = 1
 	[SequenceSender.StreamClient]
-		Server = "zkevm-erigon:6900"
+		Server = "xlayer-erigon:6900"
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "2m"
@@ -28,7 +28,7 @@ MaxPendingTx = 1
 		MaxGasPriceLimit = 0
 		PersistenceFilename = "ethtxmanager.json"
 			[SequenceSender.EthTxManager.Etherman]
-				URL = "zkevm-mock-l1-network:8545"
+				URL = "xlayer-mock-l1-network:8545"
 				MultiGasProvider = false
 				L1ChainID = 1337
 				HTTPHeaders = []

@@ -1,4 +1,4 @@
-datadir: /data/erigon-data/xlayer-testnet
+datadir: /home/erigon/.local/share/erigon
 chain: xlayer-testnet
 http: true
 private.api.addr: localhost:9091

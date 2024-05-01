@@ -83,7 +83,7 @@ services:
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
   xlayer-erigon-rpc:
-    container_name: xlayer-erigon-seq
+    container_name: xlayer-erigon-rpc
     image: xlayer-erigon
     ports:
       - 8123:8545

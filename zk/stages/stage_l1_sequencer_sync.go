@@ -183,7 +183,7 @@ func HandleL1InfoTreeUpdate(
 }
 
 const (
-	injectedBatchLogTrailingBytes        = 23
+	injectedBatchLogTrailingBytes        = 24
 	injectedBatchLogTransactionStartByte = 128
 	injectedBatchLastGerStartByte        = 31
 	injectedBatchLastGerEndByte          = 64

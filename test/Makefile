@@ -24,14 +24,8 @@ stop:
 
 .PHONY: remove
 remove:
-	docker-compose remove xlayer-aggregator-db
-	docker-compose remove xlayer-state-db
-	docker-compose remove xlayer-mock-l1-network
-	docker-compose remove xlayer-stateless-executor
-	docker-compose remove xlayer-prover
-	docker-compose remove xlayer-erigon-seq
-	docker-compose remove xlayer-seqsender
-	docker-compose remove xlayer-aggregator
+	docker stop $(docker ps -aq); docker rm $(docker ps -aq);docker ps -a
+
 
 
 

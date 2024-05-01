@@ -102,7 +102,10 @@ func SpawnSequencingStage(
 
 	batchTicker := time.NewTicker(cfg.zk.SequencerBatchSealTime)
 	defer batchTicker.Stop()
+	nonEmptyBatchTimer := time.NewTicker(cfg.zk.SequencerNonEmptyBatchSealTime)
+	defer nonEmptyBatchTimer.Stop()
 
+	hasAnyTransactionsInThisBatch := false
 	thisBatch := lastBatch + 1
 	batchCounters := vm.NewBatchCounterCollector(sdb.smt.GetDepth(), uint16(forkId))
 	runLoopBlocks := true
@@ -110,7 +113,7 @@ func SpawnSequencingStage(
 	yielded := mapset.NewSet[[32]byte]()
 	coinbase := cfg.zk.AddressSequencer
 	workRemaining := true
-	blockTracking := 0
+	decodedBlocksSize := uint64(0)
 
 	if l1Recovery {
 		// let's check if we have any L1 data to recover
@@ -118,7 +121,8 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
-		if len(decodedBlocks) == 0 {
+		decodedBlocksSize = uint64(len(decodedBlocks))
+		if decodedBlocksSize == 0 {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
 			return nil
@@ -129,7 +133,13 @@ func SpawnSequencingStage(
 
 	for bn := executionAt; runLoopBlocks; bn++ {
 		if l1Recovery {
-			decodedBlock = decodedBlocks[blockTracking]
+			decodedBlocksIndex := bn - executionAt
+			if decodedBlocksIndex == decodedBlocksSize {
+				runLoopBlocks = false
+				break
+			}
+
+			decodedBlock = decodedBlocks[decodedBlocksIndex]
 			deltaTimestamp = uint64(decodedBlock.DeltaTimestamp)
 			effectiveGases = decodedBlock.EffectiveGasPricePercentages
 			blockTransactions = decodedBlock.Transactions
@@ -162,14 +172,20 @@ func SpawnSequencingStage(
 			}
 		}
 
+		overflowOnNewBlock, err := batchCounters.StartNewBlock()
+		if err != nil {
+			return err
+		}
+		if !l1Recovery && overflowOnNewBlock {
+			break
+		}
+
 		thisBlockNumber := header.Number.Uint64()
 
 		infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, err := prepareL1AndInfoTreeRelatedStuff(sdb, &decodedBlock, l1Recovery)
 		if err != nil {
 			return err
 		}
-
-		batchCounters.StartNewBlock()
 
 		ibs := state.New(sdb.stateReader)
 
@@ -206,6 +222,11 @@ func SpawnSequencingStage(
 					}
 				case <-batchTicker.C:
 					if !l1Recovery {
+						runLoopBlocks = false
+						break LOOP_TRANSACTIONS
+					}
+				case <-nonEmptyBatchTimer.C:
+					if !l1Recovery && hasAnyTransactionsInThisBatch {
 						runLoopBlocks = false
 						break LOOP_TRANSACTIONS
 					}
@@ -267,6 +288,9 @@ func SpawnSequencingStage(
 
 						addedTransactions = append(addedTransactions, transaction)
 						addedReceipts = append(addedReceipts, receipt)
+
+						hasAnyTransactionsInThisBatch = true
+						nonEmptyBatchTimer.Reset(cfg.zk.SequencerNonEmptyBatchSealTime)
 					}
 
 					if l1Recovery {
@@ -309,16 +333,6 @@ func SpawnSequencingStage(
 		}
 
 		log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, thisBlockNumber, len(addedTransactions)))
-
-		// reset the slices for added transactions
-		addedTransactions = addedTransactions[:0]
-		addedReceipts = addedReceipts[:0]
-
-		if l1Recovery && blockTracking == len(decodedBlocks)-1 {
-			runLoopBlocks = false
-			break
-		}
-		blockTracking++
 	}
 
 	counters, err := batchCounters.CombineCollectors()

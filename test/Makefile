@@ -7,9 +7,10 @@ run:
 	docker-compose up -d xlayer-prover
 	sleep 3
 	docker-compose up -d xlayer-erigon-seq
-	sleep 3
+	sleep 10
 	docker-compose up -d xlayer-approve
 	docker-compose up -d xlayer-seqsender
+	sleep 10
 	docker-compose up -d xlayer-aggregator
 
 .PHONY: stop

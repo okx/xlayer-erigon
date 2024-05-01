@@ -1,0 +1,34 @@
+[Log]
+Environment = "development" # "production" or "development"
+Level = "info"
+Outputs = ["stderr"]
+
+[SequenceSender]
+WaitPeriodSendSequence = "15s"
+LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
+MaxTxSizeForL1 = 10000
+L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+PrivateKey = {Path = "/pk/sequencer.keystore", Password = "password"}
+SequencesTxFileName = "sequencesender.json"
+WaitPeriodPurgeTxFile = "60m"
+MaxPendingTx = 1
+	[SequenceSender.StreamClient]
+		Server = "zkevm-erigon:6900"
+	[SequenceSender.EthTxManager]
+		FrequencyToMonitorTxs = "1s"
+		WaitTxToBeMined = "2m"
+		ConsolidationL1ConfirmationBlocks = 5
+		FinalizationL1ConfirmationBlocks = 10
+		WaitReceiptToBeGenerated = "8s"
+		PrivateKeys = [
+			{Path = "/pk/sequencer.keystore", Password = "testonly"},
+		]
+		ForcedGas = 0
+		GasPriceMarginFactor = 1
+		MaxGasPriceLimit = 0
+		PersistenceFilename = "ethtxmanager.json"
+			[SequenceSender.EthTxManager.Etherman]
+				URL = "zkevm-mock-l1-network:8545"
+				MultiGasProvider = false
+				L1ChainID = 1337
+				HTTPHeaders = []

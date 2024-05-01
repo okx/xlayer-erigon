@@ -8,7 +8,7 @@ zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 11155111
 zkevm.l1-rpc-url: http://rpc.ankr.com/eth_sepolia/578c95407e7831f0ac1ef79cacae294dc9bf8307121ca9fffaf1e556a5cca662
 
-zkevm.address-sequencer: "0x4820E45eB6Cf99074389544F83FE1F30084bdAb7"
+zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 zkevm.address-zkevm: "0x12e9cF0110B6C0EE11534754774253574838E9BD"
 zkevm.address-admin: "0x93836f3D8424983BB49BFBca2E9b2bb92B5D8e46"
 zkevm.address-rollup: "0x12e9cF0110B6C0EE11534754774253574838E9BD"

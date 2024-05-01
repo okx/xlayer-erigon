@@ -95,7 +95,7 @@ services:
 
   xlayer-seqsender:
     container_name: xlayer-seqsender
-    image: hermeznetwork/zkevm-seqsender:v0.1.4-RC5
+    image: hermeznetwork/zkevm-seqsender:v0.1.1-RC1
     volumes:
       - ./sequencer.keystore:/pk/sequencer.keystore
       - ./config/seqsender.node.config.toml:/app/config.toml
@@ -107,7 +107,7 @@ services:
 
   xlayer-aggregator:
     container_name: xlayer-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.2-RC3
+    image: hermeznetwork/zkevm-aggregator:v0.0.1-RC7
     ports:
       - 50081:50081
     volumes:

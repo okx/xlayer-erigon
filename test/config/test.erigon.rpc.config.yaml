@@ -28,9 +28,12 @@ zkevm.witness-full: true
 zkevm.sequencer-initial-fork-id: 9
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
+zkevm.default-gas-price: 1
+zkevm.max-gas-price: 0
+zkevm.gas-price-factor: 0.000001
 
 externalcl: true
-http.api: [eth, debug, net, trace, web3, erigon, zkevm]
+http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]
 http.addr: 0.0.0.0
 http.port: 8545
 http.vhosts: any

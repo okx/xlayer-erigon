@@ -8,6 +8,7 @@ run:
 	sleep 3
 	docker-compose up -d xlayer-erigon-seq
 	sleep 3
+	docker-compose up -d xlayer-approve
 	docker-compose up -d xlayer-seqsender
 	docker-compose up -d xlayer-aggregator
 

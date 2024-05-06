@@ -24,6 +24,7 @@ const GLOBAL_EXIT_ROOTS_BATCHES = "hermez_globalExitRoots_batches"     // batchk
 const TX_PRICE_PERCENTAGE = "hermez_txPricePercentage"                 // txHash -> txPricePercentage
 const STATE_ROOTS = "hermez_stateRoots"                                // l2blockno -> stateRoot
 const L1_INFO_TREE_UPDATES = "l1_info_tree_updates"                    // index -> L1InfoTreeUpdate
+const L1_INFO_TREE_UPDATES_BY_GER = "l1_info_tree_updates_by_ger"      // GER -> L1InfoTreeUpdate
 const BLOCK_L1_INFO_TREE_INDEX = "block_l1_info_tree_index"            // block number -> l1 info tree index
 const L1_INJECTED_BATCHES = "l1_injected_batches"                      // index increasing by 1 -> injected batch for the start of the chain
 const BLOCK_INFO_ROOTS = "block_info_roots"                            // block number -> block info root hash
@@ -36,6 +37,7 @@ const BATCH_COUNTERS = "hermez_batch_counters"                         // batch 
 const L1_BATCH_DATA = "l1_batch_data"                                  // batch number -> l1 batch data from transaction call data
 const L1_INFO_TREE_HIGHEST_BLOCK = "l1_info_tree_highest_block"        // highest l1 block number found with L1 info tree updates
 const REUSED_L1_INFO_TREE_INDEX = "reused_l1_info_tree_index"          // block number => const 1
+const LATEST_USED_GER = "latest_used_ger"                              // batch number -> GER latest used GER
 
 type HermezDb struct {
 	tx kv.RwTx
@@ -72,6 +74,7 @@ func CreateHermezBuckets(tx kv.RwTx) error {
 		TX_PRICE_PERCENTAGE,
 		STATE_ROOTS,
 		L1_INFO_TREE_UPDATES,
+		L1_INFO_TREE_UPDATES_BY_GER,
 		BLOCK_L1_INFO_TREE_INDEX,
 		L1_INJECTED_BATCHES,
 		BLOCK_INFO_ROOTS,
@@ -84,6 +87,7 @@ func CreateHermezBuckets(tx kv.RwTx) error {
 		L1_BATCH_DATA,
 		L1_INFO_TREE_HIGHEST_BLOCK,
 		REUSED_L1_INFO_TREE_INDEX,
+		LATEST_USED_GER,
 	}
 	for _, t := range tables {
 		if err := tx.CreateBucket(t); err != nil {
@@ -192,6 +196,7 @@ func (db *HermezDbReader) GetVerificationByL2BlockNo(blockNo uint64) (*types.L1B
 	if err != nil {
 		return nil, err
 	}
+	log.Debug(fmt.Sprintf("[HermezDbReader] GetVerificationByL2BlockNo: blockNo %d, batchNo %d", blockNo, batchNo))
 
 	return db.GetVerificationByBatchNo(batchNo)
 }
@@ -885,6 +890,24 @@ func (db *HermezDb) WriteL1InfoTreeUpdate(update *types.L1InfoTreeUpdate) error 
 	return db.tx.Put(L1_INFO_TREE_UPDATES, idx, marshalled)
 }
 
+func (db *HermezDb) WriteL1InfoTreeUpdateToGer(update *types.L1InfoTreeUpdate) error {
+	marshalled := update.Marshall()
+	return db.tx.Put(L1_INFO_TREE_UPDATES_BY_GER, update.GER.Bytes(), marshalled)
+}
+
+func (db *HermezDbReader) GetL1InfoTreeUpdateByGer(ger common.Hash) (*types.L1InfoTreeUpdate, error) {
+	data, err := db.tx.GetOne(L1_INFO_TREE_UPDATES_BY_GER, ger.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	if len(data) == 0 {
+		return nil, nil
+	}
+	update := &types.L1InfoTreeUpdate{}
+	update.Unmarshall(data)
+	return update, nil
+}
+
 func (db *HermezDbReader) GetL1InfoTreeUpdate(idx uint64) (*types.L1InfoTreeUpdate, error) {
 	data, err := db.tx.GetOne(L1_INFO_TREE_UPDATES, Uint64ToBytes(idx))
 	if err != nil {
@@ -1068,4 +1091,43 @@ func (db *HermezDbReader) GetL1InfoTreeHighestBlock() (uint64, error) {
 		return 0, err
 	}
 	return BytesToUint64(data), nil
+}
+
+func (db *HermezDb) WriteLatestUsedGer(batchNo uint64, ger common.Hash) error {
+	batchBytes := Uint64ToBytes(batchNo)
+	return db.tx.Put(LATEST_USED_GER, batchBytes, ger.Bytes())
+}
+
+func (db *HermezDbReader) GetLatestUsedGer() (uint64, common.Hash, error) {
+	c, err := db.tx.Cursor(LATEST_USED_GER)
+	if err != nil {
+		return 0, common.Hash{}, err
+	}
+
+	k, v, err := c.Last()
+	if err != nil {
+		return 0, common.Hash{}, err
+	}
+
+	batchNo := BytesToUint64(k)
+	ger := common.BytesToHash(v)
+
+	return batchNo, ger, nil
+}
+
+func (db *HermezDb) TruncateLatestUsedGers(fromBatch uint64) error {
+	latestBatch, _, err := db.GetLatestUsedGer()
+	if err != nil {
+		return err
+	}
+
+	for i := fromBatch; i <= latestBatch; i++ {
+		err := db.tx.Delete(LATEST_USED_GER, Uint64ToBytes(i))
+		if err != nil {
+			return err
+		}
+
+	}
+
+	return nil
 }

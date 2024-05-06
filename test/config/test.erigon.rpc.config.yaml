@@ -21,8 +21,8 @@ zkevm.l1-query-delay: 100
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
-zkevm.executor-urls: http://xlayer-stateless-executor:50071
-zkevm.executor-strict: true
+zkevm.executor-urls:
+zkevm.executor-strict: false
 zkevm.witness-full: true
 
 zkevm.sequencer-initial-fork-id: 9

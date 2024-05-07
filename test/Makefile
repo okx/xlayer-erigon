@@ -13,6 +13,7 @@ run:
 	docker-compose up -d xlayer-erigon-rpc
 	sleep 3
 	docker-compose up -d xlayer-seqsender
+	sleep 3
 	docker-compose up -d xlayer-aggregator
 
 .PHONY: stop

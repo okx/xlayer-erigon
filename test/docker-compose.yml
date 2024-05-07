@@ -118,7 +118,7 @@ services:
 
   xlayer-aggregator:
     container_name: xlayer-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.1-RC7
+    image: zjg555543/erigon-aggregator:v0.0.1-RC7
     ports:
       - 50081:50081
     volumes:

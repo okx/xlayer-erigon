@@ -2,18 +2,22 @@
     "runExecutorServer": false,
     "runExecutorClient": false,
     "runExecutorClientMultithread": false,
-    "runHashDBServer": true,
+
+    "runHashDBServer": false,
     "runHashDBTest": false,
+
     "runAggregatorServer": false,
     "runAggregatorClient": false,
     "runAggregatorClientMock": true,
     "aggregatorClientMockTimeout": 1,
-    "proverName": "test-prover",
+    "proverName": "stateless-prover-test",
+
     "runFileGenBatchProof": false,
     "runFileGenAggregatedProof": false,
     "runFileGenFinalProof": false,
     "runFileProcessBatch": false,
     "runFileProcessBatchMultithread": false,
+
     "runKeccakScriptGenerator": false,
     "runKeccakTest": false,
     "runStorageSMTest": false,
@@ -21,6 +25,7 @@
     "runMemAlignSMTest": false,
     "runSHA256Test": false,
     "runBlakeTest": false,
+
     "executeInParallel": true,
     "useMainExecGenerated": true,
     "saveRequestToFile": false,
@@ -34,28 +39,39 @@
     "opcodeTracer": false,
     "logRemoteDbReads": false,
     "logExecutorServerResponses": false,
+
     "proverServerPort": 50051,
     "proverServerMockPort": 50052,
     "proverServerMockTimeout": 10000000,
     "proverClientPort": 50051,
     "proverClientHost": "127.0.0.1",
+
     "executorServerPort": 50071,
     "executorROMLineTraces": false,
     "executorClientPort": 50071,
     "executorClientHost": "127.0.0.1",
+
     "hashDBServerPort": 50061,
     "hashDBURL": "local",
+
     "aggregatorServerPort": 50081,
     "aggregatorClientPort": 50081,
     "aggregatorClientHost": "xlayer-aggregator",
+    "aggregatorClientWatchdogTimeout": 120000000,
+
     "mapConstPolsFile": false,
     "mapConstantsTreeFile": false,
+
     "inputFile": "input_executor_0.json",
     "inputFile2": "input_executor_1.json",
+
     "keccakScriptFile": "config/scripts/keccak_script.json",
     "storageRomFile": "config/scripts/storage_sm_rom.json",
+
     "outputPath": "output",
-    "databaseURL": "postgresql://prover_user:prover_pass@xlayer-state-db:5432/prover_db",
+    "configPath": "config",
+
+    "databaseURL": "local",
     "dbNodesTableName": "state.nodes",
     "dbProgramTableName": "state.program",
     "dbMultiWrite": true,
@@ -66,11 +82,12 @@
     "dbGetTree": true,
     "cleanerPollingPeriod": 600,
     "requestsPersistence": 3600,
-    "maxExecutorThreads": 20,
+    "maxExecutorThreads": 256,
     "maxProverThreads": 8,
-    "maxHashDBThreads": 8,
+    "maxHashDBThreads": 256,
     "ECRecoverPrecalc": false,
-    "ECRecoverPrecalcNThreads": 4,
+    "ECRecoverPrecalcNThreads": 32,
     "stateManager": true,
-    "useAssociativeCache": false
+    "useAssociativeCache" : false,
+    "jsonLogs": false
 }

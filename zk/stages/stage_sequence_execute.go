@@ -17,9 +17,9 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/erigon/zk/datastream/server"
 )
 
 func SpawnSequencingStage(
@@ -348,92 +348,7 @@ func SpawnSequencingStage(
 		if err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, effectiveGases, infoTreeIndexProgress); err != nil {
 			return err
 		}
-
-func attemptAddTransaction(
-	tx kv.RwTx,
-	cfg SequenceBlockCfg,
-	batchCounters *vm.BatchCounterCollector,
-	header *types.Header,
-	parentHeader *types.Header,
-	transaction types.Transaction,
-	ibs *state.IntraBlockState,
-	hermezDb *hermez_db.HermezDb,
-	smt *smt.SMT,
-	effectiveGasPrice uint8,
-) (*types.Receipt, bool, error) {
-	txCounters := vm.NewTransactionCounter(transaction, smt.GetDepth()-1, cfg.zk.ShouldCountersBeUnlimited())
-	overflow, err := batchCounters.AddNewTransactionCounters(txCounters)
-	if err != nil {
-		return nil, false, err
-	}
-	if overflow {
-		return nil, true, nil
-	}
-
-	gasPool := new(core.GasPool).AddGas(transactionGasLimit)
-	getHeader := func(hash common.Hash, number uint64) *types.Header { return rawdb.ReadHeader(tx, hash, number) }
-
-	// set the counter collector on the config so that we can gather info during the execution
-	cfg.zkVmConfig.CounterCollector = txCounters.ExecutionCounters()
-
-	// TODO: possibly inject zero tracer here!
-
-	ibs.Prepare(transaction.Hash(), common.Hash{}, 0)
-
-	receipt, execResult, innerTxs, err := core.ApplyTransaction_zkevm(
-		cfg.chainConfig,
-		core.GetHashFn(header, getHeader),
-		cfg.engine,
-		&cfg.zk.AddressSequencer,
-		gasPool,
-		ibs,
-		noop,
-		header,
-		transaction,
-		&header.GasUsed,
-		*cfg.zkVmConfig,
-		parentHeader.ExcessDataGas,
-		effectiveGasPrice)
-
-	if err != nil {
-		return nil, false, err
-	}
-
-	// we need to keep hold of the effective percentage used
-	// todo [zkevm] for now we're hard coding to the max value but we need to calc this properly
-	if err = hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), effectiveGasPrice); err != nil {
-		return nil, false, err
-	}
-
-	// save inner tx
-	row, err := rlp.EncodeToBytes(innerTxs)
-	if err != nil {
-		return nil, false, err
-	}
-	if err = hermezDb.WriteInnerTxs(transaction.Hash(), row); err != nil {
-		return nil, false, err
-	}
-
-	err = txCounters.ProcessTx(ibs, execResult.ReturnData)
-	if err != nil {
-		return nil, false, err
-	}
-
-	// now that we have executed we can check again for an overflow
-	overflow, err = batchCounters.CheckForOverflow()
-
-	return receipt, overflow, err
-}
-
-// will be called at the start of every new block created within a batch to figure out if there is a new GER
-// we can use or not.  In the special case that this is the first block we just return 0 as we need to use the
-// 0 index first before we can use 1+
-func calculateNextL1TreeUpdateToUse(tx kv.RwTx, hermezDb *hermez_db.HermezDb) (uint64, *zktypes.L1InfoTreeUpdate, error) {
-	// always default to 0 and only update this if the next available index has reached finality
-	var nextL1Index uint64 = 0
-
-	// check which was the last used index
-	lastInfoIndex, err := stages.GetStageProgress(tx, stages.HighestUsedL1InfoIndex)
+	
 		log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, thisBlockNumber, len(addedTransactions)))
 	}
 

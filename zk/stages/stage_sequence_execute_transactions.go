@@ -7,6 +7,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
 
 	"bytes"
 	"io"
@@ -19,7 +20,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/rlp"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 )
 
@@ -161,7 +161,7 @@ func attemptAddTransaction(
 
 	ibs.Prepare(transaction.Hash(), common.Hash{}, 0)
 
-	receipt, execResult, err := core.ApplyTransaction_zkevm(
+	receipt, execResult, innerTxs, err := core.ApplyTransaction_zkevm(
 		cfg.chainConfig,
 		core.GetHashFn(header, getHeader),
 		cfg.engine,
@@ -183,6 +183,15 @@ func attemptAddTransaction(
 	// we need to keep hold of the effective percentage used
 	// todo [zkevm] for now we're hard coding to the max value but we need to calc this properly
 	if err = sdb.hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), effectiveGasPrice); err != nil {
+		return nil, false, err
+	}
+
+	// save inner tx
+	row, err := rlp.EncodeToBytes(innerTxs)
+	if err != nil {
+		return nil, false, err
+	}
+	if err = hermezDb.WriteInnerTxs(transaction.Hash(), row); err != nil {
 		return nil, false, err
 	}
 

@@ -6,10 +6,10 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
+	"encoding/json"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
-	"encoding/json"
 )
 
 const L1VERIFICATIONS = "hermez_l1Verifications"                       // l1blockno, batchno -> l1txhash
@@ -33,6 +33,7 @@ const INTERMEDIATE_TX_STATEROOTS = "hermez_intermediate_tx_stateRoots" // l2bloc
 const BATCH_WITNESSES = "hermez_batch_witnesses"                       // batch number -> witness
 const BATCH_COUNTERS = "hermez_batch_counters"                         // batch number -> counters
 const L1_BATCH_DATA = "l1_batch_data"                                  // batch number -> l1 batch data from transaction call data
+const INNER_TX = "hermez_inner_tx"                                     // txHash -> inner tx
 
 type HermezDb struct {
 	tx kv.RwTx
@@ -926,4 +927,17 @@ func (db *HermezDbReader) GetLastL1BatchData() (uint64, error) {
 	}
 
 	return BytesToUint64(k), nil
+}
+
+func (db *HermezDb) WriteInnerTxs(txHash common.Hash, innerTxs []byte) error {
+	return db.tx.Put(INNER_TX, txHash.Bytes(), innerTxs)
+}
+
+func (db *HermezDbReader) GetInnerTxs(txHash common.Hash) ([]byte, error) {
+	data, err := db.tx.GetOne(INNER_TX, txHash.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return data, nil
 }

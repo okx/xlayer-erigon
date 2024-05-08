@@ -35,12 +35,12 @@ import (
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func applyTransaction_zkevm(config *chain.Config, engine consensus.EngineReader, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, evm vm.VMInterface, cfg vm.Config, effectiveGasPricePercentage uint8) (*types.Receipt, *ExecutionResult, error) {
+func applyTransaction_zkevm(config *chain.Config, engine consensus.EngineReader, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, evm vm.VMInterface, cfg vm.Config, effectiveGasPricePercentage uint8) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
 	rules := evm.ChainRules()
 
 	msg, err := tx.AsMessage(*types.MakeSigner(config, header.Number.Uint64()), header.BaseFee, rules)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	msg.SetEffectiveGasPricePercentage(effectiveGasPricePercentage)
 	msg.SetCheckNonce(!cfg.StatelessExec)
@@ -69,12 +69,12 @@ func applyTransaction_zkevm(config *chain.Config, engine consensus.EngineReader,
 
 	result, err := ApplyMessage(evm, msg, gp, true /* refunds */, false /* gasBailout */)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
 	if err = ibs.FinalizeTx(rules, stateWriter); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	*usedGas += result.UsedGas
 
@@ -112,7 +112,8 @@ func applyTransaction_zkevm(config *chain.Config, engine consensus.EngineReader,
 		}
 	}
 
-	return receipt, result, err
+	innerTxs := afterApplyTransaction(evm, result.Failed())
+	return receipt, result, innerTxs, err
 }
 
 // ApplyTransaction attempts to apply a transaction to the given state database
@@ -133,7 +134,7 @@ func ApplyTransaction_zkevm(
 	cfg vm.ZkConfig,
 	excessDataGas *big.Int,
 	effectiveGasPricePercentage uint8,
-) (*types.Receipt, *ExecutionResult, error) {
+) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
 	// Create a new context to be used in the EVM environment
 
 	// Add addresses to access list if applicable
@@ -143,5 +144,20 @@ func ApplyTransaction_zkevm(
 	blockContext := NewEVMBlockContext(header, blockHashFunc, engine, author, excessDataGas)
 	vmenv := vm.NewZkEVM(blockContext, evmtypes.TxContext{}, ibs, config, cfg)
 
-	return applyTransaction_zkevm(config, engine, gp, ibs, stateWriter, header, tx, usedGas, vmenv, cfg.Config, effectiveGasPricePercentage)
+	receipt, result, innerTxs, err := applyTransaction_zkevm(config, engine, gp, ibs, stateWriter, header, tx, usedGas, vmenv, cfg.Config, effectiveGasPricePercentage)
+
+	return receipt, result, innerTxs, err
+}
+
+func afterApplyTransaction(env vm.VMInterface, failed bool) []*vm.InnerTx {
+	innerTxs := env.GetInnerTxMeta().InnerTxs
+	if len(innerTxs) > 1 {
+		if failed {
+			for _, innerTx := range innerTxs {
+				innerTx.IsError = true
+			}
+		}
+		return innerTxs
+	}
+	return nil
 }

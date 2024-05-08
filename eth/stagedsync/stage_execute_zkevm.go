@@ -426,6 +426,11 @@ func executeBlockZk(
 				return nil, err
 			}
 		}
+
+		// TODO writeInnerTxs?
+		if err := rawdb.WriteInnerTxs(tx, blockNum, execRs.InnerTxs); err != nil {
+			return nil, err
+		}
 	}
 
 	if cfg.changeSetHook != nil {

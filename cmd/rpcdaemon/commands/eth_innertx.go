@@ -2,8 +2,9 @@ package commands
 
 import (
 	"context"
-
+	
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/rpc"
@@ -33,14 +34,14 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 }
 
 // GetBlockInternalTransactions ...
-func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, numberOrHash rpc.BlockNumberOrHash) (map[libcommon.Hash][]*vm.InnerTx, error) {
+func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, numberOrHash rpc.BlockNumberOrHash) ([][]*vm.InnerTx, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	blockNum, blockHash, _, err := rpchelper.GetBlockNumber(numberOrHash, tx, api.filters)
+	blockNum, _, _, err := rpchelper.GetBlockNumber(numberOrHash, tx, api.filters)
 	if err != nil {
 		return nil, err
 	}
@@ -55,23 +56,24 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, numberOrHa
 		return nil, nil
 	}
 
-	body, err := api._blockReader.BodyWithTransactions(ctx, tx, blockHash, blockNum)
-	if err != nil {
-		return nil, err
-	}
-
-	var rtn = make(map[libcommon.Hash][]*vm.InnerTx)
-	for _, txn := range body.Transactions {
-		data, err := hermez_db.NewHermezDbReader(tx).GetInnerTxs(txn.Hash())
-		if err != nil {
-			return nil, err
-		}
-		innerTxs := make([]*vm.InnerTx, 0)
-		err = rlp.DecodeBytes(data, &innerTxs)
-		if err != nil {
-			return nil, err
-		}
-		rtn[txn.Hash()] = innerTxs
-	}
-	return rtn, nil
+	return rawdb.ReadInnerTxs(tx, blockNum), nil
+	//body, err := api._blockReader.BodyWithTransactions(ctx, tx, blockHash, blockNum)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//var rtn = make(map[libcommon.Hash][]*vm.InnerTx)
+	//for _, txn := range body.Transactions {
+	//	data, err := hermez_db.NewHermezDbReader(tx).GetInnerTxs(txn.Hash())
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	innerTxs := make([]*vm.InnerTx, 0)
+	//	err = rlp.DecodeBytes(data, &innerTxs)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	rtn[txn.Hash()] = innerTxs
+	//}
+	//return rtn, nil
 }

@@ -67,9 +67,10 @@ func ExecuteBlockEphemerallyZk(
 	gp.AddGas(blockGasLimit)
 
 	var (
-		rejectedTxs []*RejectedTx
-		includedTxs types.Transactions
-		receipts    types.Receipts
+		rejectedTxs   []*RejectedTx
+		includedTxs   types.Transactions
+		receipts      types.Receipts
+		blockInnerTxs [][]*vm.InnerTx
 	)
 
 	blockInfoTree, excessDataGas, err := PrepareBlockTxExecution(chainConfig, engine, chainReader, block, ibs, roHermezDb, blockGasLimit, vmConfig.ReadOnly)
@@ -102,7 +103,7 @@ func ExecuteBlockEphemerallyZk(
 		}
 
 		zkConfig := vm.NewZkConfig(*vmConfig, nil)
-		receipt, execResult, _, err := ApplyTransaction_zkevm(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, zkConfig, excessDataGas, effectiveGasPricePercentage)
+		receipt, execResult, innerTxs, err := ApplyTransaction_zkevm(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, zkConfig, excessDataGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err
 		}
@@ -161,6 +162,8 @@ func ExecuteBlockEphemerallyZk(
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
 			}
+			// TODO vmConfig.NoInnerTxs
+			blockInnerTxs = append(blockInnerTxs, innerTxs)
 		}
 		if !chainConfig.IsForkID7Etrog(block.NumberU64()) {
 			if err := ibs.ScalableSetSmtRootHash(roHermezDb); err != nil {
@@ -250,6 +253,7 @@ func ExecuteBlockEphemerallyZk(
 		Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
 		GasUsed:     math.HexOrDecimal64(*usedGas),
 		Rejected:    rejectedTxs,
+		InnerTxs:    blockInnerTxs,
 	}
 
 	return execRs, nil

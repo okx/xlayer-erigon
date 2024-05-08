@@ -2,6 +2,8 @@ package stages
 
 import (
 	"context"
+	"sort"
+
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
@@ -9,7 +11,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	"github.com/ledgerwatch/erigon/zk/txpool"
-	"sort"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -57,14 +58,14 @@ func SpawnSequencerExecutorVerifyStage(
 	}
 
 	// progress here is at the block level
-	intersProgress, err := stages.GetStageProgress(tx, stages.IntermediateHashes)
+	executeProgress, err := stages.GetStageProgress(tx, stages.Execution)
 	if err != nil {
 		return err
 	}
 
 	// we need to get the batch number for the latest block, so we can search for new batches to send for
 	// verification
-	intersBatch, err := hermezDb.GetBatchNoByL2Block(intersProgress)
+	latestBatch, err := hermezDb.GetBatchNoByL2Block(executeProgress)
 	if err != nil {
 		return err
 	}
@@ -74,7 +75,7 @@ func SpawnSequencerExecutorVerifyStage(
 	// this mode of operation
 	canVerify := cfg.verifier.HasExecutors()
 	if !canVerify {
-		if err = stages.SaveStageProgress(tx, stages.SequenceExecutorVerify, intersBatch); err != nil {
+		if err = stages.SaveStageProgress(tx, stages.SequenceExecutorVerify, latestBatch); err != nil {
 			return err
 		}
 		if freshTx {
@@ -107,10 +108,21 @@ func SpawnSequencerExecutorVerifyStage(
 			// todo [zkevm]!
 
 			// todo: remove any witnesses for batches higher than the one failing (including the failing one)
+
+			// for now just return early and do not update any stage progress, safest option for now
+			log.Error("Batch failed verification, skipping updating executor verify progress", "batch", response.BatchNumber)
+			break
 		}
 
 		// all good so just update the stage progress for now
 		if err = stages.SaveStageProgress(tx, stages.SequenceExecutorVerify, response.BatchNumber); err != nil {
+			return err
+		}
+
+		// we know that if the batch has been marked as OK we can update the datastream progress to match
+		// as the verifier will have handled writing to the stream
+		highestBlock, err := hermezDb.GetHighestBlockInBatch(response.BatchNumber)
+		if err = stages.SaveStageProgress(tx, stages.DataStream, highestBlock); err != nil {
 			return err
 		}
 
@@ -122,17 +134,22 @@ func SpawnSequencerExecutorVerifyStage(
 
 		// now let the verifier know we have got this message, so it can release it
 		cfg.verifier.RemoveResponse(response.BatchNumber)
+		cfg.verifier.MarkRequestAsHandled(response.BatchNumber)
 		progress = response.BatchNumber
 	}
 
 	// send off the new batches to the verifier to be processed
-	for batch := progress + 1; batch <= intersBatch; batch++ {
+	for batch := progress + 1; batch <= latestBatch; batch++ {
 		// we do not need to verify batch 1 as this is the injected batch so just updated progress and move on
 		if batch == injectedBatchNumber {
 			if err = stages.SaveStageProgress(tx, stages.SequenceExecutorVerify, injectedBatchNumber); err != nil {
 				return err
 			}
 		} else {
+			if cfg.verifier.IsRequestAdded(batch) {
+				continue
+			}
+
 			// we need the state root of the last block in the batch to send to the executor
 			blocks, err := hermezDb.GetL2BlockNosByBatch(batch)
 			if err != nil {
@@ -152,7 +169,12 @@ func SpawnSequencerExecutorVerifyStage(
 				return err
 			}
 
-			cfg.verifier.AddRequest(&legacy_executor_verifier.VerifierRequest{BatchNumber: batch, StateRoot: block.Root(), Counters: counters})
+			forkId, err := hermezDb.GetForkId(batch)
+			if err != nil {
+				return err
+			}
+
+			cfg.verifier.AddRequest(&legacy_executor_verifier.VerifierRequest{BatchNumber: batch, ForkId: forkId, StateRoot: block.Root(), Counters: counters})
 		}
 	}
 

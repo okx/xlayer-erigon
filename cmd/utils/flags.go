@@ -429,7 +429,7 @@ var (
 	L1MaticContractAddressFlag = cli.StringFlag{
 		Name:  "zkevm.l1-matic-contract-address",
 		Usage: "Ethereum L1 Matic contract address",
-		Value: "",
+		Value: "0x0",
 	}
 	L1FirstBlockFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-first-block",
@@ -445,6 +445,21 @@ var (
 		Name:  "zkevm.sequencer-initial-fork-id",
 		Usage: "The initial fork id to launch the sequencer with",
 		Value: 8,
+	}
+	SequencerBlockSealTime = cli.StringFlag{
+		Name:  "zkevm.sequencer-block-seal-time",
+		Usage: "Block seal time. Defaults to 6s",
+		Value: "6s",
+	}
+	SequencerBatchSealTime = cli.StringFlag{
+		Name:  "zkevm.sequencer-batch-seal-time",
+		Usage: "Batch seal time. Defaults to 12s",
+		Value: "12s",
+	}
+	SequencerNonEmptyBatchSealTime = cli.StringFlag{
+		Name:  "zkevm.sequencer-non-empty-batch-seal-time",
+		Usage: "Batch seal time. Defaults to 3s",
+		Value: "3s",
 	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",
@@ -486,8 +501,13 @@ var (
 		Usage: "Allow the sequencer to proceed pre-EIP155 transactions",
 		Value: false,
 	}
-	EffectiveGasPriceForTransfer = cli.Float64Flag{
-		Name:  "zkevm.effective-gas-price-transfer",
+	EffectiveGasPriceForEthTransfer = cli.Float64Flag{
+		Name:  "zkevm.effective-gas-price-eth-transfer",
+		Usage: "Set the effective gas price in percentage for transfers",
+		Value: 1,
+	}
+	EffectiveGasPriceForErc20Transfer = cli.Float64Flag{
+		Name:  "zkevm.effective-gas-price-erc20-transfer",
 		Usage: "Set the effective gas price in percentage for transfers",
 		Value: 1,
 	}
@@ -531,7 +551,7 @@ var (
 		Usage: "The URL of the pool manager. If set, eth_sendRawTransaction will be redirected there.",
 		Value: "",
 	}
-  DisableVirtualCounters = cli.BoolFlag{
+	DisableVirtualCounters = cli.BoolFlag{
 		Name:  "zkevm.disable-virtual-counters",
 		Usage: "Disable the virtual counters. This has an effect on on sequencer node and when external executor is not enabled.",
 		Value: false,

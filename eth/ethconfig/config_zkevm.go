@@ -27,11 +27,15 @@ type Zk struct {
 	RpcRateLimits                          int
 	DatastreamVersion                      int
 	SequencerInitialForkId                 uint64
+	SequencerBlockSealTime                 time.Duration
+	SequencerBatchSealTime                 time.Duration
+	SequencerNonEmptyBatchSealTime         time.Duration
 	ExecutorUrls                           []string
 	ExecutorStrictMode                     bool
 	AllowFreeTransactions                  bool
 	AllowPreEIP155Transactions             bool
-	EffectiveGasPriceForTransfer           uint8
+	EffectiveGasPriceForEthTransfer        uint8
+	EffectiveGasPriceForErc20Transfer      uint8
 	EffectiveGasPriceForContractInvocation uint8
 	EffectiveGasPriceForContractDeployment uint8
 	DefaultGasPrice                        uint64
@@ -55,4 +59,8 @@ var DefaultZkConfig = &Zk{}
 
 func (c *Zk) ShouldCountersBeUnlimited() bool {
 	return c.DisableVirtualCounters && !c.ExecutorStrictMode && len(c.ExecutorUrls) != 0
+}
+
+func (c *Zk) HasExecutors() bool {
+	return len(c.ExecutorUrls) > 0 && c.ExecutorUrls[0] != ""
 }

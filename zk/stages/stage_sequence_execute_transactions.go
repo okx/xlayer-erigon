@@ -191,7 +191,7 @@ func attemptAddTransaction(
 	if err != nil {
 		return nil, false, err
 	}
-	if err = hermezDb.WriteInnerTxs(transaction.Hash(), row); err != nil {
+	if err = sdb.hermezDb.WriteInnerTxs(transaction.Hash(), row); err != nil {
 		return nil, false, err
 	}
 

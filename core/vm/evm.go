@@ -89,7 +89,7 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 
-	InnerTxMeta *InnerTxMeta
+	innerTxMeta *InnerTxMeta
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should
@@ -102,6 +102,12 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 		config:          vmConfig,
 		chainConfig:     chainConfig,
 		chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
+		innerTxMeta: &InnerTxMeta{
+			index:     0,
+			lastDepth: 0,
+			indexMap:  map[int]int{0: 0},
+			InnerTxs:  make([]*InnerTx, 0),
+		},
 	}
 
 	// [zkevm] change
@@ -115,6 +121,12 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 func (evm *EVM) Reset(txCtx evmtypes.TxContext, ibs evmtypes.IntraBlockState) {
 	evm.txContext = txCtx
 	evm.intraBlockState = ibs
+	evm.innerTxMeta = &InnerTxMeta{
+		index:     0,
+		lastDepth: 0,
+		indexMap:  map[int]int{0: 0},
+		InnerTxs:  make([]*InnerTx, 0),
+	}
 
 	// ensure the evm is reset to be used again
 	atomic.StoreInt32(&evm.abort, 0)

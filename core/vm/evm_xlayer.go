@@ -47,9 +47,9 @@ type InnerTxMeta struct {
 }
 
 func (evm *EVM) GetInnerTxMeta() *InnerTxMeta {
-	return evm.InnerTxMeta
+	return evm.innerTxMeta
 }
 
 func (evm *EVM) AddInnerTx(innerTx *InnerTx) {
-	evm.InnerTxMeta.InnerTxs = append(evm.InnerTxMeta.InnerTxs, innerTx)
+	evm.innerTxMeta.InnerTxs = append(evm.innerTxMeta.InnerTxs, innerTx)
 }

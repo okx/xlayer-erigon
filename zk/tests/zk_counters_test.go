@@ -292,7 +292,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 
 			vmCfg.CounterCollector = txCounters.ExecutionCounters()
 
-			_, result, err := core.ApplyTransaction_zkevm(
+			_, result, _, err := core.ApplyTransaction_zkevm(
 				chainConfig,
 				core.GetHashFn(header, getHeader),
 				engine,

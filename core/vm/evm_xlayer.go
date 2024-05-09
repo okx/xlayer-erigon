@@ -2,11 +2,11 @@ package vm
 
 import "math/big"
 
-// InnerTxBasic stores the basic field of an inner tx.
+// InnerTx stores the basic field of an inner tx.
 // NOTE: DON'T change this struct for:
 // 1. It will be written to database, and must be keep the same type When reading history data from db
 // 2. It will be returned by rpc method
-type InnerTxBasic struct {
+type InnerTx struct {
 	Dept          big.Int `json:"dept"`
 	InternalIndex big.Int `json:"internal_index"`
 	CallType      string  `json:"call_type"`
@@ -22,21 +22,6 @@ type InnerTxBasic struct {
 	Value         string  `json:"value"`
 	ValueWei      string  `json:"value_wei"`
 	Error         string  `json:"error"`
-}
-
-type BlockInnerData struct {
-	BlockHash string
-	TxHashes  []string
-	TxMap     map[string][]*InnerTxBasic
-}
-
-// InnerTx store all field of an inner tx, you can change/add those field as you will.
-type InnerTx struct {
-	InnerTxBasic
-
-	//FromNonce       uint64
-	//Create2Salt     string
-	//Create2CodeHash string
 }
 
 type InnerTxMeta struct {

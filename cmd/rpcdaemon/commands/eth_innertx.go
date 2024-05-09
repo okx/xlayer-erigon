@@ -7,10 +7,8 @@ import (
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
 )
 
 // GetInternalTransactions ...
@@ -21,17 +19,9 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 	}
 	defer tx.Rollback()
 
-	data, err := hermez_db.NewHermezDbReader(tx).GetInnerTxs(txnHash)
-	if err != nil {
-		return nil, err
-	}
+	// TODO
 
-	innerTxs := make([]*vm.InnerTx, 0)
-	err = rlp.DecodeBytes(data, &innerTxs)
-	if err != nil {
-		return nil, err
-	}
-	return innerTxs, nil
+	return nil, nil
 }
 
 // GetBlockInternalTransactions ...
@@ -64,23 +54,4 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 	}
 
 	return rawdb.ReadInnerTxs(tx, n), nil
-	//body, err := api._blockReader.BodyWithTransactions(ctx, tx, blockHash, blockNum)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//var rtn = make(map[libcommon.Hash][]*vm.InnerTx)
-	//for _, txn := range body.Transactions {
-	//	data, err := hermez_db.NewHermezDbReader(tx).GetInnerTxs(txn.Hash())
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	innerTxs := make([]*vm.InnerTx, 0)
-	//	err = rlp.DecodeBytes(data, &innerTxs)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	rtn[txn.Hash()] = innerTxs
-	//}
-	//return rtn, nil
 }

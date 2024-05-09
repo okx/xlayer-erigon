@@ -38,7 +38,6 @@ const L1_BATCH_DATA = "l1_batch_data"                                  // batch 
 const L1_INFO_TREE_HIGHEST_BLOCK = "l1_info_tree_highest_block"        // highest l1 block number found with L1 info tree updates
 const REUSED_L1_INFO_TREE_INDEX = "reused_l1_info_tree_index"          // block number => const 1
 const LATEST_USED_GER = "latest_used_ger"                              // batch number -> GER latest used GER
-const INNER_TX = "hermez_inner_tx"                                     // txHash -> inner tx
 
 type HermezDb struct {
 	tx kv.RwTx
@@ -1129,17 +1128,4 @@ func (db *HermezDb) TruncateLatestUsedGers(fromBatch uint64) error {
 	}
 
 	return nil
-}
-
-func (db *HermezDb) WriteInnerTxs(txHash common.Hash, innerTxs []byte) error {
-	return db.tx.Put(INNER_TX, txHash.Bytes(), innerTxs)
-}
-
-func (db *HermezDbReader) GetInnerTxs(txHash common.Hash) ([]byte, error) {
-	data, err := db.tx.GetOne(INNER_TX, txHash.Bytes())
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
 }

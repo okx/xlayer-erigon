@@ -1798,8 +1798,6 @@ func ReadVerkleNode(tx kv.RwTx, root libcommon.Hash) (verkle.VerkleNode, error) 
 	return verkle.ParseNode(encoded, 0, root[:])
 }
 
-const InnerTx = "InnerTx" // block_num_u64 + txId -> inner txs of transaction
-
 func WriteInnerTxs(db kv.RwTx, number uint64, innerTxs [][]*vm.InnerTx) error {
 	for txId, its := range innerTxs {
 		if len(its) == 0 {
@@ -1811,7 +1809,7 @@ func WriteInnerTxs(db kv.RwTx, number uint64, innerTxs [][]*vm.InnerTx) error {
 			return fmt.Errorf("encode inner tx for block %d: %w", number, err)
 		}
 
-		if err = db.Put(InnerTx, dbutils.LogKey(number, uint32(txId)), data); err != nil {
+		if err = db.Put(kv.INNER_TX, dbutils.LogKey(number, uint32(txId)), data); err != nil {
 			return fmt.Errorf("writing logs for block %d: %w", number, err)
 		}
 	}
@@ -1824,7 +1822,7 @@ func ReadInnerTxs(db kv.Tx, blockNum uint64) [][]*vm.InnerTx {
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, blockNum)
 
-	it, err := db.Prefix(InnerTx, prefix)
+	it, err := db.Prefix(kv.INNER_TX, prefix)
 	if err != nil {
 		log.Error("inner txs fetching failed", "err", err)
 		return nil

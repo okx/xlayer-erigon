@@ -2,10 +2,11 @@ package commands
 
 import (
 	"context"
-	
+
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/vm"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
@@ -34,29 +35,35 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 }
 
 // GetBlockInternalTransactions ...
-func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, numberOrHash rpc.BlockNumberOrHash) ([][]*vm.InnerTx, error) {
+func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) ([][]*vm.InnerTx, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
 
-	blockNum, _, _, err := rpchelper.GetBlockNumber(numberOrHash, tx, api.filters)
-	if err != nil {
-		return nil, err
-	}
-	if int64(blockNum) == rpc.PendingBlockNumber.Int64() {
-		return nil, nil
-	}
-	latestBlockNumber, err := rpchelper.GetLatestBlockNumber(tx)
-	if err != nil {
-		return nil, err
-	}
-	if blockNum > latestBlockNumber {
+	if number == rpc.PendingBlockNumber {
 		return nil, nil
 	}
 
-	return rawdb.ReadInnerTxs(tx, blockNum), nil
+	// get latest executed block
+	executedBlock, err := stages.GetStageProgress(tx, stages.Execution)
+	if err != nil {
+		return nil, err
+	}
+
+	// return null if requested block  is higher than executed
+	// made for consistency with zkevm
+	if number > 0 && executedBlock < uint64(number.Int64()) {
+		return nil, nil
+	}
+
+	n, _, _, err := rpchelper.GetBlockNumber(rpc.BlockNumberOrHashWithNumber(number), tx, api.filters)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawdb.ReadInnerTxs(tx, n), nil
 	//body, err := api._blockReader.BodyWithTransactions(ctx, tx, blockHash, blockNum)
 	//if err != nil {
 	//	return nil, err

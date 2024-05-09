@@ -1804,7 +1804,7 @@ func WriteInnerTxs(db kv.RwTx, number uint64, innerTxs [][]*vm.InnerTx) error {
 			continue
 		}
 
-		data, err := rlp.EncodeToBytes(innerTxs)
+		data, err := rlp.EncodeToBytes(its)
 		if err != nil {
 			return fmt.Errorf("encode inner tx for block %d: %w", number, err)
 		}

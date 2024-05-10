@@ -32,6 +32,7 @@ type InnerTx struct {
 	Input         string  `json:"input"`
 	Output        string  `json:"output"`
 	IsError       bool    `json:"is_error"`
+	Gas           uint64  `json:"gas"`
 	GasUsed       uint64  `json:"gas_used"`
 	Value         string  `json:"value"`
 	ValueWei      string  `json:"value_wei"`
@@ -66,7 +67,7 @@ func beforeOp(
 		CallType: callTyp,
 		From:     fromAddr.String(),
 		ValueWei: value.String(),
-		GasUsed:  gas,
+		Gas:      gas,
 		IsError:  false,
 	}
 
@@ -116,7 +117,7 @@ func beforeOp(
 	return innerTx, newIndex
 }
 
-func afterOp(interpreter *EVMInterpreter, opType string, newIndex int, innerTx *InnerTx, addr *libcommon.Address, err error) {
+func afterOp(interpreter *EVMInterpreter, opType string, gas_used uint64, newIndex int, innerTx *InnerTx, addr *libcommon.Address, err error) {
 	if err != nil {
 		innerTxMeta := interpreter.evm.GetInnerTxMeta()
 		for _, innerTx := range innerTxMeta.InnerTxs[newIndex:] {

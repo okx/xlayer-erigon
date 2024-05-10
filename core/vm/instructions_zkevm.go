@@ -360,7 +360,7 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL.String(), scope.Contract.Address(), &toAddr, nil, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
 
-	innerTx.TraceAddress = scope.Contract.CallerAddress.Hash().String()
+	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
 	innerTx.ValueWei = scope.Contract.value.String()
 	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
 
@@ -384,17 +384,17 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 func beforeOp(interpreter *EVMInterpreter, name string, fromAddr libcommon.Address, toAddr *libcommon.Address, codeAddr *libcommon.Address, gas uint64, value *big.Int) (*InnerTx, int) {
 	innerTx := &InnerTx{
 		CallType: name,
-		From:     fromAddr.Hash().String(),
+		From:     fromAddr.String(),
 		ValueWei: value.String(),
 		GasUsed:  gas,
 		IsError:  false,
 	}
 
 	if toAddr != nil {
-		innerTx.To = toAddr.Hash().String()
+		innerTx.To = toAddr.String()
 	}
 	if codeAddr != nil {
-		innerTx.CodeAddress = codeAddr.Hash().String()
+		innerTx.CodeAddress = codeAddr.String()
 	}
 
 	innerTxMeta := interpreter.evm.GetInnerTxMeta()
@@ -442,6 +442,6 @@ func afterOp(interpreter *EVMInterpreter, opType string, newIndex int, innerTx *
 
 	switch opType {
 	case "create":
-		innerTx.To = addr.Hash().String()
+		innerTx.To = addr.String()
 	}
 }

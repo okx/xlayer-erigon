@@ -18,9 +18,10 @@ package vm
 
 import (
 	"fmt"
+	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"golang.org/x/crypto/sha3"
 
 	"github.com/ledgerwatch/log/v3"
@@ -653,7 +654,9 @@ func opCreate(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]b
 
 	scope.Contract.UseGas(gas)
 
+	innerTx, newIndex := beforeOp(interpreter, CREATE.String(), scope.Contract.Address(), nil, nil, gas, value.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create(scope.Contract, input, gas, &value, 0)
+	afterOp(interpreter, "create", newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
@@ -693,7 +696,9 @@ func opCreate2(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]
 	scope.Contract.UseGas(gas)
 	// reuse size int for stackvalue
 	stackValue := size
+	innerTx, newIndex := beforeOp(interpreter, CREATE2.String(), scope.Contract.Address(), nil, nil, gas, endowment.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create2(scope.Contract, input, gas, &endowment, &salt)
+	afterOp(interpreter, "create", newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error.
 	if suberr != nil {
@@ -732,7 +737,9 @@ func opCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byt
 		gas += params.CallStipend
 	}
 
+	innerTx, newIndex := beforeOp(interpreter, CALL.String(), scope.Contract.Address(), &toAddr, nil, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, &value, false /* bailout */, 0)
+	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
 
 	if err != nil {
 		temp.Clear()
@@ -767,7 +774,9 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 		gas += params.CallStipend
 	}
 
+	innerTx, newIndex := beforeOp(interpreter, CALLCODE.String(), scope.Contract.Address(), &toAddr, &toAddr, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, &value)
+	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -797,7 +806,12 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
+	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL.String(), scope.Contract.Address(), &toAddr, nil, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
+	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
+	innerTx.ValueWei = scope.Contract.value.String()
+	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
+
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -827,7 +841,9 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
+	innerTx, newIndex := beforeOp(interpreter, STATICCALL.String(), scope.Contract.Address(), &toAddr, nil, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
+	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -880,8 +896,10 @@ func opSelfdestruct(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 			interpreter.cfg.Tracer.CaptureExit([]byte{}, 0, nil)
 		}
 	}
+	innerTx, newIndex := beforeOp(interpreter, SELFDESTRUCT.String(), scope.Contract.Address(), &beneficiaryAddr, nil, 0, balance.ToBig())
 	interpreter.evm.IntraBlockState().AddBalance(beneficiaryAddr, balance)
 	interpreter.evm.IntraBlockState().Selfdestruct(callerAddr)
+	afterOp(interpreter, "selfdestruct", newIndex, innerTx, nil, nil)
 	return nil, errStopToken
 }
 

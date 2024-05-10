@@ -2,8 +2,7 @@ package vm
 
 import (
 	"math/big"
-	"strconv"
-
+	
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common"
@@ -101,9 +100,9 @@ func opStaticCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCon
 	toAddr := libcommon.Address(addr.Bytes20())
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
-	innerTx, newIndex := beforeOp(interpreter, STATICCALL.String(), scope.Contract.Address(), &toAddr, nil, gas, big.NewInt(0))
+	innerTx, newIndex := beforeOp(interpreter, STATICCAL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
-	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
+	afterOp(interpreter, STATICCAL_TYP, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -142,10 +141,10 @@ func opSendAll_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContex
 	}
 
 	if beneficiaryAddr != callerAddr {
-		innerTx, newIndex := beforeOp(interpreter, SENDALL.String(), scope.Contract.Address(), &beneficiaryAddr, nil, 0, balance.ToBig())
+		innerTx, newIndex := beforeOp(interpreter, SUICIDE_TYP, scope.Contract.Address(), &beneficiaryAddr, nil, nil, 0, balance.ToBig())
 		interpreter.evm.IntraBlockState().AddBalance(beneficiaryAddr, balance)
 		interpreter.evm.IntraBlockState().SubBalance(callerAddr, balance)
-		afterOp(interpreter, "send_all", newIndex, innerTx, nil, nil)
+		afterOp(interpreter, SUICIDE_TYP, newIndex, innerTx, nil, nil)
 	}
 	return nil, errStopToken
 }
@@ -205,9 +204,9 @@ func opCreate_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 
 	scope.Contract.UseGas(gas)
 
-	innerTx, newIndex := beforeOp(interpreter, CREATE.String(), scope.Contract.Address(), nil, nil, gas, value.ToBig())
+	innerTx, newIndex := beforeOp(interpreter, CREATE_TYP, scope.Contract.Address(), nil, nil, input, gas, value.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create(scope.Contract, input, gas, &value, 0)
-	afterOp(interpreter, "create", newIndex, innerTx, &addr, suberr)
+	afterOp(interpreter, CREATE_TYP, newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
@@ -247,9 +246,9 @@ func opCreate2_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContex
 	scope.Contract.UseGas(gas)
 	// reuse size int for stackvalue
 	stackValue := size
-	innerTx, newIndex := beforeOp(interpreter, CREATE2.String(), scope.Contract.Address(), nil, nil, gas, endowment.ToBig())
+	innerTx, newIndex := beforeOp(interpreter, CREATE_TYP, scope.Contract.Address(), nil, nil, input, gas, endowment.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create2(scope.Contract, input, gas, &endowment, &salt)
-	afterOp(interpreter, "create", newIndex, innerTx, &addr, suberr)
+	afterOp(interpreter, CREATE_TYP, newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error.
 	if suberr != nil {
@@ -288,9 +287,9 @@ func opCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 		gas += params.CallStipend
 	}
 
-	innerTx, newIndex := beforeOp(interpreter, CALL.String(), scope.Contract.Address(), &toAddr, nil, gas, value.ToBig())
+	innerTx, newIndex := beforeOp(interpreter, CALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, &value, false /* bailout */, 0)
-	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
+	afterOp(interpreter, CALL_TYP, newIndex, innerTx, nil, err)
 
 	if err != nil {
 		temp.Clear()
@@ -325,9 +324,9 @@ func opCallCode_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 		gas += params.CallStipend
 	}
 
-	innerTx, newIndex := beforeOp(interpreter, CALLCODE.String(), scope.Contract.Address(), &toAddr, &toAddr, gas, value.ToBig())
+	innerTx, newIndex := beforeOp(interpreter, CALLCODE_TYP, scope.Contract.Address(), &toAddr, &toAddr, args, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, &value)
-	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
+	afterOp(interpreter, CALLCODE_TYP, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -357,12 +356,12 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
-	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL.String(), scope.Contract.Address(), &toAddr, nil, gas, big.NewInt(0))
+	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
 
 	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
 	innerTx.ValueWei = scope.Contract.value.String()
-	afterOp(interpreter, "call", newIndex, innerTx, nil, err)
+	afterOp(interpreter, DELEGATECALL_TYP, newIndex, innerTx, nil, err)
 
 	if err != nil {
 		temp.Clear()
@@ -379,69 +378,4 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 
 	interpreter.returnData = ret
 	return ret, nil
-}
-
-func beforeOp(interpreter *EVMInterpreter, name string, fromAddr libcommon.Address, toAddr *libcommon.Address, codeAddr *libcommon.Address, gas uint64, value *big.Int) (*InnerTx, int) {
-	innerTx := &InnerTx{
-		CallType: name,
-		From:     fromAddr.String(),
-		ValueWei: value.String(),
-		GasUsed:  gas,
-		IsError:  false,
-	}
-
-	if toAddr != nil {
-		innerTx.To = toAddr.String()
-	}
-	if codeAddr != nil {
-		innerTx.CodeAddress = codeAddr.String()
-	}
-
-	innerTxMeta := interpreter.evm.GetInnerTxMeta()
-	if innerTxMeta == nil {
-		// TODO
-	}
-	if interpreter.Depth() == innerTxMeta.lastDepth {
-		innerTxMeta.index++
-		innerTxMeta.indexMap[interpreter.Depth()] = innerTxMeta.index
-	} else if interpreter.Depth() < innerTxMeta.lastDepth {
-		innerTxMeta.index = innerTxMeta.indexMap[interpreter.Depth()] + 1
-		innerTxMeta.indexMap[interpreter.Depth()] = innerTxMeta.index
-		innerTxMeta.lastDepth = interpreter.Depth()
-	} else if interpreter.Depth() > innerTxMeta.lastDepth {
-		innerTxMeta.index = 0
-		innerTxMeta.indexMap[interpreter.Depth()] = 0
-		innerTxMeta.lastDepth = interpreter.Depth()
-	}
-	for i := 1; i <= innerTxMeta.lastDepth; i++ {
-		innerTx.Name = innerTx.Name + "_" + strconv.Itoa(innerTxMeta.indexMap[i])
-	}
-	innerTx.Name = innerTx.CallType + innerTx.Name
-	innerTx.Dept = *big.NewInt(int64(interpreter.Depth()))
-	innerTx.InternalIndex = *big.NewInt(int64(innerTxMeta.index))
-
-	interpreter.evm.AddInnerTx(innerTx)
-
-	newIndex := len(innerTxMeta.InnerTxs) - 1
-	if newIndex < 0 {
-		newIndex = 0
-	}
-
-	// TODO
-	//interpreter.evm.SetInnerTxMeta(innerTxMeta)
-	return innerTx, newIndex
-}
-
-func afterOp(interpreter *EVMInterpreter, opType string, newIndex int, innerTx *InnerTx, addr *libcommon.Address, err error) {
-	if err != nil {
-		innerTxMeta := interpreter.evm.GetInnerTxMeta()
-		for _, innerTx := range innerTxMeta.InnerTxs[newIndex:] {
-			innerTx.IsError = true
-		}
-	}
-
-	switch opType {
-	case "create":
-		innerTx.To = addr.String()
-	}
 }

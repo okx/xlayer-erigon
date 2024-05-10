@@ -112,8 +112,6 @@ func beforeOp(
 		newIndex = 0
 	}
 
-	// TODO
-	//interpreter.evm.SetInnerTxMeta(innerTxMeta)
 	return innerTx, newIndex
 }
 

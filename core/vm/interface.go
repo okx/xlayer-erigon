@@ -53,7 +53,6 @@ type VMInterface interface {
 	TxContext() evmtypes.TxContext
 	AddInnerTx(innerTx *InnerTx)
 	GetInnerTxMeta() *InnerTxMeta
-	//SetInnerTxMeta(*InnerTxMeta)
 }
 
 // VMInterpreter exposes additional EVM methods for use in the interpreter.

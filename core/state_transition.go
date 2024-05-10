@@ -386,9 +386,11 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	)
 	//add InnerTx
 	innerTx := &vm.InnerTx{
-		Dept:    *big.NewInt(0),
-		From:    sender.Address().String(),
-		IsError: false,
+		Dept:     *big.NewInt(0),
+		From:     sender.Address().String(),
+		IsError:  false,
+		Gas:      st.gas,
+		ValueWei: st.value.ToBig().String(),
 	}
 	st.evm.AddInnerTx(innerTx)
 
@@ -455,6 +457,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		)
 	}
 
+	innerTx.GasUsed = st.gasUsed()
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
 		Err:        vmerr,

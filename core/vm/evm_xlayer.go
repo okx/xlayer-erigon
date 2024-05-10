@@ -118,6 +118,7 @@ func beforeOp(
 }
 
 func afterOp(interpreter *EVMInterpreter, opType string, gas_used uint64, newIndex int, innerTx *InnerTx, addr *libcommon.Address, err error) {
+	innerTx.GasUsed = gas_used
 	if err != nil {
 		innerTxMeta := interpreter.evm.GetInnerTxMeta()
 		for _, innerTx := range innerTxMeta.InnerTxs[newIndex:] {

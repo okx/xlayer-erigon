@@ -389,7 +389,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		Dept:     *big.NewInt(0),
 		From:     sender.Address().String(),
 		IsError:  false,
-		Gas:      st.gas,
+		Gas:      st.gas + intrinsicGas,
 		ValueWei: st.value.ToBig().String(),
 	}
 	st.evm.AddInnerTx(innerTx)

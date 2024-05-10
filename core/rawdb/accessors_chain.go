@@ -1809,7 +1809,7 @@ func WriteInnerTxs(db kv.RwTx, number uint64, innerTxs [][]*vm.InnerTx) error {
 			return fmt.Errorf("encode inner tx for block %d: %w", number, err)
 		}
 
-		if err = db.Put(kv.INNER_TX, dbutils.LogKey(number, uint32(txId)), data); err != nil {
+		if err = db.Append(kv.INNER_TX, dbutils.LogKey(number, uint32(txId)), data); err != nil {
 			return fmt.Errorf("writing logs for block %d: %w", number, err)
 		}
 	}

@@ -151,13 +151,10 @@ func ApplyTransaction_zkevm(
 
 func afterApplyTransaction(env vm.VMInterface, failed bool) []*vm.InnerTx {
 	innerTxs := env.GetInnerTxMeta().InnerTxs
-	if len(innerTxs) > 1 {
-		if failed {
-			for _, innerTx := range innerTxs {
-				innerTx.IsError = true
-			}
+	if failed {
+		for _, innerTx := range innerTxs {
+			innerTx.IsError = true
 		}
-		return innerTxs
 	}
-	return nil
+	return innerTxs
 }

@@ -386,11 +386,9 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	)
 	//add InnerTx
 	innerTx := &vm.InnerTx{
-		InnerTxBasic: vm.InnerTxBasic{
-			Dept:    *big.NewInt(0),
-			From:    sender.Address().String(),
-			IsError: false,
-		},
+		Dept:    *big.NewInt(0),
+		From:    sender.Address().String(),
+		IsError: false,
 	}
 	st.evm.AddInnerTx(innerTx)
 

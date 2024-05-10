@@ -383,13 +383,11 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 
 func beforeOp(interpreter *EVMInterpreter, name string, fromAddr libcommon.Address, toAddr *libcommon.Address, codeAddr *libcommon.Address, gas uint64, value *big.Int) (*InnerTx, int) {
 	innerTx := &InnerTx{
-		InnerTxBasic: InnerTxBasic{
-			CallType: name,
-			From:     fromAddr.Hash().String(),
-			ValueWei: value.String(),
-			GasUsed:  gas,
-			IsError:  false,
-		},
+		CallType: name,
+		From:     fromAddr.Hash().String(),
+		ValueWei: value.String(),
+		GasUsed:  gas,
+		IsError:  false,
 	}
 
 	if toAddr != nil {

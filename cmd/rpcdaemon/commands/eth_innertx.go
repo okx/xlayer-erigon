@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"fmt"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -19,13 +20,39 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 	}
 	defer tx.Rollback()
 
-	// TODO
+	blockNum, ok, err := api.txnLookup(ctx, tx, txnHash)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	block, err := api.blockByNumberWithSenders(tx, blockNum)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, nil
+	}
 
-	return nil, nil
+	var txnIndex uint64
+	for idx, transaction := range block.Transactions() {
+		if transaction.Hash() == txnHash {
+			txnIndex = uint64(idx)
+			break
+		}
+	}
+
+	blockInnerTxs := rawdb.ReadInnerTxs(tx, blockNum)
+	if len(blockInnerTxs) != len(block.Transactions()) {
+		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	}
+
+	return blockInnerTxs[txnIndex], nil
 }
 
 // GetBlockInternalTransactions ...
-func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) ([][]*vm.InnerTx, error) {
+func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) (map[libcommon.Hash][]*vm.InnerTx, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -53,5 +80,23 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 		return nil, err
 	}
 
-	return rawdb.ReadInnerTxs(tx, n), nil
+	block, err := api.blockByNumberWithSenders(tx, n)
+	if err != nil {
+		return nil, err
+	}
+	if block == nil {
+		return nil, nil
+	}
+
+	blockInnerTxs := rawdb.ReadInnerTxs(tx, n)
+	if len(blockInnerTxs) != len(block.Transactions()) {
+		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	}
+
+	res := make(map[libcommon.Hash][]*vm.InnerTx)
+	for index, innerTxs := range blockInnerTxs {
+		res[block.Transactions()[index].Hash()] = innerTxs
+	}
+
+	return res, nil
 }

@@ -107,7 +107,7 @@ func beforeOp(
 
 	interpreter.evm.AddInnerTx(innerTx)
 
-	newIndex := len(innerTxMeta.InnerTxs) - 1
+	newIndex := len(interpreter.evm.GetInnerTxMeta().InnerTxs) - 1
 	if newIndex < 0 {
 		newIndex = 0
 	}

@@ -96,7 +96,7 @@ func XLayerTestnetGenesisBlock() *types.Genesis {
 
 func XLayerDevGenesisBlock() *types.Genesis {
 	return &types.Genesis{
-		Config:     params.XLayerTestnetChainConfig,
+		Config:     params.XLayerDevChainConfig,
 		Timestamp:  1712835021,
 		GasLimit:   0x0,
 		Difficulty: big.NewInt(0x0),

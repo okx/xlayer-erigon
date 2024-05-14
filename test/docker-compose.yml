@@ -25,7 +25,7 @@ services:
 
   xlayer-state-db:
     container_name: xlayer-state-db
-    image: postgres
+    image: postgres:15
     ports:
       - 5432:5432
     volumes:
@@ -72,6 +72,9 @@ services:
   xlayer-erigon-seq:
     container_name: xlayer-erigon-seq
     image: xlayer-erigon
+    depends_on:
+      - xlayer-state-db
+      - xlayer-stateless-executor
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
@@ -85,6 +88,8 @@ services:
   xlayer-erigon-rpc:
     container_name: xlayer-erigon-rpc
     image: xlayer-erigon
+    depends_on:
+      - xlayer-erigon-seq
     ports:
       - 8123:8545
       - 6900:6900
@@ -96,6 +101,8 @@ services:
   xlayer-stateless-executor:
     container_name: xlayer-stateless-executor
     image: hermeznetwork/zkevm-prover:v6.0.2-RC3
+    depends_on:
+      - xlayer-state-db
     ports:
       - 0.0.0.0:50061:50061 # MT
       - 0.0.0.0:50071:50071 # Executor
@@ -107,6 +114,8 @@ services:
   xlayer-seqsender:
     container_name: xlayer-seqsender
     image: hermeznetwork/zkevm-seqsender:v0.1.1-RC1
+    depends_on:
+      - xlayer-erigon-rpc
     volumes:
       - ./sequencer.keystore:/pk/sequencer.keystore
       - ./config/seqsender.node.config.toml:/app/config.toml
@@ -119,6 +128,10 @@ services:
   xlayer-aggregator:
     container_name: xlayer-aggregator
     image: zjg555543/erigon-aggregator:v0.0.1-RC7
+    depends_on:
+      - xlayer-mock-l1-network
+      - xlayer-state-db
+      - xlayer-aggregator-db
     ports:
       - 50081:50081
     volumes:
@@ -133,6 +146,9 @@ services:
   xlayer-prover:
     container_name: xlayer-prover
     image: hermeznetwork/zkevm-prover:v6.0.1
+    depends_on:
+      - xlayer-state-db
+      - xlayer-aggregator
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
@@ -141,6 +157,8 @@ services:
   xlayer-approve:
     container_name: zkevm-approve
     image: hermeznetwork/zkevm-node:v0.6.6
+    depends_on:
+      - xlayer-mock-l1-network
     volumes:
       - ./sequencer.keystore:/pk/keystore
       - ./config/test.node.config.toml:/app/config.toml

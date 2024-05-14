@@ -13,6 +13,7 @@ const (
 	DELEGATECALL_TYP = "delegatecall"
 	STATICCAL_TYP    = "staticcall"
 	CREATE_TYP       = "create"
+	CREATE2_TYP      = "create2"
 	SUICIDE_TYP      = "suicide"
 )
 

@@ -246,9 +246,9 @@ func opCreate2_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContex
 	scope.Contract.UseGas(gas)
 	// reuse size int for stackvalue
 	stackValue := size
-	innerTx, newIndex := beforeOp(interpreter, CREATE_TYP, scope.Contract.Address(), nil, nil, input, gas, endowment.ToBig())
+	innerTx, newIndex := beforeOp(interpreter, CREATE2_TYP, scope.Contract.Address(), nil, nil, input, gas, endowment.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create2(scope.Contract, input, gas, &endowment, &salt)
-	afterOp(interpreter, CREATE_TYP, gas-returnGas, newIndex, innerTx, &addr, suberr)
+	afterOp(interpreter, CREATE2_TYP, gas-returnGas, newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error.
 	if suberr != nil {

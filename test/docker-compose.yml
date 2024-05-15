@@ -6,6 +6,9 @@ services:
   xlayer-aggregator-db:
     container_name: xlayer-aggregator-db
     image: postgres:15
+    healthcheck:
+      test: ["CMD", "pg_isready"]
+      interval: 5s
     deploy:
       resources:
         limits:
@@ -26,6 +29,9 @@ services:
   xlayer-state-db:
     container_name: xlayer-state-db
     image: postgres:15
+    healthcheck:
+      test: [ "CMD", "pg_isready" ]
+      interval: 5s
     ports:
       - 5432:5432
     volumes:
@@ -74,7 +80,6 @@ services:
     image: xlayer-erigon
     depends_on:
       - xlayer-state-db
-      - xlayer-stateless-executor
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
@@ -102,7 +107,8 @@ services:
     container_name: xlayer-stateless-executor
     image: hermeznetwork/zkevm-prover:v6.0.2-RC3
     depends_on:
-      - xlayer-state-db
+      xlayer-state-db:
+        condition: service_healthy
     ports:
       - 0.0.0.0:50061:50061 # MT
       - 0.0.0.0:50071:50071 # Executor
@@ -129,9 +135,14 @@ services:
     container_name: xlayer-aggregator
     image: zjg555543/erigon-aggregator:v0.0.1-RC7
     depends_on:
-      - xlayer-mock-l1-network
-      - xlayer-state-db
-      - xlayer-aggregator-db
+      xlayer-mock-l1-network:
+        condition: service_started
+      xlayer-state-db:
+        condition: service_healthy
+      xlayer-aggregator-db:
+        condition: service_healthy
+      xlayer-erigon-seq:
+        condition: service_started
     ports:
       - 50081:50081
     volumes:

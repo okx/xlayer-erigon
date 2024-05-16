@@ -161,13 +161,6 @@ func makeLog_zkevm(size int) executionFunc {
 
 		d := scope.Memory.GetCopy(int64(mStart.Uint64()), int64(mSize.Uint64()))
 
-		// [zkEvm] fill 0 at the end
-		//dataLen := len(d)
-		//lenMod32 := dataLen & 31
-		//if lenMod32 != 0 {
-		//	d = append(d, make([]byte, 32-lenMod32)...)
-		//}
-
 		interpreter.evm.IntraBlockState().AddLog_zkEvm(&types.Log{
 			Address: scope.Contract.Address(),
 			Topics:  topics,

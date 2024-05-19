@@ -8,7 +8,6 @@ import (
 	"math/big"
 
 	"github.com/RoaringBitmap/roaring"
-	"github.com/holiman/uint256"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -16,6 +15,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv/iter"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/order"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/rawdbv3"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/chain"
@@ -71,7 +71,7 @@ func (api *BaseAPI) getReceipts(ctx context.Context, tx kv.Tx, chainConfig *chai
 		if err != nil {
 			return nil, err
 		}
-		receipt, _, err := core.ApplyTransaction(chainConfig, core.GetHashFn(header, getHeader), engine, nil, gp, ibs, noopWriter, header, txn, usedGas, vm.Config{}, excessDataGas, effectiveGasPricePercentage)
+		receipt, _, _, err := core.ApplyTransaction(chainConfig, core.GetHashFn(header, getHeader), engine, nil, gp, ibs, noopWriter, header, txn, usedGas, vm.Config{}, excessDataGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err
 		}

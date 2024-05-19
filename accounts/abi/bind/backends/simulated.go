@@ -25,12 +25,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	state2 "github.com/gateway-fm/cdk-erigon-lib/state"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/log/v3"
@@ -719,7 +719,7 @@ func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx types.Transac
 
 	b.pendingState.Prepare(tx.Hash(), libcommon.Hash{}, len(b.pendingBlock.Transactions()))
 	//fmt.Printf("==== Start producing block %d, header: %d\n", b.pendingBlock.NumberU64(), b.pendingHeader.Number.Uint64())
-	if _, _, err := core.ApplyTransaction(
+	if _, _, _, err := core.ApplyTransaction(
 		b.m.ChainConfig, core.GetHashFn(b.pendingHeader, b.getHeader), b.m.Engine,
 		&b.pendingHeader.Coinbase, b.gasPool,
 		b.pendingState, state.NewNoopWriter(),

@@ -131,8 +131,10 @@ Loop:
 		writeChangeSets := nextStagesExpectData || blockNum > cfg.prune.History.PruneTo(to)
 		writeReceipts := nextStagesExpectData || blockNum > cfg.prune.Receipts.PruneTo(to)
 		writeCallTraces := nextStagesExpectData || blockNum > cfg.prune.CallTraces.PruneTo(to)
+		// TODO
+		writeInnerTxs := true //nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to)
 
-		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, initialCycle, stateStream, hermezDb)
+		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", block.Hash().String(), "err", err)
@@ -383,6 +385,7 @@ func executeBlockZk(
 	writeChangesets bool,
 	writeReceipts bool,
 	writeCallTraces bool,
+	writeInnerTxs bool,
 	initialCycle bool,
 	stateStream bool,
 	roHermezDb state.ReadOnlyHermezDb,
@@ -426,8 +429,8 @@ func executeBlockZk(
 				return nil, err
 			}
 		}
-
-		// TODO writeInnerTxs?
+	}
+	if writeInnerTxs {
 		if err := rawdb.WriteInnerTxs(tx, blockNum, execRs.InnerTxs); err != nil {
 			return nil, err
 		}

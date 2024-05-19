@@ -103,6 +103,8 @@ func ExecuteBlockEphemerally(
 		rejectedTxs []*RejectedTx
 		includedTxs types.Transactions
 		receipts    types.Receipts
+
+		blockInnerTxs [][]*vm.InnerTx
 	)
 
 	var excessDataGas *big.Int
@@ -142,7 +144,7 @@ func ExecuteBlockEphemerally(
 			return nil, err
 		}
 
-		receipt, _, err := ApplyTransaction(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, *vmConfig, excessDataGas, effectiveGasPricePercentage)
+		receipt, _, innerTxs, err := ApplyTransaction(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, *vmConfig, excessDataGas, effectiveGasPricePercentage)
 		if writeTrace {
 			if ftracer, ok := vmConfig.Tracer.(vm.FlushableTracer); ok {
 				ftracer.Flush(tx)
@@ -160,6 +162,9 @@ func ExecuteBlockEphemerally(
 			includedTxs = append(includedTxs, tx)
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
+			}
+			if !vmConfig.NoInnerTxs {
+				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
 		}
 	}
@@ -199,6 +204,7 @@ func ExecuteBlockEphemerally(
 		Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
 		GasUsed:     math.HexOrDecimal64(*usedGas),
 		Rejected:    rejectedTxs,
+		InnerTxs:    blockInnerTxs,
 	}
 
 	return execRs, nil
@@ -227,6 +233,8 @@ func ExecuteBlockEphemerallyBor(
 		rejectedTxs []*RejectedTx
 		includedTxs types.Transactions
 		receipts    types.Receipts
+
+		blockInnerTxs [][]*vm.InnerTx
 	)
 
 	var excessDataGas *big.Int
@@ -257,7 +265,7 @@ func ExecuteBlockEphemerallyBor(
 		}
 		gp.Reset(block.GasLimit())
 
-		receipt, _, err := ApplyTransaction(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, *vmConfig, excessDataGas, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED)
+		receipt, _, innerTxs, err := ApplyTransaction(chainConfig, blockHashFunc, engine, nil, gp, ibs, noop, header, tx, usedGas, *vmConfig, excessDataGas, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED)
 		if writeTrace {
 			if ftracer, ok := vmConfig.Tracer.(vm.FlushableTracer); ok {
 				ftracer.Flush(tx)
@@ -274,6 +282,9 @@ func ExecuteBlockEphemerallyBor(
 			includedTxs = append(includedTxs, tx)
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
+			}
+			if !vmConfig.NoInnerTxs {
+				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
 		}
 	}
@@ -330,6 +341,7 @@ func ExecuteBlockEphemerallyBor(
 		GasUsed:          math.HexOrDecimal64(*usedGas),
 		Rejected:         rejectedTxs,
 		StateSyncReceipt: stateSyncReceipt,
+		InnerTxs:         blockInnerTxs,
 	}
 
 	return execRs, nil
@@ -355,7 +367,7 @@ func SysCallContract(contract libcommon.Address, data []byte, chainConfig chain.
 		data, nil, false,
 		true, // isFree
 	)
-	vmConfig := vm.Config{NoReceipts: true, RestoreState: constCall}
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true, RestoreState: constCall}
 	// Create a new context to be used in the EVM environment
 	isBor := chainConfig.Bor != nil
 	var txContext evmtypes.TxContext
@@ -399,7 +411,7 @@ func SysCreate(contract libcommon.Address, data []byte, chainConfig chain.Config
 		data, nil, false,
 		true, // isFree
 	)
-	vmConfig := vm.Config{NoReceipts: true}
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true}
 	// Create a new context to be used in the EVM environment
 	author := &contract
 	txContext := NewEVMTxContext(msg)
@@ -428,8 +440,8 @@ func CallContract(contract libcommon.Address, data []byte, chainConfig chain.Con
 	if err != nil {
 		return nil, fmt.Errorf("SysCallContract: %w ", err)
 	}
-	vmConfig := vm.Config{NoReceipts: true}
-	_, result, err = ApplyTransaction(&chainConfig, GetHashFn(header, nil), engine, &state.SystemAddress, gp, ibs, noop, header, tx, &gasUsed, vmConfig, excessDataGas, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED)
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true}
+	_, result, _, err = ApplyTransaction(&chainConfig, GetHashFn(header, nil), engine, &state.SystemAddress, gp, ibs, noop, header, tx, &gasUsed, vmConfig, excessDataGas, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED)
 	if err != nil {
 		return result, fmt.Errorf("SysCallContract: %w ", err)
 	}

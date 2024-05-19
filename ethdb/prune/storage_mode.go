@@ -166,6 +166,7 @@ type Mode struct {
 	TxIndex     BlockAmount
 	CallTraces  BlockAmount
 	Experiments Experiments
+	InnerTxs    BlockAmount
 }
 
 type BlockAmount interface {

@@ -67,9 +67,10 @@ func ExecuteBlockEphemerallyZk(
 	gp.AddGas(blockGasLimit)
 
 	var (
-		rejectedTxs   []*RejectedTx
-		includedTxs   types.Transactions
-		receipts      types.Receipts
+		rejectedTxs []*RejectedTx
+		includedTxs types.Transactions
+		receipts    types.Receipts
+
 		blockInnerTxs [][]*vm.InnerTx
 	)
 
@@ -162,8 +163,9 @@ func ExecuteBlockEphemerallyZk(
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
 			}
-			// TODO vmConfig.NoInnerTxs
-			blockInnerTxs = append(blockInnerTxs, innerTxs)
+			if !vmConfig.NoInnerTxs {
+				blockInnerTxs = append(blockInnerTxs, innerTxs)
+			}
 		}
 		if !chainConfig.IsForkID7Etrog(block.NumberU64()) {
 			if err := ibs.ScalableSetSmtRootHash(roHermezDb); err != nil {

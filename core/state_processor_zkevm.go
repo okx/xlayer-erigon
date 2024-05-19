@@ -112,7 +112,10 @@ func applyTransaction_zkevm(config *chain.Config, engine consensus.EngineReader,
 		}
 	}
 
-	innerTxs := afterApplyTransaction(evm, result.Failed())
+	var innerTxs []*vm.InnerTx
+	if !cfg.NoInnerTxs {
+		innerTxs = afterApplyTransaction(evm, result.Failed())
+	}
 	return receipt, result, innerTxs, err
 }
 

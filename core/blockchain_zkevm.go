@@ -360,7 +360,7 @@ func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, bloc
 		return
 	}
 
-	log.Warnf("TryToFixCumulativeGas, chainID:%d, tx hash:%v, gas used %d, raw cumulative gas used %d but will use the gasUsed",
+	log.Warnf("Try to fix cumulative gas, chain id:%d, tx hash:%v, gas used %d, raw cumulative gas used:%d but will use the gas used.",
 		chainConfig.ChainID.Uint64(), receipt.TxHash, receipt.GasUsed, receipt.CumulativeGasUsed)
 	receipt.CumulativeGasUsed = receipt.GasUsed
 }

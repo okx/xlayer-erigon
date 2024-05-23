@@ -70,7 +70,7 @@ func SpawnStageL1Syncer(
 	logPrefix := s.LogPrefix()
 	///// DEBUG BISECT /////
 	if cfg.zkCfg.DebugLimit > 0 {
-		log.Info(fmt.Sprintf("[%s] Debug mode, ignore L1 sync", logPrefix))
+		log.Info(fmt.Sprintf("[%s] Debug limit set, ignore L1 sync", logPrefix))
 		return nil
 	}
 	///// DEBUG BISECT /////

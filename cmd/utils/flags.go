@@ -582,6 +582,11 @@ var (
 		Usage: "Disable syncing",
 		Value: false,
 	}
+	DebugOnlyDs = cli.BoolFlag{
+		Name:  "debug.only-ds",
+		Usage: "Debug only with data stream",
+		Value: false,
+	}
 	DebugLimit = cli.UintFlag{
 		Name:  "debug.limit",
 		Usage: "Limit the number of blocks to sync",

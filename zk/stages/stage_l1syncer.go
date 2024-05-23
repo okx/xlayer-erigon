@@ -74,6 +74,11 @@ func SpawnStageL1Syncer(
 	///// DEBUG BISECT /////
 
 	logPrefix := s.LogPrefix()
+	if cfg.zkCfg.DebugOnlyDs {
+		log.Info(fmt.Sprintf("[%s] Ignore L1 sync", logPrefix))
+		return nil
+	}
+
 	log.Info(fmt.Sprintf("[%s] Starting L1 sync stage", logPrefix))
 	if sequencer.IsSequencer() {
 		log.Info(fmt.Sprintf("[%s] skipping -- sequencer", logPrefix))

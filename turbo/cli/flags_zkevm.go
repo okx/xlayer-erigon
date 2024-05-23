@@ -116,6 +116,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DebugLimit:                             ctx.Uint64(utils.DebugLimit.Name),
 		DebugStep:                              ctx.Uint64(utils.DebugStep.Name),
 		DebugStepAfter:                         ctx.Uint64(utils.DebugStepAfter.Name),
+		DebugOnlyDs:                            ctx.Bool(utils.DebugOnlyDs.Name),
 		PoolManagerUrl:                         ctx.String(utils.PoolManagerUrl.Name),
 		DisableVirtualCounters:                 ctx.Bool(utils.DisableVirtualCounters.Name),
 	}

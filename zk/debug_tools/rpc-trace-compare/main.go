@@ -74,14 +74,13 @@ func main() {
 		log.Warn("----------------------------------------------")
 		log.Warn("Comparing tx", "txHash", txHash)
 
-		localTrace, err := getTxReceipt(rpcConfig.LocalUrl, txHash)
+		localTrace, err := getRpcTrace(rpcConfig.LocalUrl, txHash)
 		if err != nil {
 			log.Error("Getting localTrace failed:", "err", err)
 			continue
 		}
-		fmt.Println(fmt.Sprintf("%v", localTrace))
 
-		remoteTrace, err := getTxReceipt(rpcConfig.Url, txHash)
+		remoteTrace, err := getRpcTrace(rpcConfig.Url, txHash)
 		if err != nil {
 			log.Error("Getting remoteTrace failed:", "err", err)
 			continue
@@ -129,46 +128,6 @@ func getRpcTrace(url string, txHash string) (*HttpResult, error) {
 	body, _ := io.ReadAll(resp.Body)
 	var httpResp HTTPResponse
 	json.Unmarshal(body, &httpResp)
-
-	if httpResp.Error.Code != 0 {
-		return nil, fmt.Errorf("failed to get trace: %v", httpResp.Error)
-	}
-	return &httpResp.Result, nil
-}
-
-func getTxReceipt(url string, txHash string) (*HttpResult, error) {
-	payloadbytecode := RequestData{
-		Method:  "eth_getTransactionReceipt",
-		Params:  []string{txHash},
-		ID:      1,
-		Jsonrpc: "2.0",
-	}
-
-	jsonPayload, err := json.Marshal(payloadbytecode)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonPayload))
-	if err != nil {
-		return nil, err
-	}
-	// req.SetBasicAuth(cfg.Username, cfg.Pass)
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("failed to get rpc: %v", resp.Body)
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-	var httpResp HTTPResponse
-	json.Unmarshal(body, &httpResp)
-	fmt.Println(fmt.Sprintf("%v", string(body)))
 
 	if httpResp.Error.Code != 0 {
 		return nil, fmt.Errorf("failed to get trace: %v", httpResp.Error)

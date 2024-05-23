@@ -206,6 +206,19 @@ func compareReceipt(localReceipt, remoteReceipt *Receipt) bool {
 	}
 	logs1 := localReceipt.Logs
 	logs2 := remoteReceipt.Logs
+
+	if localReceipt.Root != remoteReceipt.Root {
+		log.Error("Root mismatch", "Local", localReceipt.Root, "Remote", remoteReceipt.Root)
+		receiptMatches = false
+	}
+	if localReceipt.CumulativeGasUsed != remoteReceipt.CumulativeGasUsed {
+		log.Error("CumulativeGasUsed mismatch", "Local", localReceipt.CumulativeGasUsed, "Remote", remoteReceipt.CumulativeGasUsed)
+		receiptMatches = false
+	}
+	if localReceipt.LogsBloom != remoteReceipt.LogsBloom {
+		log.Error("LogsBloom mismatch", "Local", localReceipt.LogsBloom, "Remote", remoteReceipt.LogsBloom)
+		receiptMatches = false
+	}
 	for j := range logs1 {
 		if logs1[j].LogIndex != logs2[j].LogIndex {
 			log.Error("LogIndex mismatch", "Local", logs1[j].LogIndex, "Remote", logs2[j].LogIndex)
@@ -246,15 +259,6 @@ func compareReceipt(localReceipt, remoteReceipt *Receipt) bool {
 			receiptMatches = false
 		}
 	}
-
-	if localReceipt.CumulativeGasUsed != remoteReceipt.CumulativeGasUsed {
-		log.Error("CumulativeGasUsed mismatch", "Local", localReceipt.CumulativeGasUsed, "Remote", remoteReceipt.CumulativeGasUsed)
-		receiptMatches = false
-	}
-	if localReceipt.LogsBloom != remoteReceipt.LogsBloom {
-		log.Error("LogsBloom mismatch", "Local", localReceipt.LogsBloom, "Remote", remoteReceipt.LogsBloom)
-		receiptMatches = false
-	}
 	if localReceipt.Status != remoteReceipt.Status {
 		log.Error("Status mismatch", "Local", localReceipt.Status, "Remote", remoteReceipt.Status)
 		receiptMatches = false
@@ -263,19 +267,17 @@ func compareReceipt(localReceipt, remoteReceipt *Receipt) bool {
 		log.Error("TransactionHash mismatch", "Local", localReceipt.TransactionHash, "Remote", remoteReceipt.TransactionHash)
 		receiptMatches = false
 	}
-
 	if localReceipt.TransactionIndex != remoteReceipt.TransactionIndex {
 		log.Error("TransactionIndex mismatch", "Local", localReceipt.TransactionIndex, "Remote", remoteReceipt.TransactionIndex)
 		receiptMatches = false
 	}
-
 	if localReceipt.BlockNumber != remoteReceipt.BlockNumber {
 		log.Error("BlockNumber mismatch", "Local", localReceipt.BlockNumber, "Remote", remoteReceipt.BlockNumber)
 		receiptMatches = false
 	}
 	if localReceipt.GasUsed != remoteReceipt.GasUsed {
-		//log.Error("GasUsed mismatch", "Local", localReceipt.GasUsed, "Remote", remoteReceipt.GasUsed)
-		//receiptMatches = false
+		log.Error("GasUsed mismatch", "Local", localReceipt.GasUsed, "Remote", remoteReceipt.GasUsed)
+		receiptMatches = false
 	}
 	if localReceipt.From != remoteReceipt.From {
 		log.Error("From mismatch", "Local", localReceipt.From, "Remote", remoteReceipt.From)
@@ -293,10 +295,12 @@ func compareReceipt(localReceipt, remoteReceipt *Receipt) bool {
 		log.Error("Type mismatch", "Local", localReceipt.Type, "Remote", remoteReceipt.Type)
 		receiptMatches = false
 	}
+
 	if localReceipt.EffectiveGasPrice != remoteReceipt.EffectiveGasPrice {
 		log.Error("EffectiveGasPrice mismatch", "Local", localReceipt.EffectiveGasPrice, "Remote", remoteReceipt.EffectiveGasPrice)
 		receiptMatches = false
 	}
+
 	return receiptMatches
 }
 

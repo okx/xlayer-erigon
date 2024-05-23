@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/ethclient"
 	"github.com/ledgerwatch/erigon/zk/debug_tools"
 	"github.com/ledgerwatch/log/v3"
@@ -89,6 +90,10 @@ func main() {
 	blockRemote, err := rpcClientRemote.BlockByNumber(ctx, blockNum)
 	if err != nil {
 		log.Error("rpcClientLocal.BlockByNumber", "err", err)
+	}
+
+	if !compareBlock(blockLocal, blockRemote) {
+		log.Error("Block mismatch")
 	}
 
 	// compare block tx hashes
@@ -293,4 +298,78 @@ func compareReceipt(localReceipt, remoteReceipt *Receipt) bool {
 		receiptMatches = false
 	}
 	return receiptMatches
+}
+
+func compareBlock(localBlock, remoteBlock *types.Block) bool {
+	blockMatches := true
+	if localBlock.Hash() != remoteBlock.Hash() {
+		blockMatches = false
+		log.Error("Block hash mismatch", "Local", localBlock.Hash(), "Remote", remoteBlock.Hash())
+	}
+	localHeader := localBlock.Header()
+	remoteHeader := remoteBlock.Header()
+	if localHeader.ParentHash != remoteHeader.ParentHash {
+		blockMatches = false
+		log.Error("ParentHash mismatch", "Local", localHeader.ParentHash, "Remote", remoteHeader.ParentHash)
+	}
+	if localHeader.UncleHash != remoteHeader.UncleHash {
+		blockMatches = false
+		log.Error("UncleHash mismatch", "Local", localHeader.UncleHash, "Remote", remoteHeader.UncleHash)
+	}
+	if localHeader.Root != remoteHeader.Root {
+		blockMatches = false
+		log.Error("Root mismatch", "Local", localHeader.Root, "Remote", remoteHeader.Root)
+	}
+	if localHeader.TxHash != remoteHeader.TxHash {
+		blockMatches = false
+		log.Error("TxHash mismatch", "Local", localHeader.TxHash, "Remote", remoteHeader.TxHash)
+	}
+	if localHeader.ReceiptHash != remoteHeader.ReceiptHash {
+		blockMatches = false
+		log.Error("ReceiptHash mismatch", "Local", localHeader.ReceiptHash, "Remote", remoteHeader.ReceiptHash)
+	}
+	if localHeader.Bloom != remoteHeader.Bloom {
+		blockMatches = false
+		log.Error("Bloom mismatch", "Local", localHeader.Bloom, "Remote", remoteHeader.Bloom)
+	}
+	if localHeader.Difficulty.Cmp(remoteHeader.Difficulty) != 0 {
+		blockMatches = false
+		log.Error("Difficulty mismatch", "Local", localHeader.Difficulty, "Remote", remoteHeader.Difficulty)
+	}
+	if localHeader.Number.Cmp(remoteHeader.Number) != 0 {
+		blockMatches = false
+		log.Error("Number mismatch", "Local", localHeader.Number, "Remote", remoteHeader.Number)
+	}
+	if localHeader.GasLimit != remoteHeader.GasLimit {
+		blockMatches = false
+		log.Error("GasLimit mismatch", "Local", localHeader.GasLimit, "Remote", remoteHeader.GasLimit)
+	}
+	if localHeader.GasUsed != remoteHeader.GasUsed {
+		blockMatches = false
+		log.Error("GasUsed mismatch", "Local", localHeader.GasUsed, "Remote", remoteHeader.GasUsed)
+	}
+	if localHeader.Time != remoteHeader.Time {
+		blockMatches = false
+		log.Error("Time mismatch", "Local", localHeader.Time, "Remote", remoteHeader.Time)
+	}
+	if !bytes.Equal(localHeader.Extra, remoteHeader.Extra) {
+		blockMatches = false
+		log.Error("Extra mismatch", "Local", localHeader.Extra, "Remote", remoteHeader.Extra)
+	}
+
+	if localHeader.MixDigest != remoteHeader.MixDigest {
+		blockMatches = false
+		log.Error("MixDigest mismatch", "Local", localHeader.MixDigest, "Remote", remoteHeader.MixDigest)
+	}
+
+	if localHeader.Nonce != remoteHeader.Nonce {
+		blockMatches = false
+		log.Error("Nonce mismatch", "Local", localHeader.Nonce, "Remote", remoteHeader.Nonce)
+	}
+	if localHeader.BaseFee != remoteHeader.BaseFee {
+		blockMatches = false
+		log.Error("BaseFee mismatch", "Local", localHeader.BaseFee, "Remote", remoteHeader.BaseFee)
+	}
+
+	return blockMatches
 }

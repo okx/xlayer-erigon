@@ -356,7 +356,12 @@ func FinalizeBlockExecutionWithHistoryWrite(
 }
 
 func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, blockNum uint64, roHermezDb state.ReadOnlyHermezDb, tx types.Transaction) {
-	if !zkchainconfig.IsXLayerTestnetChain(chainConfig.ChainID.Uint64()) || !chainConfig.IsForkID8Elderberry(blockNum) {
+	if !zkchainconfig.IsXLayerTestnetChain(chainConfig.ChainID.Uint64()) {
+		return
+	}
+
+	//block must between fork8 and fork9
+	if !chainConfig.IsForkID8Elderberry(blockNum) || chainConfig.IsForkID9Elderberry(blockNum) {
 		return
 	}
 

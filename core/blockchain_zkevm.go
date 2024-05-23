@@ -147,6 +147,8 @@ func ExecuteBlockEphemerallyZk(
 			receipt.CumulativeGasUsed = receipt.GasUsed
 		}
 
+		tryFixCumulativeGas(receipt, chainConfig, blockNum)
+
 		if err != nil {
 			if !vmConfig.StatelessExec {
 				return nil, fmt.Errorf("could not apply tx %d from block %d [%v]: %w", txIndex, block.NumberU64(), tx.Hash().Hex(), err)

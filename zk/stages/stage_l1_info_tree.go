@@ -41,8 +41,8 @@ func SpawnL1InfoTreeStage(
 ) (err error) {
 	logPrefix := s.LogPrefix()
 
-	if cfg.zkCfg.DebugOnlyDs {
-		log.Info(fmt.Sprintf("[%s] Ignore L1 sync", logPrefix))
+	if cfg.zkCfg.DebugLimit > 0 {
+		log.Info(fmt.Sprintf("[%s] Debug limit set, ignore L1 sync", logPrefix))
 		return nil
 	}
 

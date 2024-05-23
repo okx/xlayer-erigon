@@ -208,7 +208,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.SyncLimit,
 	&utils.SupportGasless,
 	&utils.DebugNoSync,
-	&utils.DebugOnlyDs,
 	&utils.DebugLimit,
 	&utils.DebugStep,
 	&utils.DebugStepAfter,

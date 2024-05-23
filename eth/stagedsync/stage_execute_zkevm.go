@@ -259,23 +259,20 @@ func getExecRange(cfg ExecuteBlockCfg, tx kv.RwTx, stageProgress, toBlock uint64
 	if toBlock > 0 {
 		to = cmp.Min(prevStageProgress, toBlock)
 	}
-	if cfg.zk.DebugOnlyDs {
-		log.Info(fmt.Sprintf("[%s] Ignore L1 sync", logPrefix))
-		shouldShortCircuit = false
-	}
-
-	if shouldShortCircuit {
-		to = noProgressTo
-	}
 
 	// if debug limit set, use it
 	if cfg.zk.DebugLimit > 0 {
+		shouldShortCircuit = false
 		if !quiet {
 			log.Info(fmt.Sprintf("[%s] Debug limit set, switching to it", logPrefix), "regularTo", to, "debugTo", cfg.zk.DebugLimit)
 		}
 		if cfg.zk.DebugLimit < to {
 			to = cfg.zk.DebugLimit
 		}
+	}
+
+	if shouldShortCircuit {
+		to = noProgressTo
 	}
 
 	total := to - stageProgress

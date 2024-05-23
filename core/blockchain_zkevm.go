@@ -24,6 +24,8 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
+	"github.com/ledgerwatch/erigon/zk/zkchainconfig"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 
 	"github.com/ledgerwatch/erigon/chain"
 
@@ -349,4 +351,14 @@ func FinalizeBlockExecutionWithHistoryWrite(
 	}
 
 	return newBlock, newTxs, newReceipt, nil
+}
+
+func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, blockNum uint64) {
+	if !zkchainconfig.IsXLayerTestnetChain(chainConfig.ChainID.Uint64()) || !chainConfig.IsForkID8Elderberry(blockNum) {
+		return
+	}
+
+	log.Warnf("TryToFixCumulativeGas, chainID:%d, tx hash:%v, gas used %d, raw cumulative gas used %d but will use the gasUsed",
+		chainConfig.ChainID.Uint64(), receipt.TxHash, receipt.GasUsed, receipt.CumulativeGasUsed)
+	receipt.CumulativeGasUsed = receipt.GasUsed
 }

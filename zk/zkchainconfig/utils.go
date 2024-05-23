@@ -2,26 +2,35 @@ package zkchainconfig
 
 import "github.com/ledgerwatch/erigon/params/networkname"
 
+const XlayerTestnetChainId = 195
+const XlayerMainnetChainId = 196
+const HermezMainnetChainId = 1101
+const HermezBaliChainId = 2440
+const HermezCardonaChainId = 2442
+const HermezEtrogChainId = 10010
+const HermezLocalDevnetChainId = 999999
+const HermezEsTestChainId = 123
+
 var chainIds = []uint64{
-	195,    // xlayer-testnet
-	196,    // xlayer-mainet
-	1101,   // mainnet
-	2440,   // cardona internal
-	2442,   // cardona
-	10010,  //etrog testnet
-	999999, // local devnet
-	123,    // estestnet
+	XlayerTestnetChainId,     // xlayer-testnet
+	XlayerMainnetChainId,     // xlayer-mainet
+	HermezMainnetChainId,     // mainnet
+	HermezBaliChainId,        // cardona internal
+	HermezCardonaChainId,     // cardona
+	HermezEtrogChainId,       //etrog testnet
+	HermezLocalDevnetChainId, // local devnet
+	HermezEsTestChainId,      // estestnet
 }
 
 var chainIdToName = map[uint64]string{
-	195:    networkname.XLayerTestnetChainName,
-	196:    networkname.XLayerMainnetChainName,
-	1101:   networkname.HermezMainnetChainName,
-	2440:   networkname.HermezBaliChainName,
-	2442:   networkname.HermezCardonaChainName,
-	10010:  networkname.HermezEtrogChainName,
-	999999: networkname.HermezLocalDevnetChainName,
-	123:    networkname.HermezESTestChainName,
+	XlayerTestnetChainId:     networkname.XLayerTestnetChainName,
+	XlayerMainnetChainId:     networkname.XLayerMainnetChainName,
+	HermezMainnetChainId:     networkname.HermezMainnetChainName,
+	HermezBaliChainId:        networkname.HermezBaliChainName,
+	HermezCardonaChainId:     networkname.HermezCardonaChainName,
+	HermezEtrogChainId:       networkname.HermezEtrogChainName,
+	HermezLocalDevnetChainId: networkname.HermezLocalDevnetChainName,
+	HermezEsTestChainId:      networkname.HermezESTestChainName,
 }
 
 func IsZk(chainId uint64) bool {
@@ -31,6 +40,10 @@ func IsZk(chainId uint64) bool {
 		}
 	}
 	return false
+}
+
+func IsXLayerTestnetChain(chainId uint64) bool {
+	return chainId == XlayerTestnetChainId
 }
 
 func GetChainName(chainId uint64) string {

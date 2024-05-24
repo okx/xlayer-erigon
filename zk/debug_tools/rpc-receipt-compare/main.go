@@ -82,14 +82,15 @@ func CalcReceiptHash() {
 	receipt := &types.Receipt{
 		Type:              1,
 		CumulativeGasUsed: 1,
-		//PostState:         []byte{1},
-		Status: 1,
-		Bloom:  b,
-		Logs:   []*types.Log{log1},
+		PostState:         []byte{0, 0, 0, 0},
+		Status:            1,
+		Bloom:             b,
+		Logs:              []*types.Log{log1},
 	}
 	var receipts types.Receipts
 	receipts = append(receipts, receipt)
 	receiptSha := types.DeriveSha(receipts)
+	log.Warn("receipt PostState", "PostState", receipt.PostState)
 	log.Warn("Receipt hash", "receiptSha", receiptSha)
 }
 
@@ -101,8 +102,8 @@ func main() {
 		return
 	}
 
-	CalcReceiptHash()
-	return
+	//CalcReceiptHash()
+	//return
 	log.Warn("Starting receipt comparison", "blockNumber", rpcConfig.Block)
 	defer log.Warn("Check finished.")
 

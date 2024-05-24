@@ -147,7 +147,7 @@ func ExecuteBlockEphemerallyZk(
 			receipt.CumulativeGasUsed = receipt.GasUsed
 		}
 
-		tryFixCumulativeGas(receipt, chainConfig, blockNum, roHermezDb, tx)
+		tryFixCumulativeGas(receipt, chainConfig, blockNum, roHermezDb, tx, header)
 
 		if err != nil {
 			if !vmConfig.StatelessExec {
@@ -355,7 +355,7 @@ func FinalizeBlockExecutionWithHistoryWrite(
 	return newBlock, newTxs, newReceipt, nil
 }
 
-func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, blockNum uint64, roHermezDb state.ReadOnlyHermezDb, tx types.Transaction) {
+func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, blockNum uint64, roHermezDb state.ReadOnlyHermezDb, tx types.Transaction, header *types.Header) {
 	if !zkchainconfig.IsXLayerTestnetChain(chainConfig.ChainID.Uint64()) {
 		return
 	}
@@ -370,12 +370,12 @@ func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, bloc
 	receipt.CumulativeGasUsed = receipt.GasUsed
 
 	// receipt root holds the intermediate stateroot after the tx
-	intermediateState, err := roHermezDb.GetIntermediateTxStateRoot(blockNum, tx.Hash())
-	if err != nil {
-		panic(err)
-		return
-	}
-	receipt.PostState = intermediateState.Bytes()
+	//intermediateState, err := roHermezDb.GetIntermediateTxStateRoot(blockNum, tx.Hash())
+	//if err != nil {
+	//	panic(err)
+	//	return
+	//}
+	receipt.PostState = header.Root.Bytes()
 	log.Infof("Receipt, %v,%v,%v,%v,%v", receipt.Type, receipt.PostState, receipt.Status, receipt.CumulativeGasUsed, receipt.Bloom)
 	for i := range receipt.Logs {
 		log.Infof("Log, %v,%v,%v,%v", receipt.Logs[i].Address, receipt.Logs[i].Topics, receipt.Logs[i].Data, receipt.Logs[i].TxHash)

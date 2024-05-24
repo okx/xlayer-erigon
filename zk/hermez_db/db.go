@@ -836,6 +836,7 @@ func (db *HermezDb) DeleteStateRoots(fromBlockNo, toBlockNo uint64) error {
 	return db.deleteFromBucketWithUintKeysRange(STATE_ROOTS, fromBlockNo, toBlockNo)
 }
 func (db *HermezDb) WriteIntermediateTxStateRoot(l2BlockNo uint64, txHash common.Hash, rpcRoot common.Hash) error {
+	log.Info("WriteIntermediateTxStateRoot", "l2BlockNo", l2BlockNo, "txHash", txHash, "rpcRoot", rpcRoot)
 	numberBytes := Uint64ToBytes(l2BlockNo)
 	key := append(numberBytes, txHash.Bytes()...)
 
@@ -847,13 +848,16 @@ func (db *HermezDbReader) GetIntermediateTxStateRoot(l2BlockNo uint64, txHash co
 	key := append(numberBytes, txHash.Bytes()...)
 	data, err := db.tx.GetOne(INTERMEDIATE_TX_STATEROOTS, key)
 	if err != nil {
+		log.Error("GetIntermediateTxStateRoot", "l2BlockNo", l2BlockNo, "txHash", txHash, "error", err)
 		return common.Hash{}, err
 	}
 
+	log.Info("GetIntermediateTxStateRoot", "l2BlockNo", l2BlockNo, "txHash", txHash, "rpcRoot", common.BytesToHash(data))
 	return common.BytesToHash(data), nil
 }
 
 func (db *HermezDb) DeleteIntermediateTxStateRoots(fromBlockNo, toBlockNo uint64) error {
+	log.Info("DeleteIntermediateTxStateRoots", "fromBlockNo", fromBlockNo, "toBlockNo", toBlockNo)
 	c, err := db.tx.Cursor(INTERMEDIATE_TX_STATEROOTS)
 	if err != nil {
 		return err

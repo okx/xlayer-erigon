@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"io"
 	"math/big"
 	"net/http"
@@ -59,6 +60,39 @@ type RequestData struct {
 	Jsonrpc string   `json:"jsonrpc"`
 }
 
+func CalcReceiptHash() {
+	var b types.Bloom
+	b.SetBytes([]byte{2})
+
+	addr := libcommon.HexToAddress("0xd6dda5aa7749142b7fda3fe4662c9f346101b8a6")
+
+	log1 := &types.Log{
+		Address: addr,
+		Topics:  []libcommon.Hash{libcommon.HexToHash("0x1")},
+		Data:    []byte{1},
+		TxHash:  libcommon.HexToHash("0x1"),
+
+		TxIndex:     2,
+		BlockNumber: 2,
+		BlockHash:   libcommon.HexToHash("0x2"),
+		Index:       2,
+		Removed:     true,
+	}
+
+	receipt := &types.Receipt{
+		Type:              1,
+		CumulativeGasUsed: 1,
+		//PostState:         []byte{1},
+		Status: 1,
+		Bloom:  b,
+		Logs:   []*types.Log{log1},
+	}
+	var receipts types.Receipts
+	receipts = append(receipts, receipt)
+	receiptSha := types.DeriveSha(receipts)
+	log.Warn("Receipt hash", "receiptSha", receiptSha)
+}
+
 func main() {
 	ctx := context.Background()
 	rpcConfig, err := debug_tools.GetConf()
@@ -67,6 +101,8 @@ func main() {
 		return
 	}
 
+	CalcReceiptHash()
+	return
 	log.Warn("Starting receipt comparison", "blockNumber", rpcConfig.Block)
 	defer log.Warn("Check finished.")
 
@@ -140,7 +176,6 @@ func main() {
 			remote, _ := json.MarshalIndent(remoteReceipt, "", "  ")
 			writeToFile(fmt.Sprintf("local-hash-%s", txHash), string(local))
 			writeToFile(fmt.Sprintf("remote-hash-%s", txHash), string(remote))
-			return
 		}
 	}
 }

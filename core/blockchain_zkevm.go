@@ -365,7 +365,7 @@ func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, bloc
 		return
 	}
 
-	log.Warnf("Try to fix cumulative gas, chain id:%d, tx hash:%v, gas used %d, raw cumulative gas used:%d but will use the gas used.",
+	log.Infof("Try to fix cumulative gas, chain id:%d, tx hash:%v, gas used %d, raw cumulative gas used:%d but will use the gas used.",
 		chainConfig.ChainID.Uint64(), receipt.TxHash, receipt.GasUsed, receipt.CumulativeGasUsed)
 	receipt.CumulativeGasUsed = receipt.GasUsed
 
@@ -376,6 +376,12 @@ func tryFixCumulativeGas(receipt *types.Receipt, chainConfig *chain.Config, bloc
 		return
 	}
 	receipt.PostState = intermediateState.Bytes()
+	log.Infof("Receipt, %v,%v,%v,%v,%v", receipt.Type, receipt.PostState, receipt.Status, receipt.CumulativeGasUsed, receipt.Bloom)
+	for i := range receipt.Logs {
+		log.Infof("Log, %v,%v,%v,%v", receipt.Logs[i].Address, receipt.Logs[i].Topics, receipt.Logs[i].Data, receipt.Logs[i].TxHash)
+		for j := range receipt.Logs[i].Topics {
+			log.Infof("Topic, %v", receipt.Logs[i].Topics[j])
+		}
+	}
 
-	log.Warnf("Receipt postState:%v", receipt.PostState)
 }

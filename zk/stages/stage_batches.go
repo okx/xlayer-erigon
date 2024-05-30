@@ -161,6 +161,9 @@ func SpawnStageBatches(
 			// this will download all blocks from datastream and push them in a channel
 			// if no error, break, else continue trying to get them
 			// Create bookmark
+			if batchesProgress == 2000 {
+				batchesProgress = 1999
+			}
 			bookmark := types.NewL2BlockBookmark(batchesProgress + 1)
 			cfg.dsClient.ReadAllEntriesToChannel(bookmark)
 		}()
@@ -203,6 +206,28 @@ func SpawnStageBatches(
 	lastWrittenTimeAtomic := cfg.dsClient.GetLastWrittenTimeAtomic()
 	streamingAtomic := cfg.dsClient.GetStreamingAtomic()
 	errChan := cfg.dsClient.GetErrChan()
+
+	point, err := stages.GetStageProgress(tx, stages.PointBlockNumber)
+	if err != nil {
+		return fmt.Errorf("fail to set stage point blocknumber progress, %w", err)
+	}
+	if cfg.zkCfg.SyncInBatch > 0 && point < lastBlockHeight {
+		if !firstCycle {
+			nextPoint, err := stages.GetStageProgress(tx, stages.NextPointBlockNumber)
+			if err != nil {
+				return fmt.Errorf("failed to get stage next point blocknubmer progress, %w", err)
+			}
+			point = nextPoint
+		}
+		err = stages.SaveStageProgress(tx, stages.PointBlockNumber, point)
+		if err != nil {
+			return fmt.Errorf("fail to set stage point blocknumber progress, %w", err)
+		}
+		err = stages.SaveStageProgress(tx, stages.NextPointBlockNumber, point+cfg.zkCfg.SyncInBatch)
+		if err != nil {
+			return fmt.Errorf("fail to set stage next point blocknumber progress, %w", err)
+		}
+	}
 
 LOOP:
 	for {
@@ -312,6 +337,11 @@ LOOP:
 			progressChan <- blocksWritten
 
 			if endLoop && cfg.zkCfg.DebugLimit > 0 {
+				break LOOP
+			}
+			if cfg.zkCfg.SyncInBatch > 0 && l2Block.L2BlockNumber >= point {
+				time.Sleep(2 * time.Second)
+				log.Info(fmt.Sprintf("[%s] Next point %d block number have reached", logPrefix, point))
 				break LOOP
 			}
 		case gerUpdate := <-gerUpdateChan:

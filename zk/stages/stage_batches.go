@@ -161,9 +161,6 @@ func SpawnStageBatches(
 			// this will download all blocks from datastream and push them in a channel
 			// if no error, break, else continue trying to get them
 			// Create bookmark
-			if batchesProgress == 2000 {
-				batchesProgress = 1999
-			}
 			bookmark := types.NewL2BlockBookmark(batchesProgress + 1)
 			cfg.dsClient.ReadAllEntriesToChannel(bookmark)
 		}()
@@ -211,7 +208,7 @@ func SpawnStageBatches(
 	if err != nil {
 		return fmt.Errorf("fail to set stage point blocknumber progress, %w", err)
 	}
-	if cfg.zkCfg.SyncInBatch > 0 && point < lastBlockHeight {
+	if cfg.zkCfg.SyncInBatch > 0 && lastBlockHeight >= point {
 		if !firstCycle {
 			nextPoint, err := stages.GetStageProgress(tx, stages.NextPointBlockNumber)
 			if err != nil {

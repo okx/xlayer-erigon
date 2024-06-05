@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/iden3/go-iden3-crypto/keccak256"
+	ethTypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/contracts"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	"github.com/ledgerwatch/log/v3"
-	ethTypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/zk/types"
-	"github.com/iden3/go-iden3-crypto/keccak256"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/log/v3"
 )
 
 type L1SequencerSyncCfg struct {
@@ -41,8 +41,8 @@ func SpawnL1SequencerSyncStage(
 	quiet bool,
 ) (err error) {
 	logPrefix := s.LogPrefix()
-	log.Info(fmt.Sprintf("[%s] Starting L1 Info Tree stage", logPrefix))
-	defer log.Info(fmt.Sprintf("[%s] Finished L1 Info Tree stage", logPrefix))
+	log.Info(fmt.Sprintf("[%s] Starting L1 Sequencer sync stage", logPrefix))
+	defer log.Info(fmt.Sprintf("[%s] Finished L1 Sequencer sync stage", logPrefix))
 
 	freshTx := tx == nil
 	if freshTx {
@@ -53,28 +53,19 @@ func SpawnL1SequencerSyncStage(
 		defer tx.Rollback()
 	}
 
-	hermezDb := hermez_db.NewHermezDb(tx)
-
-	progress, err := stages.GetStageProgress(tx, stages.L1InfoTree)
+	progress, err := stages.GetStageProgress(tx, stages.L1SequencerSync)
 	if err != nil {
 		return err
+	}
+	if progress > 0 {
+		// if we have progress then we can assume that we have the single injected batch already so can just return here
+		return nil
 	}
 	if progress == 0 {
 		progress = cfg.zkCfg.L1FirstBlock - 1
 	}
 
-	latestUpdate, found, err := hermezDb.GetLatestL1InfoTreeUpdate()
-	if err != nil {
-		return err
-	}
-
-	// because the info tree updates are used by the RPC node and the sequencer, and we can switch between
-	// the two, we need to ensure consistency when migrating from RPC to sequencer modes of operation,
-	// so we keep track of these block numbers outside of the usual stage progress
-	latestL1InfoTreeBlockNumber, err := hermezDb.GetL1InfoTreeHighestBlock()
-	if err != nil {
-		return err
-	}
+	hermezDb := hermez_db.NewHermezDb(tx)
 
 	if !cfg.syncer.IsSyncStarted() {
 		cfg.syncer.Run(progress)
@@ -82,32 +73,30 @@ func SpawnL1SequencerSyncStage(
 
 	logChan := cfg.syncer.GetLogsChan()
 	progressChan := cfg.syncer.GetProgressMessageChan()
-	infoTreeUpdates := 0
 
 Loop:
 	for {
 		select {
-		case l := <-logChan:
-			switch l.Topics[0] {
-			case contracts.UpdateL1InfoTreeTopic:
-				if latestL1InfoTreeBlockNumber > 0 && l.BlockNumber <= latestL1InfoTreeBlockNumber {
-					continue
-				}
-				latestUpdate, err = HandleL1InfoTreeUpdate(cfg.syncer, hermezDb, l, latestUpdate, found)
-				if err != nil {
-					return err
-				}
-				found = true
-				infoTreeUpdates++
-				latestL1InfoTreeBlockNumber = l.BlockNumber
-			case contracts.InitialSequenceBatchesTopic:
-				if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l); err != nil {
-					return err
-				}
-			default:
-				log.Warn("received unexpected topic from l1 sync stage", "topic", l.Topics[0])
+		case logs := <-logChan:
+			headersMap, err := cfg.syncer.L1QueryHeaders(logs)
+			if err != nil {
+				return err
 			}
 
+			for _, l := range logs {
+				header := headersMap[l.BlockNumber]
+				switch l.Topics[0] {
+				case contracts.InitialSequenceBatchesTopic:
+					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
+						return err
+					}
+					// we only ever handle a single injected batch as a sequencer currently so we can just
+					// exit early here
+					break Loop
+				default:
+					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
+				}
+			}
 		case progMsg := <-progressChan:
 			log.Info(fmt.Sprintf("[%s] %s", logPrefix, progMsg))
 		default:
@@ -117,16 +106,17 @@ Loop:
 		}
 	}
 
-	if err = hermezDb.WriteL1InfoTreeHighestBlock(latestL1InfoTreeBlockNumber); err != nil {
-		return err
-	}
+	cfg.syncer.Stop()
 
 	progress = cfg.syncer.GetLastCheckedL1Block()
-	if err = stages.SaveStageProgress(tx, stages.L1InfoTree, progress); err != nil {
-		return err
+	if progress >= cfg.zkCfg.L1FirstBlock {
+		// do not save progress if progress less than L1FirstBlock
+		if err = stages.SaveStageProgress(tx, stages.L1SequencerSync, progress); err != nil {
+			return err
+		}
 	}
 
-	log.Info(fmt.Sprintf("[%s] Info tree updates", logPrefix), "count", infoTreeUpdates)
+	log.Info(fmt.Sprintf("[%s] L1 Sequencer sync finished", logPrefix))
 
 	if freshTx {
 		if err = tx.Commit(); err != nil {
@@ -143,11 +133,14 @@ func HandleL1InfoTreeUpdate(
 	l ethTypes.Log,
 	latestUpdate *types.L1InfoTreeUpdate,
 	found bool,
+	header *ethTypes.Header,
 ) (*types.L1InfoTreeUpdate, error) {
 	if len(l.Topics) != 3 {
 		log.Warn("Received log for info tree that did not have 3 topics")
 		return nil, nil
 	}
+	var err error
+
 	mainnetExitRoot := l.Topics[1]
 	rollupExitRoot := l.Topics[2]
 	combined := append(mainnetExitRoot.Bytes(), rollupExitRoot.Bytes()...)
@@ -168,12 +161,14 @@ func HandleL1InfoTreeUpdate(
 
 	// now we need the block timestamp and the parent hash information for the block tied
 	// to this event
-	block, err := syncer.GetBlock(l.BlockNumber)
-	if err != nil {
-		return nil, err
+	if header == nil {
+		header, err = syncer.GetHeader(l.BlockNumber)
+		if err != nil {
+			return nil, err
+		}
 	}
-	update.ParentHash = block.ParentHash()
-	update.Timestamp = block.Time()
+	update.ParentHash = header.ParentHash
+	update.Timestamp = header.Time
 	update.BlockNumber = l.BlockNumber
 
 	if err = hermezDb.WriteL1InfoTreeUpdate(update); err != nil {
@@ -198,10 +193,15 @@ func HandleInitialSequenceBatches(
 	syncer IL1Syncer,
 	db *hermez_db.HermezDb,
 	l ethTypes.Log,
+	header *ethTypes.Header,
 ) error {
-	l1Block, err := syncer.GetBlock(l.BlockNumber)
-	if err != nil {
-		return err
+	var err error
+
+	if header == nil {
+		header, err = syncer.GetHeader(l.BlockNumber)
+		if err != nil {
+			return err
+		}
 	}
 
 	// the log appears to have some trailing 24 bytes of all 0s in it.  Not sure why but we can't handle the
@@ -212,9 +212,9 @@ func HandleInitialSequenceBatches(
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,
-		Timestamp:          l1Block.Time(),
-		L1BlockHash:        l1Block.Hash(),
-		L1ParentHash:       l1Block.ParentHash(),
+		Timestamp:          header.Time,
+		L1BlockHash:        header.Hash(),
+		L1ParentHash:       header.ParentHash,
 		LastGlobalExitRoot: common.BytesToHash(l.Data[injectedBatchLastGerStartByte:injectedBatchLastGerEndByte]),
 		Sequencer:          common.BytesToAddress(l.Data[injectedBatchSequencerStartByte:injectedBatchSequencerEndByte]),
 		Transaction:        txData,

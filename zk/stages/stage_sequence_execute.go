@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/log/v3"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ledgerwatch/erigon/common/math"
+	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -62,23 +64,31 @@ func SpawnSequencingStage(
 		return err
 	}
 
-	if err := utils.UpdateZkEVMBlockCfg(cfg.chainConfig, sdb.hermezDb, logPrefix); err != nil {
-		return err
-	}
+	getHeader := func(hash common.Hash, number uint64) *types.Header { return rawdb.ReadHeader(sdb.tx, hash, number) }
+
+	l1Recovery := cfg.zk.L1SyncStartBlock > 0
 
 	// injected batch
 	if executionAt == 0 {
+		// set the block height for the fork we're running at to ensure contract interactions are correct
+		if err = utils.RecoverySetBlockConfigForks(1, forkId, cfg.chainConfig, logPrefix); err != nil {
+			return err
+		}
+
 		header, parentBlock, err := prepareHeader(tx, executionAt, math.MaxUint64, forkId, cfg.zk.AddressSequencer)
 		if err != nil {
 			return err
 		}
 
-		err = processInjectedInitialBatch(ctx, cfg, s, sdb, forkId, header, parentBlock)
+		getHashFn := core.GetHashFn(header, getHeader)
+		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &cfg.zk.AddressSequencer, parentBlock.ExcessDataGas())
+
+		err = processInjectedInitialBatch(ctx, cfg, s, sdb, forkId, header, parentBlock, &blockContext)
 		if err != nil {
 			return err
 		}
 
-		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64(), server.StandardOperationMode)
+		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64())
 		if err = server.WriteBlocksToStream(tx, sdb.hermezDb.HermezDbReader, srv, cfg.stream, 1, 1, logPrefix); err != nil {
 			return err
 		}
@@ -92,6 +102,10 @@ func SpawnSequencingStage(
 		return nil
 	}
 
+	if err := utils.UpdateZkEVMBlockCfg(cfg.chainConfig, sdb.hermezDb, logPrefix); err != nil {
+		return err
+	}
+
 	var header *types.Header
 	var parentBlock *types.Block
 
@@ -103,8 +117,7 @@ func SpawnSequencingStage(
 	var deltaTimestamp uint64 = math.MaxUint64
 	var decodedBlocks []zktx.DecodedBatchL2Data // only used in l1 recovery
 	var blockTransactions []types.Transaction
-	var effectiveGases []uint8
-	l1Recovery := cfg.zk.L1SyncStartBlock > 0
+	var l1EffectiveGases, effectiveGases []uint8
 
 	batchTicker := time.NewTicker(cfg.zk.SequencerBatchSealTime)
 	defer batchTicker.Stop()
@@ -113,7 +126,7 @@ func SpawnSequencingStage(
 
 	hasAnyTransactionsInThisBatch := false
 	thisBatch := lastBatch + 1
-	batchCounters := vm.NewBatchCounterCollector(sdb.smt.GetDepth(), uint16(forkId))
+	batchCounters := vm.NewBatchCounterCollector(sdb.smt.GetDepth(), uint16(forkId), cfg.zk.ShouldCountersBeUnlimited(l1Recovery))
 	runLoopBlocks := true
 	lastStartedBn := executionAt - 1
 	yielded := mapset.NewSet[[32]byte]()
@@ -122,6 +135,12 @@ func SpawnSequencingStage(
 	decodedBlocksSize := uint64(0)
 
 	if l1Recovery {
+		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+			time.Sleep(1 * time.Second)
+			return nil
+		}
+
 		// let's check if we have any L1 data to recover
 		decodedBlocks, coinbase, workRemaining, err = getNextL1BatchData(thisBatch, forkId, sdb.hermezDb)
 		if err != nil {
@@ -131,6 +150,27 @@ func SpawnSequencingStage(
 		if decodedBlocksSize == 0 {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
+			return nil
+		}
+
+		// now let's detect a bad batch and skip it if we have to
+		currentBlock, err := rawdb.ReadBlockByNumber(sdb.tx, executionAt)
+		if err != nil {
+			return err
+		}
+		badBatch, err := checkForBadBatch(sdb.hermezDb, currentBlock.Time(), decodedBlocks)
+		if err != nil {
+			return err
+		}
+
+		if badBatch {
+			log.Info(fmt.Sprintf("[%s] Skipping bad batch %d...", logPrefix, thisBatch))
+			if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
+				return err
+			}
+			if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
+				return err
+			}
 			return nil
 		}
 	}
@@ -148,7 +188,7 @@ func SpawnSequencingStage(
 
 			decodedBlock = decodedBlocks[decodedBlocksIndex]
 			deltaTimestamp = uint64(decodedBlock.DeltaTimestamp)
-			effectiveGases = decodedBlock.EffectiveGasPricePercentages
+			l1EffectiveGases = decodedBlock.EffectiveGasPricePercentages
 			blockTransactions = decodedBlock.Transactions
 		}
 
@@ -161,6 +201,7 @@ func SpawnSequencingStage(
 			clonedBatchCounters = batchCounters.Clone()
 			addedTransactions = []types.Transaction{}
 			addedReceipts = []*types.Receipt{}
+			effectiveGases = []uint8{}
 			header, parentBlock, err = prepareHeader(tx, blockNumber, deltaTimestamp, forkId, coinbase)
 			if err != nil {
 				return err
@@ -189,12 +230,14 @@ func SpawnSequencingStage(
 
 		thisBlockNumber := header.Number.Uint64()
 
-		infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, err := prepareL1AndInfoTreeRelatedStuff(sdb, &decodedBlock, l1Recovery)
+		infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, err := prepareL1AndInfoTreeRelatedStuff(sdb, &decodedBlock, l1Recovery, header.Time)
 		if err != nil {
 			return err
 		}
 
 		ibs := state.New(sdb.stateReader)
+		getHashFn := core.GetHashFn(header, getHeader)
+		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &cfg.zk.AddressSequencer, parentBlock.ExcessDataGas())
 
 		parentRoot := parentBlock.Root()
 		if err = handleStateForNewBlockStarting(
@@ -262,13 +305,14 @@ func SpawnSequencingStage(
 						var effectiveGas uint8
 
 						if l1Recovery {
-							effectiveGas = effectiveGases[i]
+							effectiveGas = l1EffectiveGases[i]
 						} else {
 							effectiveGas = DeriveEffectiveGasPrice(cfg, transaction)
 							effectiveGases = append(effectiveGases, effectiveGas)
 						}
+						effectiveGases = append(effectiveGases, effectiveGas)
 
-						receipt, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, header, parentBlock.Header(), transaction, effectiveGas, l1Recovery)
+						receipt, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, l1Recovery, forkId)
 						if err != nil {
 							// if we are in recovery just log the error as a warning.  If the data is on the L1 then we should consider it as confirmed.
 							// The executor/prover would simply skip a TX with an invalid nonce for example so we don't need to worry about that here.
@@ -327,8 +371,8 @@ func SpawnSequencingStage(
 			}
 		} else {
 			for idx, transaction := range addedTransactions {
-				effectiveGas := DeriveEffectiveGasPrice(cfg, transaction)
-				receipt, innerOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, header, parentBlock.Header(), transaction, effectiveGas, false)
+				effectiveGas := effectiveGases[idx]
+				receipt, innerOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, false, forkId)
 				if err != nil {
 					return err
 				}
@@ -365,7 +409,7 @@ func SpawnSequencingStage(
 	// if we do not have an executors in the zk config then we can populate the stream immediately with the latest
 	// batch information
 	if !cfg.zk.HasExecutors() {
-		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64(), server.StandardOperationMode)
+		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64())
 		if err = server.WriteBlocksToStream(tx, sdb.hermezDb.HermezDbReader, srv, cfg.stream, executionAt+1, blockNumber, logPrefix); err != nil {
 			return err
 		}

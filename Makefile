@@ -28,7 +28,8 @@ CGO_CFLAGS += -Wno-error=strict-prototypes # for Clang15, remove it when can htt
 CGO_CFLAGS := CGO_CFLAGS="$(CGO_CFLAGS)"
 DBG_CGO_CFLAGS += -DMDBX_DEBUG=1
 
-BUILD_TAGS = nosqlite,noboltdb,netgo # about netgo see: https://github.com/golang/go/issues/30310#issuecomment-471669125
+# about netgo see: https://github.com/golang/go/issues/30310#issuecomment-471669125
+BUILD_TAGS = nosqlite,noboltdb,netgo
 PACKAGE = github.com/ledgerwatch/erigon
 
 GO_FLAGS += -trimpath -tags $(BUILD_TAGS) -buildvcs=false
@@ -127,6 +128,7 @@ COMMANDS += evm
 COMMANDS += lightclient
 COMMANDS += sentinel
 COMMANDS += erigon-el
+COMMANDS += acl
 
 # build each command using %.cmd rule
 $(COMMANDS): %: %.cmd
@@ -304,6 +306,7 @@ automated-tests:
 .PHONY: protobuf
 protobuf:
 	protoc -I=zk/legacy_executor_verifier/proto --go_out=zk/legacy_executor_verifier/proto zk/legacy_executor_verifier/proto/process_batch.proto
+	protoc -I=zk/datastream/proto --go_out=zk/datastream/proto zk/datastream/proto/datastream.proto
 
 ## help:                              print commands help
 help	:	Makefile

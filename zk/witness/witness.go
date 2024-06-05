@@ -141,6 +141,8 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 		return h
 	}
 
+	prevStateRoot := prevHeader.Root
+
 	for blockNum := startBlock; blockNum <= endBlock; blockNum++ {
 		block, err := rawdb.ReadBlockByNumber(tx, blockNum)
 		if err != nil {
@@ -209,11 +211,14 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 
 		chainReader := stagedsync.NewChainReaderImpl(g.chainCfg, tx, nil)
 
-		_, err = core.ExecuteBlockEphemerallyZk(g.chainCfg, &vmConfig, getHashFn, engine, block, tds, trieStateWriter, chainReader, nil, hermezDb)
+		_, err = core.ExecuteBlockEphemerallyZk(g.chainCfg, &vmConfig, getHashFn, engine, block, tds, trieStateWriter, chainReader, nil, hermezDb, &prevStateRoot)
 
 		if err != nil {
 			return nil, err
 		}
+
+		prevStateRoot = block.Root()
+		reader.Close() // close the cursors created by the plainstate
 	}
 
 	var rl trie.RetainDecider
@@ -256,6 +261,7 @@ func populateDbTables(batch *memdb.MemoryMutation) error {
 		db2.TableStats,
 		hermez_db.TX_PRICE_PERCENTAGE,
 		hermez_db.BLOCKBATCHES,
+		hermez_db.BATCH_BLOCKS,
 		hermez_db.BLOCK_GLOBAL_EXIT_ROOTS,
 		hermez_db.GLOBAL_EXIT_ROOTS_BATCHES,
 		hermez_db.STATE_ROOTS,

@@ -21,6 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
+	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/eth/ethconsensusconfig"
 	"github.com/ledgerwatch/erigon/params"
 	seq "github.com/ledgerwatch/erigon/zk/sequencer"
@@ -202,6 +203,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 		Difficulty: big.NewInt(0),
 	}
 	getHeader := func(hash common.Hash, number uint64) *types.Header { return rawdb.ReadHeader(tx, hash, number) }
+	blockHashFunc := core.GetHashFn(header, getHeader)
 
 	chainConfig := params.ChainConfigByChainName("hermez-dev")
 	chainConfig.ChainID = big.NewInt(test.ChainId)
@@ -267,11 +269,15 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 		}
 	}
 
-	batchCollector := vm.NewBatchCounterCollector(test.SmtDepths[0], uint16(test.ForkId))
+	batchCollector := vm.NewBatchCounterCollector(test.SmtDepths[0], uint16(test.ForkId), false)
 
 	blockStarted := false
 	for i, block := range decodedBlocks {
 		for _, transaction := range block.Transactions {
+			vmCfg.Config.SkipAnalysis = core.SkipAnalysis(chainConfig, header.Number.Uint64())
+
+			blockContext := core.NewEVMBlockContext(header, blockHashFunc, engine, &sequencer, big.NewInt(0))
+
 			if !blockStarted {
 				overflow, err := batchCollector.StartNewBlock()
 				if err != nil {
@@ -291,21 +297,21 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 			gasPool := new(core.GasPool).AddGas(transactionGasLimit)
 
 			vmCfg.CounterCollector = txCounters.ExecutionCounters()
+			
+			evm := vm.NewZkEVM(blockContext, evmtypes.TxContext{}, ibs, chainConfig, vmCfg)
 
 			_, result, _, err := core.ApplyTransaction_zkevm(
 				chainConfig,
-				core.GetHashFn(header, getHeader),
 				engine,
-				&sequencer,
+				evm,
 				gasPool,
 				ibs,
 				noop,
 				header,
 				transaction,
 				&header.GasUsed,
-				vmCfg,
-				big.NewInt(0), // parent excess data gas
-				zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM)
+				zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM,
+			)
 
 			if err != nil {
 				// this could be deliberate in the test so just move on and note it

@@ -19,12 +19,16 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -41,10 +45,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
-
-	"encoding/json"
-	"os"
-	"path"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
@@ -375,6 +375,11 @@ var (
 		Usage: "Designed for recovery of the network from the L1 batch data, slower mode of operation than the datastream.  If set the datastream will not be used",
 		Value: 0,
 	}
+	L1SyncStopBatch = cli.Uint64Flag{
+		Name:  "zkevm.l1-sync-stop-batch",
+		Usage: "Designed mainly for debugging, this will stop the L1 sync going on for too long when you only want to pull a handful of batches from the L1 during recovery",
+		Value: 0,
+	}
 	L1ChainIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l1-chain-id",
 		Usage: "Ethereum L1 chain ID",
@@ -426,6 +431,11 @@ var (
 		Usage:    "Ethereum L1 delay between queries for verifications and sequences - in milliseconds",
 		Value:    6000,
 	}
+	L1HighestBlockTypeFlag = cli.StringFlag{
+		Name:  "zkevm.l1-highest-block-type",
+		Usage: "The type of the highest block in the L1 chain. latest, safe, or finalized",
+		Value: "finalized",
+	}
 	L1MaticContractAddressFlag = cli.StringFlag{
 		Name:  "zkevm.l1-matic-contract-address",
 		Usage: "Ethereum L1 Matic contract address",
@@ -440,6 +450,11 @@ var (
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
 		Value: 10000,
+	}
+	IncrementTreeAlways = cli.BoolFlag{
+		Name:  "zkevm.increment-tree-always",
+		Usage: "Increment the state tree, never rebuild",
+		Value: false,
 	}
 	SequencerInitialForkId = cli.Uint64Flag{
 		Name:  "zkevm.sequencer-initial-fork-id",
@@ -470,6 +485,16 @@ var (
 		Name:  "zkevm.executor-strict",
 		Usage: "Defaulted to true to ensure you must set some executor URLs, bypass this restriction by setting to false",
 		Value: true,
+	}
+	ExecutorRequestTimeout = cli.DurationFlag{
+		Name:  "zkevm.executor-request-timeout",
+		Usage: "The timeout for the executor request",
+		Value: 60 * time.Second,
+	}
+	ExecutorMaxConcurrentRequests = cli.IntFlag{
+		Name:  "zkevm.executor-max-concurrent-requests",
+		Usage: "The maximum number of concurrent requests to the executor",
+		Value: 1,
 	}
 	RpcRateLimitsFlag = cli.IntFlag{
 		Name:  "zkevm.rpc-ratelimit",
@@ -559,6 +584,16 @@ var (
 	SupportGasless = cli.BoolFlag{
 		Name:  "zkevm.gasless",
 		Usage: "Support gasless transactions",
+		Value: false,
+	}
+	ExecutorPayloadOutput = cli.StringFlag{
+		Name:  "zkevm.executor-payload-output",
+		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
+		Value: "",
+	}
+	DebugNoSync = cli.BoolFlag{
+		Name:  "debug.no-sync",
+		Usage: "Disable syncing",
 		Value: false,
 	}
 	DebugLimit = cli.UintFlag{
@@ -1777,17 +1812,18 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	// Override any default configs for hard coded networks.
 	chain := ctx.String(ChainFlag.Name)
 	if strings.HasPrefix(chain, "dynamic") {
+		configFilePath := ctx.String(ConfigFlag.Name)
+		if configFilePath == "" {
+			Fatalf("Config file is required for dynamic chain")
+		}
+
+		// Be sure to set this first
+		params.DynamicChainConfigPath = filepath.Dir(configFilePath)
+		filename := path.Join(params.DynamicChainConfigPath, chain+"-conf.json")
+
 		genesis := core.GenesisBlockByChainName(chain)
 
 		dConf := DynamicConfig{}
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-
-		basePath := path.Join(homeDir, "dynamic-configs")
-		filename := path.Join(basePath, chain+"-conf.json")
 
 		if _, err := os.Stat(filename); err == nil {
 			dConfBytes, err := os.ReadFile(filename)

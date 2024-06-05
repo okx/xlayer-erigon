@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/nsf/jsondiff"
+	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 )
 
 var (
@@ -19,12 +21,13 @@ var (
 )
 
 func main() {
+	ctx := context.Background()
 	flag.StringVar(&stream1, "stream1", "", "the first stream to pull data from")
 	flag.StringVar(&stream2, "stream2", "", "the second stream to pull data from")
 	flag.Parse()
 
-	client1 := client.NewClient(stream1, 0, 0)
-	client2 := client.NewClient(stream2, 0, 0)
+	client1 := client.NewClient(ctx, stream1, 0, 0)
+	client2 := client.NewClient(ctx, stream2, 0, 0)
 
 	err := client1.Start()
 	if err != nil {
@@ -38,10 +41,7 @@ func main() {
 		return
 	}
 
-	initialBookmark := &types.Bookmark{
-		Type: types.BookmarkTypeBlock,
-		From: 0,
-	}
+	initialBookmark := types.NewBookmarkProto(0, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
 
 	data1, err := readFromClient(client1, initialBookmark, 5000)
 	if err != nil {
@@ -68,7 +68,7 @@ func main() {
 	fmt.Println("test complete...")
 }
 
-func readFromClient(client *client.StreamClient, bookmark *types.Bookmark, total int) ([]interface{}, error) {
+func readFromClient(client *client.StreamClient, bookmark *types.BookmarkProto, total int) ([]interface{}, error) {
 	go func() {
 		err := client.ReadAllEntriesToChannel(bookmark)
 		if err != nil {

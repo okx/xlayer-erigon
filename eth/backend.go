@@ -192,9 +192,9 @@ type Ethereum struct {
 	kvRPC          *remotedbserver.KvServer
 
 	// zk
-	dataStream *datastreamer.StreamServer
-	l1Syncer   *syncer.L1Syncer
-	etherMan   *etherman.Client
+	dataStream      *datastreamer.StreamServer
+	l1Syncer        *syncer.L1Syncer
+	etherManClients []*etherman.Client
 
 	preStartTasks *PreStartTasks
 }
@@ -727,7 +727,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				Outputs:     nil,
 			}
 			// todo [zkevm] read the stream version from config and figure out what system id is used for
-			backend.dataStream, err = datastreamer.NewServer(uint16(httpCfg.DataStreamPort), uint8(2), 1, datastreamer.StreamType(1), file, logConfig)
+			backend.dataStream, err = datastreamer.NewServer(uint16(httpCfg.DataStreamPort), uint8(backend.config.DatastreamVersion), 1, datastreamer.StreamType(1), file, logConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -751,7 +751,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		// update the chain config with the zero gas from the flags
 		backend.chainConfig.SupportGasless = cfg.Gasless
 
-		backend.etherMan = newEtherMan(cfg, chainConfig.ChainName)
+		l1Urls := strings.Split(cfg.L1RpcUrl, ",")
+		backend.etherManClients = make([]*etherman.Client, len(l1Urls))
+		for i, url := range l1Urls {
+			backend.etherManClients[i] = newEtherMan(cfg, chainConfig.ChainName, url)
+		}
 
 		isSequencer := sequencer.IsSequencer()
 
@@ -763,25 +767,39 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		var l1Topics [][]libcommon.Hash
 		var l1Contracts []libcommon.Address
 		if isSequencer {
-			l1Topics = [][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic, contracts.InitialSequenceBatchesTopic}}
-			l1Contracts = []libcommon.Address{cfg.AddressGerManager, cfg.AddressZkevm}
+			l1Topics = [][]libcommon.Hash{{contracts.InitialSequenceBatchesTopic}}
+			l1Contracts = []libcommon.Address{cfg.AddressZkevm}
 		} else {
 			l1Topics = [][]libcommon.Hash{{
 				contracts.SequencedBatchTopicPreEtrog,
 				contracts.SequencedBatchTopicEtrog,
 				contracts.VerificationTopicPreEtrog,
 				contracts.VerificationTopicEtrog,
-				contracts.UpdateL1InfoTreeTopic,
 			}}
-			l1Contracts = []libcommon.Address{cfg.AddressRollup, cfg.AddressAdmin, cfg.AddressGerManager}
+			l1Contracts = []libcommon.Address{cfg.AddressRollup, cfg.AddressAdmin, cfg.AddressZkevm}
+		}
+
+		ethermanClients := make([]syncer.IEtherman, len(backend.etherManClients))
+		for i, c := range backend.etherManClients {
+			ethermanClients[i] = c.EthClient
 		}
 
 		backend.l1Syncer = syncer.NewL1Syncer(
-			backend.etherMan.EthClient,
+			ethermanClients,
 			l1Contracts,
 			l1Topics,
 			cfg.L1BlockRange,
 			cfg.L1QueryDelay,
+			cfg.L1HighestBlockType,
+		)
+
+		l1InfoTreeSyncer := syncer.NewL1Syncer(
+			ethermanClients,
+			[]libcommon.Address{cfg.AddressGerManager},
+			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic}},
+			cfg.L1BlockRange,
+			cfg.L1QueryDelay,
+			cfg.L1HighestBlockType,
 		)
 
 		if isSequencer {
@@ -798,8 +816,10 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			var legacyExecutors []legacy_executor_verifier.ILegacyExecutor
 			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
 				levCfg := legacy_executor_verifier.Config{
-					GrpcUrls: cfg.ExecutorUrls,
-					Timeout:  time.Second * 5,
+					GrpcUrls:              cfg.ExecutorUrls,
+					Timeout:               cfg.ExecutorRequestTimeout,
+					MaxConcurrentRequests: cfg.ExecutorMaxConcurrentRequests,
+					OutputLocation:        cfg.ExecutorPayloadOutput,
 				}
 				executors := legacy_executor_verifier.NewExecutors(levCfg)
 				for _, e := range executors {
@@ -817,18 +837,17 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				backend.dataStream,
 			)
 
-			verifier.StartWork()
-
 			// we need to make sure the pool is always aware of the latest block for when
 			// we switch context from being an RPC node to a sequencer
 			backend.txPool2.ForceUpdateLatestBlock(executionProgress)
 
 			l1BlockSyncer := syncer.NewL1Syncer(
-				backend.etherMan.EthClient,
+				ethermanClients,
 				[]libcommon.Address{cfg.AddressZkevm},
 				[][]libcommon.Hash{{contracts.SequenceBatchesTopic}},
 				cfg.L1BlockRange,
 				cfg.L1QueryDelay,
+				cfg.L1HighestBlockType,
 			)
 
 			backend.syncStages = stages2.NewSequencerZkStages(
@@ -844,6 +863,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				backend.engine,
 				backend.dataStream,
 				backend.l1Syncer,
+				l1InfoTreeSyncer,
 				l1BlockSyncer,
 				backend.txPool2,
 				backend.txPool2DB,
@@ -864,7 +884,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 			*/
 
-			streamClient := initDataStreamClient(cfg.Zk)
+			streamClient := initDataStreamClient(ctx, cfg.Zk)
 
 			backend.syncStages = stages2.NewDefaultZkStages(
 				backend.sentryCtx,
@@ -878,6 +898,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				backend.forkValidator,
 				backend.engine,
 				backend.l1Syncer,
+				l1InfoTreeSyncer,
 				streamClient,
 				backend.dataStream,
 			)
@@ -900,9 +921,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 }
 
 // creates an EtherMan instance with default parameters
-func newEtherMan(cfg *ethconfig.Config, l2ChainName string) *etherman.Client {
+func newEtherMan(cfg *ethconfig.Config, l2ChainName, url string) *etherman.Client {
 	ethmanConf := etherman.Config{
-		URL:                       cfg.L1RpcUrl,
+		URL:                       url,
 		L1ChainID:                 cfg.L1ChainId,
 		L2ChainID:                 cfg.L2ChainId,
 		L2ChainName:               l2ChainName,
@@ -920,12 +941,12 @@ func newEtherMan(cfg *ethconfig.Config, l2ChainName string) *etherman.Client {
 }
 
 // creates a datastream client with default parameters
-func initDataStreamClient(cfg *ethconfig.Zk) *client.StreamClient {
+func initDataStreamClient(ctx context.Context, cfg *ethconfig.Zk) *client.StreamClient {
 	// datastream
 	// Create client
 	log.Info("Starting datastream client...")
 	// retry connection
-	datastreamClient := client.NewClient(cfg.L2DataStreamerUrl, cfg.DatastreamVersion, cfg.L2DataStreamerTimeout)
+	datastreamClient := client.NewClient(ctx, cfg.L2DataStreamerUrl, cfg.DatastreamVersion, cfg.L2DataStreamerTimeout)
 
 	for i := 0; i < 30; i++ {
 		// Start client (connect to the server)
@@ -1026,7 +1047,7 @@ func (s *Ethereum) PreStart() error {
 		// so here we loop and take a brief pause waiting for it to be ready
 		attempts := 0
 		for {
-			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64())
+			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion)
 			if err != nil {
 				if errors.Is(err, datastreamer.ErrAtomicOpNotAllowed) {
 					attempts++
@@ -1330,6 +1351,11 @@ func (s *Ethereum) Protocols() []p2p.Protocol {
 func (s *Ethereum) Start() error {
 	s.sentriesClient.StartStreamLoops(s.sentryCtx)
 	time.Sleep(10 * time.Millisecond) // just to reduce logs order confusion
+
+	// don't start the stageloop if debug.no-sync flag set
+	if s.config.DebugNoSync {
+		return nil
+	}
 
 	go stages2.StageLoop(s.sentryCtx, s.chainConfig, s.chainDB, s.stagedSync, s.sentriesClient.Hd, s.notifications, s.sentriesClient.UpdateHead, s.waitForStageLoopStop, s.config.Sync.LoopThrottle)
 

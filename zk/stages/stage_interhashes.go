@@ -23,6 +23,9 @@ import (
 
 	"os"
 
+	"math"
+
+	"github.com/gateway-fm/cdk-erigon-lib/kv/memdb"
 	"github.com/ledgerwatch/erigon/common/dbutils"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/systemcontracts"
@@ -127,13 +130,22 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 
 	eridb.OpenBatch(quit)
 
-	if s.BlockNumber == 0 || shouldRegenerate {
-		if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt); err != nil {
+	if cfg.zk.IncrementTreeAlways {
+		// increment only behaviour
+		log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
+		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 	} else {
-		if root, err = zkIncrementIntermediateHashes(logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-			return trie.EmptyRoot, err
+		// default behaviour
+		if s.BlockNumber == 0 || shouldRegenerate {
+			if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt); err != nil {
+				return trie.EmptyRoot, err
+			}
+		} else {
+			if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+				return trie.EmptyRoot, err
+			}
 		}
 	}
 
@@ -213,7 +225,7 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 		expectedRootHash = syncHeadHeader.Root
 	}
 
-	root, err := unwindZkSMT(s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, true, &expectedRootHash, quit)
+	root, err := unwindZkSMT(ctx, s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, true, &expectedRootHash, quit)
 	if err != nil {
 		return err
 	}
@@ -328,7 +340,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 	return common.BigToHash(root), nil
 }
 
-func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, from, to uint64) (common.Hash, error) {
+func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, from, to uint64) (common.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Increment trie hashes started", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 	defer log.Info(fmt.Sprintf("[%s] Increment ended", logPrefix))
 
@@ -419,7 +431,7 @@ func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, d
 		}
 	}
 
-	if _, _, err := dbSmt.SetStorage(logPrefix, accChanges, codeChanges, storageChanges); err != nil {
+	if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
 		return trie.EmptyRoot, err
 	}
 
@@ -431,7 +443,7 @@ func zkIncrementIntermediateHashes(logPrefix string, s *stagedsync.StageState, d
 	return hash, nil
 }
 
-func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *common.Hash, quit <-chan struct{}) (common.Hash, error) {
+func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *common.Hash, quit <-chan struct{}) (common.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Unwind trie hashes started", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))
 
@@ -445,7 +457,10 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 		quit = make(chan struct{})
 	}
 
-	eridb.OpenBatch(quit)
+	// only open the batch if tx is not already one
+	if _, ok := db.(*memdb.MemoryMutation); !ok {
+		eridb.OpenBatch(quit)
+	}
 
 	ac, err := db.CursorDupSort(kv.AccountChangeSet)
 	if err != nil {
@@ -461,9 +476,14 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 
 	currentPsr := state2.NewPlainStateReader(db)
 
-	total := from - to + 1
+	total := uint64(math.Abs(float64(from) - float64(to) + 1))
+	printerStopped := false
 	progressChan, stopPrinter := zk.ProgressPrinter(fmt.Sprintf("[%s] Progress unwinding", logPrefix), total)
-	defer stopPrinter()
+	defer func() {
+		if !printerStopped {
+			stopPrinter()
+		}
+	}()
 
 	// walk backwards through the blocks, applying state changes, and deletes
 	// PlainState contains data AT the block
@@ -480,12 +500,19 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 	}
 
 	for i := from; i >= to+1; i-- {
+		select {
+		case <-ctx.Done():
+			return trie.EmptyRoot, fmt.Errorf(fmt.Sprintf("[%s] Context done", logPrefix))
+		default:
+		}
+
 		psr := state2.NewPlainState(db, i, systemcontracts.SystemContractCodeLookup["Hermez"])
 
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 
 		// collect changes to accounts and code
 		for _, v, err2 := ac.SeekExact(dupSortKey); err2 == nil && v != nil; _, v, err2 = ac.NextDup() {
+
 			addr := common.BytesToAddress(v[:length.Addr])
 
 			// if the account was created in this changeset we should delete it
@@ -562,10 +589,14 @@ func unwindZkSMT(logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, 
 			return trie.EmptyRoot, err
 		}
 
-		progressChan <- total - i
+		progressChan <- 1
+		psr.Close()
 	}
 
-	if _, _, err := dbSmt.SetStorage(logPrefix, accChanges, codeChanges, storageChanges); err != nil {
+	stopPrinter()
+	printerStopped = true
+
+	if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
 		return trie.EmptyRoot, err
 	}
 

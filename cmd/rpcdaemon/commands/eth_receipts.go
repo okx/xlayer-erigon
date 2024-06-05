@@ -71,7 +71,6 @@ func (api *BaseAPI) getReceipts(ctx context.Context, tx kv.Tx, chainConfig *chai
 		if err != nil {
 			return nil, err
 		}
-
 		receipt, _, _, err := core.ApplyTransaction(chainConfig, core.GetHashFn(header, getHeader), engine, nil, gp, txEnv.Ibs, noopWriter, header, txn, usedGas, vm.Config{}, excessDataGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err

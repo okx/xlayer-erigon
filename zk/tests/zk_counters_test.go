@@ -297,7 +297,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 			gasPool := new(core.GasPool).AddGas(transactionGasLimit)
 
 			vmCfg.CounterCollector = txCounters.ExecutionCounters()
-			
+
 			evm := vm.NewZkEVM(blockContext, evmtypes.TxContext{}, ibs, chainConfig, vmCfg)
 
 			_, result, _, err := core.ApplyTransaction_zkevm(

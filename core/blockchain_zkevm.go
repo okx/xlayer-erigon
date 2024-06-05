@@ -18,16 +18,13 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
-
 	"github.com/ledgerwatch/erigon/chain"
-
-	"errors"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/consensus/misc"
@@ -35,6 +32,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
+	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
 )
 
 type EphemeralExecResultZk struct {
@@ -236,7 +234,6 @@ func ExecuteBlockEphemerallyZk(
 		}
 	}
 	blockLogs := ibs.Logs()
-
 	execRs := &EphemeralExecResultZk{
 		EphemeralExecResult: &EphemeralExecResult{
 			TxRoot:      types.DeriveSha(includedTxs),

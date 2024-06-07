@@ -70,6 +70,8 @@ func ExecuteBlockEphemerallyZk(
 		rejectedTxs []*RejectedTx
 		includedTxs types.Transactions
 		receipts    types.Receipts
+
+		blockInnerTxs [][]*vm.InnerTx
 	)
 
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)
@@ -97,7 +99,7 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 
-		receipt, execResult, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage)
+		receipt, execResult, innerTxs, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err
 		}
@@ -154,6 +156,9 @@ func ExecuteBlockEphemerallyZk(
 			includedTxs = append(includedTxs, tx)
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
+			}
+			if !vmConfig.NoInnerTxs {
+				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
 		}
 		if !chainConfig.IsForkID7Etrog(block.NumberU64()) {
@@ -219,6 +224,7 @@ func ExecuteBlockEphemerallyZk(
 		//	return nil, fmt.Errorf("bloom computed by execution: %x, in header: %x", bloom, header.Bloom)
 		//}
 	}
+
 	if !vmConfig.ReadOnly {
 		txs := blockTransactions
 		if _, _, _, err := FinalizeBlockExecution(engine, stateReader, block.Header(), txs, block.Uncles(), stateWriter, chainConfig, ibs, receipts, block.Withdrawals(), chainReader, false, excessDataGas); err != nil {
@@ -235,6 +241,7 @@ func ExecuteBlockEphemerallyZk(
 		Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
 		GasUsed:     math.HexOrDecimal64(*usedGas),
 		Rejected:    rejectedTxs,
+		InnerTxs:    blockInnerTxs,
 	}
 
 	return execRs, nil

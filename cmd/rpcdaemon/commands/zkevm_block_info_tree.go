@@ -118,7 +118,7 @@ func (api *ZkEvmAPIImpl) GetL2BlockInfoTree(ctx context.Context, blockNum rpc.Bl
 			return nil, err
 		}
 
-		receipt, execResult, err := core.ApplyTransaction_zkevm(chainConfig, api.ethApi._engine, evm, gp, ibs, state.NewNoopWriter(), block.Header(), tx, usedGas, effectiveGasPricePercentage)
+		receipt, execResult, _, err := core.ApplyTransaction_zkevm(chainConfig, api.ethApi._engine, evm, gp, ibs, state.NewNoopWriter(), block.Header(), tx, usedGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err
 		}

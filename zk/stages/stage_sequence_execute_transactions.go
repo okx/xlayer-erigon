@@ -11,6 +11,7 @@ import (
 	"bytes"
 	"io"
 
+	"errors"
 	mapset "github.com/deckarep/golang-set/v2"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/ledgerwatch/erigon/core"
@@ -21,7 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
-	"errors"
 )
 
 func getNextPoolTransactions(cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
@@ -162,7 +162,7 @@ func attemptAddTransaction(
 	ibs.Prepare(transaction.Hash(), common.Hash{}, 0)
 	evm := vm.NewZkEVM(*blockContext, evmtypes.TxContext{}, ibs, cfg.chainConfig, *cfg.zkVmConfig)
 
-	receipt, execResult, err := core.ApplyTransaction_zkevm(
+	receipt, execResult, _, err := core.ApplyTransaction_zkevm(
 		cfg.chainConfig,
 		cfg.engine,
 		evm,

@@ -19,8 +19,8 @@ package vm
 import (
 	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
@@ -51,6 +51,8 @@ type VMInterface interface {
 	Context() evmtypes.BlockContext
 	IntraBlockState() evmtypes.IntraBlockState
 	TxContext() evmtypes.TxContext
+	AddInnerTx(innerTx *InnerTx)
+	GetInnerTxMeta() *InnerTxMeta
 }
 
 // VMInterpreter exposes additional EVM methods for use in the interpreter.

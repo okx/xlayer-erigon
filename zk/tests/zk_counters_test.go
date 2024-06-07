@@ -300,7 +300,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 
 			evm := vm.NewZkEVM(blockContext, evmtypes.TxContext{}, ibs, chainConfig, vmCfg)
 
-			_, result, err := core.ApplyTransaction_zkevm(
+			_, result, _, err := core.ApplyTransaction_zkevm(
 				chainConfig,
 				engine,
 				evm,

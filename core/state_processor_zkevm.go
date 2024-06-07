@@ -65,7 +65,7 @@ func GetTxContext(config *chain.Config, engine consensus.EngineReader, ibs *stat
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, blockNumber *big.Int, tx types.Transaction, usedGas *uint64, evm vm.VMInterface) (*types.Receipt, *ExecutionResult, error) {
+func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, blockNumber *big.Int, tx types.Transaction, usedGas *uint64, evm vm.VMInterface) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
 	rules := evm.ChainRules()
 
 	if evm.Config().TraceJumpDest {
@@ -77,12 +77,12 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 
 	result, err := ApplyMessage(evm, msg, gp, true /* refunds */, false /* gasBailout */)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// Update the state with pending changes
 	if err = ibs.FinalizeTx(rules, stateWriter); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	if usedGas != nil {
@@ -122,7 +122,11 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 		}
 	}
 
-	return receipt, result, err
+	var innerTxs []*vm.InnerTx
+	if !evm.Config().NoInnerTxs {
+		innerTxs = afterApplyTransaction(evm, result.Failed())
+	}
+	return receipt, result, innerTxs, err
 }
 
 func PrepareForTxExecution(
@@ -167,11 +171,21 @@ func ApplyTransaction_zkevm(
 	tx types.Transaction,
 	usedGas *uint64,
 	effectiveGasPricePercentage uint8,
-) (*types.Receipt, *ExecutionResult, error) {
+) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
 	// Create a new context to be used in the EVM environment
 	msg, txContext, err := GetTxContext(config, engine, ibs, header, tx, evm, effectiveGasPricePercentage)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	return ApplyMessageWithTxContext(msg, txContext, gp, ibs, stateWriter, header.Number, tx, usedGas, evm)
+}
+
+func afterApplyTransaction(env vm.VMInterface, failed bool) []*vm.InnerTx {
+	innerTxs := env.GetInnerTxMeta().InnerTxs
+	if failed {
+		for _, innerTx := range innerTxs {
+			innerTx.IsError = true
+		}
+	}
+	return innerTxs
 }

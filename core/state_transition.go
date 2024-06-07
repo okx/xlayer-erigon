@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/holiman/uint256"
 
@@ -383,16 +384,29 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		ret   []byte
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
 	)
+	//add InnerTx
+	innerTx := &vm.InnerTx{
+		Dept:     *big.NewInt(0),
+		From:     sender.Address().String(),
+		IsError:  false,
+		Gas:      st.gas + intrinsicGas,
+		ValueWei: st.value.ToBig().String(),
+	}
+	st.evm.AddInnerTx(innerTx)
+
 	if contractCreation {
+		var newAddr libcommon.Address
 		// The reason why we don't increment nonce here is that we need the original
 		// nonce to calculate the address of the contract that is being created
 		// It does get incremented inside the `Create` call, after the computation
 		// of the contract's address, but before the execution of the code.
-		ret, _, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value, intrinsicGas)
+		ret, newAddr, st.gas, vmerr = st.evm.Create(sender, st.data, st.gas, st.value, intrinsicGas)
+		innerTx.To = newAddr.String()
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value, bailout, intrinsicGas)
+		innerTx.To = vm.AccountRef(*msg.To()).Address().String()
 	}
 	if refunds {
 		if rules.IsLondon {
@@ -440,6 +454,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		)
 	}
 
+	innerTx.GasUsed = st.gasUsed()
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
 		Err:        vmerr,

@@ -28,7 +28,6 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcfg"
 
-	"github.com/gballet/go-verkle"
 	common2 "github.com/gateway-fm/cdk-erigon-lib/common"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
@@ -36,11 +35,13 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/gballet/go-verkle"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/dbutils"
 	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/ethdb/cbor"
 	"github.com/ledgerwatch/erigon/rlp"
@@ -1795,4 +1796,52 @@ func ReadVerkleNode(tx kv.RwTx, root libcommon.Hash) (verkle.VerkleNode, error) 
 		return verkle.New(), nil
 	}
 	return verkle.ParseNode(encoded, 0, root[:])
+}
+
+func WriteInnerTxs(db kv.RwTx, number uint64, innerTxs [][]*vm.InnerTx) error {
+	for txId, its := range innerTxs {
+		if len(its) == 0 {
+			continue
+		}
+
+		data, err := rlp.EncodeToBytes(its)
+		if err != nil {
+			return fmt.Errorf("encode inner tx for block %d: %w", number, err)
+		}
+
+		if err = db.Append(kv.INNER_TX, dbutils.LogKey(number, uint32(txId)), data); err != nil {
+			return fmt.Errorf("writing logs for block %d: %w", number, err)
+		}
+	}
+	return nil
+}
+
+func ReadInnerTxs(db kv.Tx, blockNum uint64) [][]*vm.InnerTx {
+	var blockInnerTxs [][]*vm.InnerTx
+
+	prefix := make([]byte, 8)
+	binary.BigEndian.PutUint64(prefix, blockNum)
+
+	it, err := db.Prefix(kv.INNER_TX, prefix)
+	if err != nil {
+		log.Error("inner txs fetching failed", "err", err)
+		return nil
+	}
+	for it.HasNext() {
+		_, v, err := it.Next()
+		if err != nil {
+			log.Error("inner txs fetching failed", "err", err)
+			return nil
+		}
+
+		innerTxs := make([]*vm.InnerTx, 0)
+		if err := rlp.DecodeBytes(v, &innerTxs); err != nil {
+			err = fmt.Errorf("inner txs unmarshal failed:  %w", err)
+			log.Error("inner txs fetching failed", "err", err)
+			return nil
+		}
+
+		blockInnerTxs = append(blockInnerTxs, innerTxs)
+	}
+	return blockInnerTxs
 }

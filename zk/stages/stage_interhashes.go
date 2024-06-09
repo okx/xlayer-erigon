@@ -335,6 +335,9 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	log.Info(fmt.Sprintf("[%s] Increment trie hashes started", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 	defer log.Info(fmt.Sprintf("[%s] Increment ended", logPrefix))
 
+	quit := ctx.Done()
+	eridb.OpenBatch(quit)
+
 	ac, err := db.CursorDupSort(kv.AccountChangeSet)
 	if err != nil {
 		return trie.EmptyRoot, err

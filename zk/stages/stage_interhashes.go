@@ -128,7 +128,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 	eridb := db2.NewEriDb(tx)
 	smt := smt.NewSMT(eridb)
 
-	eridb.OpenBatch(quit)
+	//eridb.OpenBatch(quit)
 
 	if s.BlockNumber == 0 || shouldRegenerate {
 		if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt); err != nil {

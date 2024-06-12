@@ -2,10 +2,10 @@ name: CI
 on:
   push:
     branches:
-      - zkevm
+      - dev
   pull_request:
     branches:
-      - zkevm
+      - dev
     types:
       - opened
       - reopened

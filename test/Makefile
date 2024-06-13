@@ -45,8 +45,8 @@ run: ## Runs a full node
 stop: ## Stops all services
 	$(STOP)
 
-.PHONY: mac-run
-mac-run: ## Runs a full node
+.PHONY: min-run
+min-run: ## Runs a minimal node
 	$(RUN_DOCKER_L1_NETWORK)
 	sleep 3
 	$(RUN_DOCKER_SEQ)

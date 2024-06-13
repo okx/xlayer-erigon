@@ -44,3 +44,9 @@ run: ## Runs a full node
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)
+
+.PHONY: mac-run
+mac-run: ## Runs a full node
+	$(RUN_DOCKER_L1_NETWORK)
+	sleep 3
+	$(RUN_DOCKER_SEQ)

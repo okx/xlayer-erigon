@@ -22,7 +22,7 @@ zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
 zkevm.executor-urls: erigon-stateless-executor:50071
-zkevm.executor-strict: true
+zkevm.executor-strict: false
 zkevm.witness-full: true
 
 zkevm.sequencer-initial-fork-id: 9

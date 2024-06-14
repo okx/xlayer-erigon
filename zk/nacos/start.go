@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ledgerwatch/erigon/zkevm/log"
+	"github.com/ledgerwatch/log/v3"
 	"github.com/nacos-group/nacos-sdk-go/clients"
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/vo"
@@ -24,13 +24,13 @@ const (
 func StartNacosClient(urls string, namespace string, name string, externalAddr string) {
 	ip, port, err := ResolveIPAndPort(externalAddr)
 	if err != nil {
-		log.Errorf(fmt.Sprintf("failed to resolve %s error: %s", externalAddr, err.Error()))
+		log.Error(fmt.Sprintf("failed to resolve %s error: %s", externalAddr, err.Error()))
 		return
 	}
 
 	serverConfigs, err := getServerConfigs(urls)
 	if err != nil {
-		log.Errorf(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
+		log.Error(fmt.Sprintf("failed to resolve nacos server url %s: %s", urls, err.Error()))
 		return
 	}
 	client, err := clients.CreateNamingClient(map[string]interface{}{
@@ -45,7 +45,7 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 		},
 	})
 	if err != nil {
-		log.Errorf(fmt.Sprintf("failed to create nacos client. error: %s", err.Error()))
+		log.Error(fmt.Sprintf("failed to create nacos client. error: %s", err.Error()))
 		return
 	}
 
@@ -64,10 +64,10 @@ func StartNacosClient(urls string, namespace string, name string, externalAddr s
 		},
 	})
 	if err != nil {
-		log.Errorf(fmt.Sprintf("failed to register instance in nacos server. error: %s", err.Error()))
+		log.Error(fmt.Sprintf("failed to register instance in nacos server. error: %s", err.Error()))
 		return
 	}
-	log.Infof("register application instance in nacos successfully")
+	log.Info("register application instance in nacos successfully")
 }
 
 // ResolveIPAndPort resolve ip and port from addr

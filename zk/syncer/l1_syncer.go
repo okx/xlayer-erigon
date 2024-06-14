@@ -15,8 +15,8 @@ import (
 	"encoding/binary"
 
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
-	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	"github.com/ledgerwatch/erigon/rpc"
+	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 )
 
 var (
@@ -144,6 +144,7 @@ func (s *L1Syncer) Run(lastCheckedBlock uint64) {
 		for {
 			select {
 			case <-s.quit:
+				log.Info("L1 syncer thread stopped")
 				return
 			default:
 			}

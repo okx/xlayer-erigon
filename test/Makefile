@@ -1,0 +1,52 @@
+DOCKER_COMPOSE := docker-compose -f docker-compose.yml
+DOCKER_STATELESS_EXECUTOR := erigon-stateless-executor
+DOCKER_STATE_DB := erigon-state-db
+DOCKER_SEQ_SENDER := erigon-seqsender
+DOCKER_AGGREGATOR := erigon-aggregator
+DOCKER_AGGREGATOR_DB := erigon-aggregator-db
+DOCKER_PROVER := erigon-prover
+DOCKER_APPROVE := erigon-approve
+DOCKER_SEQ := erigon-seq
+DOCKER_L1_NETWORK := erigon-mock-l1-network
+
+RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)
+RUN_DOCKER_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_STATE_DB)
+RUN_DOCKER_SEQ_SENDER := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ_SENDER)
+RUN_DOCKER_AGGREGATOR := $(DOCKER_COMPOSE) up -d $(DOCKER_AGGREGATOR)
+RUN_DOCKER_AGGREGATOR_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_AGGREGATOR_DB)
+RUN_DOCKER_PROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_PROVER)
+RUN_DOCKER_APPROVE := $(DOCKER_COMPOSE) up -d $(DOCKER_APPROVE)
+RUN_DOCKER_SEQ := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ)
+RUN_DOCKER_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_L1_NETWORK)
+
+STOP := $(DOCKER_COMPOSE) down --remove-orphans
+
+.PHONY: run
+run: ## Runs a full node
+	$(RUN_DOCKER_L1_NETWORK)
+	sleep 3
+	$(RUN_DOCKER_STATE_DB)
+	sleep 3
+	$(RUN_DOCKER_AGGREGATOR_DB)
+	sleep 3
+	$(RUN_DOCKER_STATELESS_EXECUTOR)
+	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 3
+	$(RUN_DOCKER_SEQ)
+	sleep 3
+	$(RUN_DOCKER_APPROVE)
+	sleep 3
+	$(RUN_DOCKER_SEQ_SENDER)
+	sleep 3
+	$(RUN_DOCKER_AGGREGATOR)
+
+.PHONY: stop
+stop: ## Stops all services
+	$(STOP)
+
+.PHONY: min-run
+min-run: ## Runs a minimal node
+	$(RUN_DOCKER_L1_NETWORK)
+	sleep 3
+	$(RUN_DOCKER_SEQ)

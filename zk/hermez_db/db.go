@@ -1000,6 +1000,8 @@ func (db *HermezDb) WriteL1InjectedBatch(batch *types.L1InjectedBatch) error {
 
 	k := Uint64ToBytes(nextIndex)
 	v := batch.Marshall()
+
+	log.Info(fmt.Sprintf("[HermezDb] WriteL1InjectedBatch: key:%v, %v, %v", nextIndex, batch.L1BlockHash, batch.L1BlockNumber))
 	return db.tx.Put(L1_INJECTED_BATCHES, k, v)
 }
 
@@ -1009,6 +1011,7 @@ func (db *HermezDbReader) GetL1InjectedBatch(index uint64) (*types.L1InjectedBat
 	if err != nil {
 		return nil, err
 	}
+	log.Info(fmt.Sprintf("[HermezDb] GetL1InjectedBatch: key:%v,v:%v", index, v))
 	ib := new(types.L1InjectedBatch)
 	err = ib.Unmarshall(v)
 	if err != nil {

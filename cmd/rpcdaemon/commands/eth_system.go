@@ -3,21 +3,21 @@ package commands
 import (
 	"context"
 	"math/big"
+	"time"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/chain"
-
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
-	"github.com/ledgerwatch/erigon/rpc"
-
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	stageszk "github.com/ledgerwatch/erigon/zk/stages"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // BlockNumber implements eth_blockNumber. Returns the block number of most recent block.
@@ -150,6 +150,24 @@ func (api *APIImpl) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, err
 		return nil, err
 	}
 	return (*hexutil.Big)(tipcap), err
+}
+
+func (api *APIImpl) runL2GasPriceSuggester() {
+	cfg := api.L2GasPircer.GetConfig()
+	ctx := api.L2GasPircer.GetCtx()
+
+	//todo: apollo
+	updateTimer := time.NewTimer(cfg.UpdatePeriod)
+	for {
+		select {
+		case <-ctx.Done():
+			log.Info("Finishing l2 gas price suggester...")
+			return
+		case <-updateTimer.C:
+			api.L2GasPircer.UpdateGasPriceAvg(api.L1RpcUrl)
+			updateTimer.Reset(cfg.UpdatePeriod)
+		}
+	}
 }
 
 type feeHistoryResult struct {

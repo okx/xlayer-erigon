@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -347,6 +348,7 @@ type APIImpl struct {
 	MaxGasPrice                uint64
 	GasPriceFactor             float64
 	L1GasPrice                 L1GasPrice
+	L2GasPircer                gasprice.L2GasPricer
 }
 
 // NewEthAPI returns APIImpl instance
@@ -355,7 +357,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		gascap = uint64(math.MaxUint64 / 2)
 	}
 
-	return &APIImpl{
+	apii := &APIImpl{
 		BaseAPI:                    base,
 		db:                         db,
 		ethBackend:                 eth,
@@ -373,7 +375,14 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
+		//todo: confirm config
+		L2GasPircer: gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
 	}
+
+	apii.L2GasPircer.UpdateGasPriceAvg(apii.L1RpcUrl)
+	go apii.runL2GasPriceSuggester()
+
+	return apii
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction

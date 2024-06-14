@@ -28,7 +28,7 @@ zkevm.witness-full: true
 zkevm.sequencer-initial-fork-id: 9
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
-zkevm.default-gas-price: 1
+zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
 

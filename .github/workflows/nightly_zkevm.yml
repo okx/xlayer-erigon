@@ -11,7 +11,7 @@ env:
 
 jobs:
   prepare:
-    if: github.ref == 'refs/heads/zkevm'
+    if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.prep.outputs.version }}
@@ -27,7 +27,7 @@ jobs:
           echo "version=$TAG" >> $GITHUB_OUTPUT
 
   build-amd64:
-    if: github.ref == 'refs/heads/zkevm'
+    if: github.ref == 'refs/heads/dev'
     needs: prepare
     runs-on: ubuntu-latest
     steps:
@@ -50,7 +50,7 @@ jobs:
           platforms: linux/amd64
 
   build-arm64:
-    if: github.ref == 'refs/heads/zkevm'
+    if: github.ref == 'refs/heads/dev'
     needs: prepare
     runs-on: ubuntu-latest
     steps:
@@ -73,7 +73,7 @@ jobs:
           platforms: linux/arm64
 
   create-and-push-manifest:
-    if: github.ref == 'refs/heads/zkevm'
+    if: github.ref == 'refs/heads/dev'
     needs: [prepare, build-amd64, build-arm64]
     runs-on: ubuntu-latest
     steps:

@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -92,6 +93,7 @@ Loop:
 					}
 					// we only ever handle a single injected batch as a sequencer currently so we can just
 					// exit early here
+					log.Info("Injected batch found\n")
 					break Loop
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
@@ -100,9 +102,8 @@ Loop:
 		case progMsg := <-progressChan:
 			log.Info(fmt.Sprintf("[%s] %s", logPrefix, progMsg))
 		default:
-			if !cfg.syncer.IsDownloading() {
-				break Loop
-			}
+			log.Info(fmt.Sprintf("[%s] Waiting for sequencer InitialSequenceBatchesTopic log...", logPrefix))
+			time.Sleep(1 * time.Second)
 		}
 	}
 

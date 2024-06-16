@@ -31,6 +31,7 @@ require (
 	github.com/dgravesa/go-parallel v0.6.0
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/dop251/goja v0.0.0-20230122112309-96b1610dd4f7
+	github.com/dustin/go-humanize v1.0.1
 	github.com/edsrzf/mmap-go v1.1.0
 	github.com/emicklei/dot v1.0.0
 	github.com/emirpasic/gods v1.18.1
@@ -143,7 +144,6 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/dlclark/regexp2 v1.7.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
-	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/elastic/gosigar v0.14.2 // indirect
 	github.com/flynn/noise v1.0.0 // indirect
 	github.com/francoispqt/gojay v1.2.13 // indirect
@@ -290,3 +290,5 @@ require (
 )
 
 replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12
+
+replace github.com/gateway-fm/cdk-erigon-lib => github.com/okx/cdk-erigon-lib v0.0.0-20240616075938-581b8d8a7461

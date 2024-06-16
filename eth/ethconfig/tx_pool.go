@@ -43,6 +43,14 @@ type DeprecatedTxPoolConfig struct {
 	StartOnInit   bool
 	TracedSenders []string // List of senders for which tx pool should print out debugging info
 	CommitEvery   time.Duration
+
+	// XLayer config
+	// BlockedList is the blocked address list
+	BlockedList []string
+	// EnableWhitelist is a flag to enable/disable the whitelist
+	EnableWhitelist bool
+	// WhiteList is the white address list
+	WhiteList []string
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction
@@ -72,6 +80,11 @@ var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Confi
 	cfg.CommitEvery = 5 * time.Minute
 	cfg.TracedSenders = pool1Cfg.TracedSenders
 	cfg.CommitEvery = pool1Cfg.CommitEvery
+	
+	// XLayer config
+	cfg.EnableWhitelist = pool1Cfg.EnableWhitelist
+	cfg.WhiteList = pool1Cfg.WhiteList
+	cfg.BlockedList = pool1Cfg.BlockedList
 
 	return cfg
 }

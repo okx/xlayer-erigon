@@ -54,6 +54,7 @@ func NewTraceVmConfig() Config {
 		SkipAnalysis:  false,
 		TraceJumpDest: false,
 		NoReceipts:    true, // used to skip receipts at end of exec
+		NoInnerTxs:    true,
 		ReadOnly:      false,
 		StatelessExec: true, // used to setCheckNonce to false
 		RestoreState:  false,

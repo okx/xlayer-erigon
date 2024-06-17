@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -14,6 +15,10 @@ import (
 
 // GetInternalTransactions ...
 func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcommon.Hash) ([]*vm.InnerTx, error) {
+	if !api.EnableInnerTx {
+		return nil, errors.New("unsupported internal transaction method")
+	}
+
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -53,6 +58,10 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 
 // GetBlockInternalTransactions ...
 func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) (map[libcommon.Hash][]*vm.InnerTx, error) {
+	if !api.EnableInnerTx {
+		return nil, errors.New("unsupported internal transaction method")
+	}
+
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err

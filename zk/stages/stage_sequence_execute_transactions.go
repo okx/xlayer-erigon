@@ -142,14 +142,14 @@ func attemptAddTransaction(
 	transaction types.Transaction,
 	effectiveGasPrice uint8,
 	l1Recovery bool,
-) (*types.Receipt, bool, error) {
+) (*types.Receipt, []*vm.InnerTx, bool, error) {
 	txCounters := vm.NewTransactionCounter(transaction, sdb.smt.GetDepth(), cfg.zk.ShouldCountersBeUnlimited(l1Recovery))
 	overflow, err := batchCounters.AddNewTransactionCounters(txCounters)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	if overflow && !l1Recovery {
-		return nil, true, nil
+		return nil, nil, true, nil
 	}
 
 	gasPool := new(core.GasPool).AddGas(transactionGasLimit)
@@ -162,7 +162,7 @@ func attemptAddTransaction(
 	ibs.Prepare(transaction.Hash(), common.Hash{}, 0)
 	evm := vm.NewZkEVM(*blockContext, evmtypes.TxContext{}, ibs, cfg.chainConfig, *cfg.zkVmConfig)
 
-	receipt, execResult, _, err := core.ApplyTransaction_zkevm(
+	receipt, execResult, innerTx, err := core.ApplyTransaction_zkevm(
 		cfg.chainConfig,
 		cfg.engine,
 		evm,
@@ -176,7 +176,7 @@ func attemptAddTransaction(
 	)
 
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	//TODO: remove this after bug is fixed
@@ -187,16 +187,16 @@ func attemptAddTransaction(
 	// we need to keep hold of the effective percentage used
 	// todo [zkevm] for now we're hard coding to the max value but we need to calc this properly
 	if err = sdb.hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), effectiveGasPrice); err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	err = txCounters.ProcessTx(ibs, execResult.ReturnData)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	// now that we have executed we can check again for an overflow
 	overflow, err = batchCounters.CheckForOverflow()
 
-	return receipt, overflow, err
+	return receipt, innerTx, overflow, err
 }

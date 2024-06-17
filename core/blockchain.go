@@ -368,7 +368,7 @@ func SysCallContract(contract libcommon.Address, data []byte, chainConfig chain.
 		data, nil, false,
 		true, // isFree
 	)
-	vmConfig := vm.Config{NoReceipts: true, RestoreState: constCall}
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true, RestoreState: constCall}
 	// Create a new context to be used in the EVM environment
 	isBor := chainConfig.Bor != nil
 	var txContext evmtypes.TxContext
@@ -412,7 +412,7 @@ func SysCreate(contract libcommon.Address, data []byte, chainConfig chain.Config
 		data, nil, false,
 		true, // isFree
 	)
-	vmConfig := vm.Config{NoReceipts: true}
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true}
 	// Create a new context to be used in the EVM environment
 	author := &contract
 	txContext := NewEVMTxContext(msg)
@@ -441,7 +441,7 @@ func CallContract(contract libcommon.Address, data []byte, chainConfig chain.Con
 	if err != nil {
 		return nil, fmt.Errorf("SysCallContract: %w ", err)
 	}
-	vmConfig := vm.Config{NoReceipts: true}
+	vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true}
 	_, result, _, err = ApplyTransaction(&chainConfig, GetHashFn(header, nil), engine, &state.SystemAddress, gp, ibs, noop, header, tx, &gasUsed, vmConfig, excessDataGas, zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED)
 	if err != nil {
 		return result, fmt.Errorf("SysCallContract: %w ", err)

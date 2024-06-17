@@ -582,6 +582,11 @@ var (
 		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
 		Value: "",
 	}
+	AllowInternalTransactions = cli.BoolFlag{
+		Name:  "zkevm.allow-internal-transactions",
+		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
 	DebugNoSync = cli.BoolFlag{
 		Name:  "debug.no-sync",
 		Usage: "Disable syncing",

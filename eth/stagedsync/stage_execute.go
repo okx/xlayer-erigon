@@ -495,8 +495,8 @@ Loop:
 		writeChangeSets := nextStagesExpectData || blockNum > cfg.prune.History.PruneTo(to)
 		writeReceipts := nextStagesExpectData || blockNum > cfg.prune.Receipts.PruneTo(to)
 		writeCallTraces := nextStagesExpectData || blockNum > cfg.prune.CallTraces.PruneTo(to)
-		// TODO
-		writeInnerTxs := true //nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to)
+		writeInnerTxs := cfg.zk.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
+
 		if err = executeBlock(block, header, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Warn(fmt.Sprintf("[%s] Execution failed", logPrefix), "block", blockNum, "hash", block.Hash().String(), "err", err)

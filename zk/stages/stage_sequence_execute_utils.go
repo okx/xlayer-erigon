@@ -310,10 +310,11 @@ func doFinishBlockAndUpdateState(
 	receipts types.Receipts,
 	effectiveGases []uint8,
 	l1InfoIndex uint64,
+	innerTxs [][]*vm.InnerTx,
 ) error {
 	thisBlockNumber := header.Number.Uint64()
 
-	if err := finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, transactions, receipts, effectiveGases); err != nil {
+	if err := finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, transactions, receipts, effectiveGases, innerTxs); err != nil {
 		return err
 	}
 

@@ -58,6 +58,7 @@ type Zk struct {
 	PoolManagerUrl         string
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
+	EnableInnerTx          bool // XLayer
 }
 
 var DefaultZkConfig = &Zk{}

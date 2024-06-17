@@ -95,6 +95,7 @@ func (api *ZkEvmAPIImpl) GetL2BlockInfoTree(ctx context.Context, blockNum rpc.Bl
 	vmConfig := vm.NewTraceVmConfig()
 	vmConfig.Debug = false
 	vmConfig.NoReceipts = false
+	vmConfig.NoInnerTxs = false
 
 	txEnv, err := transactions.ComputeTxEnv_ZkEvm(ctx, api.ethApi._engine, block, chainConfig, api.ethApi._blockReader, tx, 0, api.ethApi.historyV3(tx))
 	if err != nil {

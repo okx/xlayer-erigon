@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
-	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -67,7 +66,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
 		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd
 		var ok bool
 		value := result.String()[:3] + fmt.Sprintf(aux, 0)
-		truncateValue, ok = new(big.Int).SetString(value, encoding.Base10)
+		truncateValue, ok = new(big.Int).SetString(value, 10)
 		if !ok {
 			log.Error("error converting: ", truncateValue)
 		}

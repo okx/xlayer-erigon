@@ -289,4 +289,7 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12
+replace (
+	github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12
+	github.com/gateway-fm/cdk-erigon-lib => ../cdk-erigon-lib
+)

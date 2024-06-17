@@ -55,6 +55,8 @@ var (
 	priceBump    uint64
 
 	commitEvery time.Duration
+
+	freeClaimGasAddr []string
 )
 
 func init() {
@@ -78,6 +80,8 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&priceBump, "txpool.pricebump", txpoolcfg.DefaultConfig.PriceBump, "Price bump percentage to replace an already existing transaction")
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
+
+	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolFreeClaimGasFlag.Name, txpoolcfg.DefaultConfig.FreeClaimGasAddr, utils.TxPoolFreeClaimGasFlag.Usage)
 }
 
 var rootCmd = &cobra.Command{

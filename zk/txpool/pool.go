@@ -214,6 +214,7 @@ type metaTx struct {
 	currentSubPool                    SubPoolType
 	alreadyYielded                    bool
 	overflowZkCountersDuringExecution bool
+	isClaimTx                         bool
 }
 
 func newMetaTx(slot *types.TxSlot, isLocal bool, timestmap uint64) *metaTx {
@@ -502,7 +503,7 @@ func (p *TxPool) processRemoteTxs(ctx context.Context) error {
 		return err
 	}
 
-	announcements, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
+	announcements, _, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
 		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
 	if err != nil {
 		return err
@@ -865,7 +866,7 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 		return nil, err
 	}
 
-	announcements, addReasons, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
+	announcements, addReasons, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
 		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
 	if err == nil {
 		for i, reason := range addReasons {
@@ -910,7 +911,20 @@ func (p *TxPool) cache() kvcache.Cache {
 	return p._stateCache
 }
 
-func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
+func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
+	senderAddr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false
+	}
+	for _, addr := range p.cfg.FreeClaimGasAddr {
+		if senderAddr.String() == addr {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 	newTxs types.TxSlots, pendingBaseFee, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
 	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
@@ -960,6 +974,7 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 		if err != nil {
 			return announcements, discardReasons, err
 		}
+		isFreeClaimAddr := p.isFreeClaimAddr(senderID)
 		onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
@@ -1559,7 +1574,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 	if err != nil {
 		return err
 	}
-	if _, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, txs,
+	if _, _, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, txs,
 		pendingBaseFee, math.MaxUint64 /* blockGasLimit */, p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, false); err != nil {
 		return err
 	}

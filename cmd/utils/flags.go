@@ -203,6 +203,11 @@ var (
 		Usage: "How often transactions should be committed to the storage",
 		Value: txpoolcfg.DefaultConfig.CommitEvery,
 	}
+	TxPoolFreeClaimGasFlag = cli.StringFlag{
+		Name:  "txpool.freeclaimgas",
+		Usage: "support free gas for claim addrs",
+		Value: "",
+	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",

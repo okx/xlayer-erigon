@@ -69,7 +69,7 @@ func processInjectedInitialBatch(
 	txns := types.Transactions{*txn}
 	receipts := types.Receipts{receipt}
 	effectiveGases := []uint8{effectiveGas}
-	innerTxs := [][]*vm.InnerTx{innerTx}
+	innerTxs := [][]*zktypes.InnerTx{innerTx}
 	return doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts, effectiveGases, 0, innerTxs)
 }
 
@@ -82,7 +82,7 @@ func handleInjectedBatch(
 	header *types.Header,
 	parentBlock *types.Block,
 	forkId uint64,
-) (*types.Transaction, *types.Receipt, []*vm.InnerTx, uint8, error) {
+) (*types.Transaction, *types.Receipt, []*zktypes.InnerTx, uint8, error) {
 	decodedBlocks, err := zktx.DecodeBatchL2Blocks(injected.Transaction, 5)
 	if err != nil {
 		return nil, nil, nil, 0, err

@@ -6,8 +6,6 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/ledgerwatch/erigon/core/vm"
-
 	"math/big"
 
 	"github.com/ledgerwatch/erigon/chain"
@@ -80,7 +78,7 @@ func finaliseBlock(
 	transactions []types.Transaction,
 	receipts types.Receipts,
 	effectiveGases []uint8,
-	innerTxs [][]*vm.InnerTx,
+	innerTxs [][]*zktypes.InnerTx,
 ) error {
 	stateWriter := state.NewPlainStateWriter(sdb.tx, sdb.tx, newHeader.Number.Uint64())
 	chainReader := stagedsync.ChainReader{
@@ -190,7 +188,7 @@ func finaliseBlock(
 	}
 
 	if cfg.zk.EnableInnerTx {
-		if err := rawdb.WriteInnerTxs(sdb.tx, newNum.Uint64(), innerTxs); err != nil {
+		if err := sdb.hermezDb.WriteInnerTxs(newNum.Uint64(), innerTxs); err != nil {
 			return err
 		}
 	}

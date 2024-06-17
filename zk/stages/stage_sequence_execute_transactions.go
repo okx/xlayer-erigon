@@ -22,6 +22,7 @@ import (
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 func getNextPoolTransactions(cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
@@ -142,7 +143,7 @@ func attemptAddTransaction(
 	transaction types.Transaction,
 	effectiveGasPrice uint8,
 	l1Recovery bool,
-) (*types.Receipt, []*vm.InnerTx, bool, error) {
+) (*types.Receipt, []*zktypes.InnerTx, bool, error) {
 	txCounters := vm.NewTransactionCounter(transaction, sdb.smt.GetDepth(), cfg.zk.ShouldCountersBeUnlimited(l1Recovery))
 	overflow, err := batchCounters.AddNewTransactionCounters(txCounters)
 	if err != nil {

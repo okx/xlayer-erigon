@@ -22,20 +22,20 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/chain"
-
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 // applyTransaction attempts to apply a transaction to the given state database
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func applyTransaction(config *chain.Config, engine consensus.EngineReader, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, evm vm.VMInterface, cfg vm.Config, effectiveGasPricePercentage uint8) (*types.Receipt, []byte, []*vm.InnerTx, error) {
+func applyTransaction(config *chain.Config, engine consensus.EngineReader, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, evm vm.VMInterface, cfg vm.Config, effectiveGasPricePercentage uint8) (*types.Receipt, []byte, []*zktypes.InnerTx, error) {
 	rules := evm.ChainRules()
 
 	msg, err := tx.AsMessage(*types.MakeSigner(config, header.Number.Uint64()), header.BaseFee, rules)
@@ -105,7 +105,7 @@ func applyTransaction(config *chain.Config, engine consensus.EngineReader, gp *G
 		receipt.TransactionIndex = uint(ibs.TxIndex())
 	}
 
-	var innerTxs []*vm.InnerTx
+	var innerTxs []*zktypes.InnerTx
 	if !cfg.NoInnerTxs {
 		innerTxs = afterApplyTransaction(evm, result.Failed())
 	}
@@ -116,7 +116,7 @@ func applyTransaction(config *chain.Config, engine consensus.EngineReader, gp *G
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyTransaction(config *chain.Config, blockHashFunc func(n uint64) libcommon.Hash, engine consensus.EngineReader, author *libcommon.Address, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, cfg vm.Config, excessDataGas *big.Int, effectiveGasPricePercentage uint8) (*types.Receipt, []byte, []*vm.InnerTx, error) {
+func ApplyTransaction(config *chain.Config, blockHashFunc func(n uint64) libcommon.Hash, engine consensus.EngineReader, author *libcommon.Address, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, header *types.Header, tx types.Transaction, usedGas *uint64, cfg vm.Config, excessDataGas *big.Int, effectiveGasPricePercentage uint8) (*types.Receipt, []byte, []*zktypes.InnerTx, error) {
 	// Create a new context to be used in the EVM environment
 
 	// Add addresses to access list if applicable

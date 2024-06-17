@@ -74,7 +74,7 @@ type EphemeralExecResult struct {
 	GasUsed          math.HexOrDecimal64   `json:"gasUsed"`
 	StateSyncReceipt *types.Receipt        `json:"-"`
 
-	InnerTxs [][]*vm.InnerTx `json:"innerTxs"`
+	InnerTxs [][]*zktypes.InnerTx `json:"innerTxs"`
 }
 
 // ExecuteBlockEphemerally runs a block from provided stateReader and
@@ -105,7 +105,7 @@ func ExecuteBlockEphemerally(
 		includedTxs types.Transactions
 		receipts    types.Receipts
 
-		blockInnerTxs [][]*vm.InnerTx
+		blockInnerTxs [][]*zktypes.InnerTx
 	)
 
 	var excessDataGas *big.Int
@@ -235,7 +235,7 @@ func ExecuteBlockEphemerallyBor(
 		includedTxs types.Transactions
 		receipts    types.Receipts
 
-		blockInnerTxs [][]*vm.InnerTx
+		blockInnerTxs [][]*zktypes.InnerTx
 	)
 
 	var excessDataGas *big.Int

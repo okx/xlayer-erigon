@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
-
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -71,7 +71,7 @@ func ExecuteBlockEphemerallyZk(
 		includedTxs types.Transactions
 		receipts    types.Receipts
 
-		blockInnerTxs [][]*vm.InnerTx
+		blockInnerTxs [][]*zktypes.InnerTx
 	)
 
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)

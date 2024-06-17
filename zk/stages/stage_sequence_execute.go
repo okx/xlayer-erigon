@@ -21,6 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
@@ -105,7 +106,7 @@ func SpawnSequencingStage(
 	var addedTransactions []types.Transaction
 	var addedReceipts []*types.Receipt
 	var clonedBatchCounters *vm.BatchCounterCollector
-	var addedInnerTxs [][]*vm.InnerTx
+	var addedInnerTxs [][]*zktypes.InnerTx
 
 	var decodedBlock zktx.DecodedBatchL2Data
 	var deltaTimestamp uint64 = math.MaxUint64
@@ -277,7 +278,7 @@ func SpawnSequencingStage(
 					for i, transaction := range blockTransactions {
 						var receipt *types.Receipt
 						var effectiveGas uint8
-						var innerTx []*vm.InnerTx
+						var innerTx []*zktypes.InnerTx
 
 						if l1Recovery {
 							effectiveGas = l1EffectiveGases[i]

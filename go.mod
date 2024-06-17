@@ -290,5 +290,3 @@ require (
 )
 
 replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12
-
-replace github.com/gateway-fm/cdk-erigon-lib => github.com/okx/cdk-erigon-lib v0.0.0-20240614094757-d464c2a973b3

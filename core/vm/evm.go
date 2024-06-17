@@ -23,11 +23,11 @@ import (
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/chain"
-
 	"github.com/ledgerwatch/erigon/common/u256"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/params"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 // emptyCodeHash is used by create to ensure deployment is disallowed to already
@@ -106,7 +106,7 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 			index:     0,
 			lastDepth: 0,
 			indexMap:  map[int]int{0: 0},
-			InnerTxs:  make([]*InnerTx, 0),
+			InnerTxs:  make([]*zktypes.InnerTx, 0),
 		},
 	}
 
@@ -125,7 +125,7 @@ func (evm *EVM) Reset(txCtx evmtypes.TxContext, ibs evmtypes.IntraBlockState) {
 		index:     0,
 		lastDepth: 0,
 		indexMap:  map[int]int{0: 0},
-		InnerTxs:  make([]*InnerTx, 0),
+		InnerTxs:  make([]*zktypes.InnerTx, 0),
 	}
 
 	// ensure the evm is reset to be used again

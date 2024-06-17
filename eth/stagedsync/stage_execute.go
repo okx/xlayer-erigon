@@ -153,7 +153,7 @@ func executeBlock(
 	writeInnerTxs bool,
 	initialCycle bool,
 	stateStream bool,
-	roHermezDb state.ReadOnlyHermezDb,
+	hermezDb *hermez_db.HermezDb,
 ) error {
 	blockNum := block.NumberU64()
 
@@ -188,7 +188,7 @@ func executeBlock(
 	} else {
 		// for zkEVM no receipts
 		//vmConfig.NoReceipts = true
-		execRs, err = core.ExecuteBlockEphemerally(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, tx, roHermezDb)
+		execRs, err = core.ExecuteBlockEphemerally(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, tx, hermezDb)
 	}
 	if err != nil {
 		return err
@@ -219,7 +219,7 @@ func executeBlock(
 	}
 
 	if writeInnerTxs {
-		if err := rawdb.WriteInnerTxs(tx, blockNum, execRs.InnerTxs); err != nil {
+		if err := hermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
 			return err
 		}
 	}

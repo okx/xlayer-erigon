@@ -23,13 +23,13 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/chain"
-
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 func GetTxContext(config *chain.Config, engine consensus.EngineReader, ibs *state.IntraBlockState, header *types.Header, tx types.Transaction, evm vm.VMInterface, effectiveGasPricePercentage uint8) (types.Message, evmtypes.TxContext, error) {
@@ -65,7 +65,7 @@ func GetTxContext(config *chain.Config, engine consensus.EngineReader, ibs *stat
 // and uses the input parameters for its environment. It returns the receipt
 // for the transaction, gas used and an error if the transaction failed,
 // indicating the block was invalid.
-func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, blockNumber *big.Int, tx types.Transaction, usedGas *uint64, evm vm.VMInterface) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
+func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, gp *GasPool, ibs *state.IntraBlockState, stateWriter state.StateWriter, blockNumber *big.Int, tx types.Transaction, usedGas *uint64, evm vm.VMInterface) (*types.Receipt, *ExecutionResult, []*zktypes.InnerTx, error) {
 	rules := evm.ChainRules()
 
 	if evm.Config().TraceJumpDest {
@@ -122,7 +122,7 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 		}
 	}
 
-	var innerTxs []*vm.InnerTx
+	var innerTxs []*zktypes.InnerTx
 	if !evm.Config().NoInnerTxs {
 		innerTxs = afterApplyTransaction(evm, result.Failed())
 	}
@@ -171,7 +171,7 @@ func ApplyTransaction_zkevm(
 	tx types.Transaction,
 	usedGas *uint64,
 	effectiveGasPricePercentage uint8,
-) (*types.Receipt, *ExecutionResult, []*vm.InnerTx, error) {
+) (*types.Receipt, *ExecutionResult, []*zktypes.InnerTx, error) {
 	// Create a new context to be used in the EVM environment
 	msg, txContext, err := GetTxContext(config, engine, ibs, header, tx, evm, effectiveGasPricePercentage)
 	if err != nil {
@@ -180,7 +180,7 @@ func ApplyTransaction_zkevm(
 	return ApplyMessageWithTxContext(msg, txContext, gp, ibs, stateWriter, header.Number, tx, usedGas, evm)
 }
 
-func afterApplyTransaction(env vm.VMInterface, failed bool) []*vm.InnerTx {
+func afterApplyTransaction(env vm.VMInterface, failed bool) []*zktypes.InnerTx {
 	innerTxs := env.GetInnerTxMeta().InnerTxs
 	if failed {
 		for _, innerTx := range innerTxs {

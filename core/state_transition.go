@@ -385,7 +385,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		vmerr error // vm errors do not effect consensus and are therefore not assigned to err
 	)
 	//add InnerTx
-	innerTx := &vm.InnerTx{
+	innerTx := &zktypes.InnerTx{
 		Dept:     *big.NewInt(0),
 		From:     sender.Address().String(),
 		IsError:  false,

@@ -20,7 +20,6 @@ import (
 
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/core/rawdb"
-	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/calltracer"
@@ -384,7 +383,7 @@ func executeBlockZk(
 	writeInnerTxs bool,
 	initialCycle bool,
 	stateStream bool,
-	roHermezDb state.ReadOnlyHermezDb,
+	hermezDb *hermez_db.HermezDb,
 ) (*core.EphemeralExecResult, error) {
 	blockNum := block.NumberU64()
 
@@ -409,7 +408,7 @@ func executeBlockZk(
 	vmConfig.Tracer = callTracer
 
 	getHashFn := core.GetHashFn(block.Header(), getHeader)
-	execRs, err := core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, roHermezDb, prevBlockRoot)
+	execRs, err := core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +427,7 @@ func executeBlockZk(
 	}
 
 	if writeInnerTxs {
-		if err := rawdb.WriteInnerTxs(tx, blockNum, execRs.InnerTxs); err != nil {
+		if err := hermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
 			return nil, err
 		}
 	}

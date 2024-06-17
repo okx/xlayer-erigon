@@ -310,7 +310,7 @@ func doFinishBlockAndUpdateState(
 	receipts types.Receipts,
 	effectiveGases []uint8,
 	l1InfoIndex uint64,
-	innerTxs [][]*vm.InnerTx,
+	innerTxs [][]*zktypes.InnerTx,
 ) error {
 	thisBlockNumber := header.Number.Uint64()
 

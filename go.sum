@@ -236,6 +236,8 @@ github.com/fsnotify/fsnotify v1.6.0 h1:n+5WquG0fcWoWp6xPWfHdbskMCQaFnG6PfBrh1Ky4
 github.com/fsnotify/fsnotify v1.6.0/go.mod h1:sl3t1tCWJFWoRz9R8WJCbQihKKwmorjAbSClcnxKAGw=
 github.com/garslo/gogen v0.0.0-20170307003452-d6ebae628c7c h1:uYNKzPntb8c6DKvP9EfrBjkLkU7pM4lM+uuHSIa8UtU=
 github.com/garslo/gogen v0.0.0-20170307003452-d6ebae628c7c/go.mod h1:Q0X6pkwTILDlzrGEckF6HKjXe48EgsY/l7K7vhY4MW8=
+github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240415152010-66aa405ca33f h1:/o6bj7zF7c72CttEswr8gG0iFC749eVprCVc2pKIB9w=
+github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240415152010-66aa405ca33f/go.mod h1:Ky//z32wQOTY/drV858kr8dECBD9OBV9Xzy+aG6TxSk=
 github.com/gateway-fm/vectorized-poseidon-gold v1.0.0 h1:Du0ZW+fkZhgRNGx/gAkHnMj3/Rl8uJkAEe+ZDPX3PDw=
 github.com/gateway-fm/vectorized-poseidon-gold v1.0.0/go.mod h1:VLGQpyjrOg8+FugH/+d8tfYd/c3z4Xqa+zbUBITygaw=
 github.com/gballet/go-verkle v0.0.0-20221121182333-31427a1f2d35 h1:I8QswD9gf3VEpr7bpepKKOm7ChxFITIG+oc1I5/S0no=
@@ -651,8 +653,6 @@ github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=
 github.com/nxadm/tail v1.4.9-0.20211216163028-4472660a31a6 h1:iZ5rEHU561k2tdi/atkIsrP5/3AX3BjyhYtC96nJ260=
 github.com/nxadm/tail v1.4.9-0.20211216163028-4472660a31a6/go.mod h1:A+9rV4WFp4DKg1Ym1v6YtCrJ2vvlt1ZA/iml0CNuu2A=
-github.com/okx/cdk-erigon-lib v0.0.0-20240614094757-d464c2a973b3 h1:8bc7QATMzaz451jLuBp0W09wUbwLoCc/clzNgfozGcY=
-github.com/okx/cdk-erigon-lib v0.0.0-20240614094757-d464c2a973b3/go.mod h1:Ky//z32wQOTY/drV858kr8dECBD9OBV9Xzy+aG6TxSk=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.7.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
 github.com/onsi/ginkgo v1.12.1/go.mod h1:zj2OWP4+oCPe1qIXoGWkgMRwljMUYCdkwsT2108oapk=

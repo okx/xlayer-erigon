@@ -6,15 +6,15 @@ import (
 	"fmt"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/ledgerwatch/erigon/core/rawdb"
-	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 // GetInternalTransactions ...
-func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcommon.Hash) ([]*vm.InnerTx, error) {
+func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcommon.Hash) ([]*zktypes.InnerTx, error) {
 	if !api.EnableInnerTx {
 		return nil, errors.New("unsupported internal transaction method")
 	}
@@ -48,7 +48,9 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 		}
 	}
 
-	blockInnerTxs := rawdb.ReadInnerTxs(tx, blockNum)
+	hermezReader := hermez_db.NewHermezDbReader(tx)
+	blockInnerTxs := hermezReader.GetInnerTxs(blockNum)
+	//blockInnerTxs := rawdb.ReadInnerTxs(tx, blockNum)
 	if len(blockInnerTxs) != len(block.Transactions()) {
 		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
 	}
@@ -57,7 +59,7 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 }
 
 // GetBlockInternalTransactions ...
-func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) (map[libcommon.Hash][]*vm.InnerTx, error) {
+func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc.BlockNumber) (map[libcommon.Hash][]*zktypes.InnerTx, error) {
 	if !api.EnableInnerTx {
 		return nil, errors.New("unsupported internal transaction method")
 	}
@@ -97,12 +99,14 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 		return nil, nil
 	}
 
-	blockInnerTxs := rawdb.ReadInnerTxs(tx, n)
+	hermezReader := hermez_db.NewHermezDbReader(tx)
+	blockInnerTxs := hermezReader.GetInnerTxs(n)
+	//blockInnerTxs := rawdb.ReadInnerTxs(tx, n)
 	if len(blockInnerTxs) != len(block.Transactions()) {
 		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
 	}
 
-	res := make(map[libcommon.Hash][]*vm.InnerTx)
+	res := make(map[libcommon.Hash][]*zktypes.InnerTx)
 	for index, innerTxs := range blockInnerTxs {
 		res[block.Transactions()[index].Hash()] = innerTxs
 	}

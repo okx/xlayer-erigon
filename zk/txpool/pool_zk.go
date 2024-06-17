@@ -32,7 +32,7 @@ func calcProtocolBaseFee(baseFee uint64) uint64 {
 // which sub pool they will need to go to. Sice this depends on other transactions from the same sender by with lower
 // nonces, and also affect other transactions from the same sender with higher nonce, it loops through all transactions
 // for a given senderID
-func onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
+func onSenderStateChange(isClaimAddr bool, senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
 	protocolBaseFee, blockGasLimit uint64, pending *PendingPool, baseFee, queued *SubPool, discard func(*metaTx, DiscardReason)) {
 	noGapsNonce := senderNonce
 	cumulativeRequiredBalance := uint256.NewInt(0)
@@ -66,7 +66,9 @@ func onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint
 		}
 		mt.minFeeCap = *minFeeCap
 		if mt.Tx.Tip.IsUint64() {
-			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
+			if !isClaimAddr {
+				minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
+			}
 		}
 		mt.minTip = minTip
 

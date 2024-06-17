@@ -438,7 +438,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 
 	//log.Debug("[txpool] new block", "unwinded", len(unwindTxs.txs), "mined", len(minedTxs.txs), "baseFee", baseFee, "blockHeight", blockHeight)
 
-	announcements, err := addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
+	announcements, err := p.addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
 		pendingBaseFee, stateChanges.BlockGasLimit,
 		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked)
 	if err != nil {
@@ -975,7 +975,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 			return announcements, discardReasons, err
 		}
 		isFreeClaimAddr := p.isFreeClaimAddr(senderID)
-		onSenderStateChange(senderID, nonce, balance, byNonce,
+		onSenderStateChange(isFreeClaimAddr, senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
@@ -984,7 +984,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 
 	return announcements, discardReasons, nil
 }
-func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
+func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
 	senders *sendersBatch, newTxs types.TxSlots, pendingBaseFee uint64, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
 	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
@@ -1041,7 +1041,8 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 		if err != nil {
 			return announcements, err
 		}
-		onSenderStateChange(senderID, nonce, balance, byNonce,
+		isFreeClaimAddr := p.isFreeClaimAddr(senderID)
+		onSenderStateChange(isFreeClaimAddr, senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 

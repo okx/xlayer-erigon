@@ -29,9 +29,9 @@ func NewL2GasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) L2GasPr
 	//case DefaultType:
 	//	log.Info("Default type selected")
 	//	gpricer = newDefaultGasPriceSuggester(ctx, cfg, pool)
-	//case FixedType:
-	//	log.Info("Fixed type selected")
-	//	gpricer = newFixedGasPriceSuggester(ctx, cfg, pool, ethMan)
+	case gaspricecfg.FixedType:
+		log.Info("Fixed type selected")
+		gpricer = newFixedGasPriceSuggester(ctx, cfg)
 	default:
 		log.Error("unknown l2 gas price suggester type ", cfg.Type, ". Please specify a valid one: 'follower' or 'default'")
 	}

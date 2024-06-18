@@ -19,12 +19,16 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -42,10 +46,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
 
-	"encoding/json"
-	"os"
-	"path"
-
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
 	"github.com/ledgerwatch/erigon/common/paths"
@@ -60,7 +60,6 @@ import (
 	"github.com/ledgerwatch/erigon/p2p/netutil"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"time"
 )
 
 // These are all the command line flags we support.
@@ -466,6 +465,11 @@ var (
 		Name:  "zkevm.sequencer-non-empty-batch-seal-time",
 		Usage: "Batch seal time. Defaults to 3s",
 		Value: "3s",
+	}
+	SequencerHaltOnBatchNumber = cli.Uint64Flag{
+		Name:  "zkevm.sequencer-halt-on-batch-number",
+		Usage: "Halt the sequencer on this batch number",
+		Value: 0,
 	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",

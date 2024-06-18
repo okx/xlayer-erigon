@@ -148,6 +148,7 @@ func SpawnSequencingStage(
 		}
 	}
 
+	tryHaltSequencer(logPrefix, cfg, thisBatch)
 	log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, thisBatch))
 
 	var blockNumber uint64

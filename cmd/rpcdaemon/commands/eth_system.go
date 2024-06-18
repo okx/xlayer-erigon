@@ -130,6 +130,11 @@ func (api *APIImpl) GasPrice_deprecated(ctx context.Context) (*hexutil.Big, erro
 		gasResult.Add(tipcap, head.BaseFee)
 	}
 
+	rgp := api.L2GasPircer.GetLastRawGP()
+	if gasResult.Cmp(rgp) < 0 {
+		gasResult = new(big.Int).Set(rgp)
+	}
+
 	return (*hexutil.Big)(gasResult), err
 }
 
@@ -149,6 +154,20 @@ func (api *APIImpl) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, err
 	if err != nil {
 		return nil, err
 	}
+
+	rgp := api.L2GasPircer.GetLastRawGP()
+	if head := rawdb.ReadCurrentHeader(tx); head != nil && head.BaseFee != nil {
+		if rgp.Cmp(head.BaseFee) > 0 {
+			rgp.Sub(rgp, head.BaseFee)
+		} else {
+			rgp.SetUint64(0)
+		}
+	}
+
+	if tipcap.Cmp(rgp) < 0 {
+		tipcap = new(big.Int).Set(rgp)
+	}
+
 	return (*hexutil.Big)(tipcap), err
 }
 

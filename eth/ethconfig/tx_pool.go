@@ -80,11 +80,6 @@ var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Confi
 	cfg.CommitEvery = 5 * time.Minute
 	cfg.TracedSenders = pool1Cfg.TracedSenders
 	cfg.CommitEvery = pool1Cfg.CommitEvery
-	
-	// XLayer config
-	cfg.EnableWhitelist = pool1Cfg.EnableWhitelist
-	cfg.WhiteList = pool1Cfg.WhiteList
-	cfg.BlockedList = pool1Cfg.BlockedList
 
 	return cfg
 }

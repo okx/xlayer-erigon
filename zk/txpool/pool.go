@@ -305,6 +305,7 @@ type TxPool struct {
 	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
+	wbCfg                   WBConfig
 	chainID                 uint256.Int
 	lastSeenBlock           atomic.Uint64
 	started                 atomic.Bool
@@ -364,6 +365,11 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		shanghaiTime:            shanghaiTime,
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
+		wbCfg: WBConfig{
+			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
+		},
 	}, nil
 }
 
@@ -736,7 +742,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// check if sender is whitelisted
-	if p.cfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}

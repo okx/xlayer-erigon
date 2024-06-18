@@ -206,7 +206,7 @@ var (
 	TxPoolEnableWhitelistFlag = cli.BoolFlag{
 		Name:  "txpool.enable.whitelist",
 		Usage: "Enable or disable tx sender white list",
-		Value: txpoolcfg.DefaultConfig.EnableWhitelist,
+		Value: false,
 	}
 	TxPoolWhiteList = cli.StringFlag{
 		Name:  "txpool.whitelist",

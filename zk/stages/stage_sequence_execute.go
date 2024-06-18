@@ -21,7 +21,6 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
-	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
@@ -106,7 +105,6 @@ func SpawnSequencingStage(
 	var addedTransactions []types.Transaction
 	var addedReceipts []*types.Receipt
 	var clonedBatchCounters *vm.BatchCounterCollector
-	var addedInnerTxs [][]*zktypes.InnerTx
 
 	var decodedBlock zktx.DecodedBatchL2Data
 	var deltaTimestamp uint64 = math.MaxUint64
@@ -278,7 +276,6 @@ func SpawnSequencingStage(
 					for i, transaction := range blockTransactions {
 						var receipt *types.Receipt
 						var effectiveGas uint8
-						var innerTx []*zktypes.InnerTx
 
 						if l1Recovery {
 							effectiveGas = l1EffectiveGases[i]
@@ -288,7 +285,7 @@ func SpawnSequencingStage(
 						}
 						effectiveGases = append(effectiveGases, effectiveGas)
 
-						receipt, innerTx, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, l1Recovery)
+						receipt, overflow, err = attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, l1Recovery)
 						if err != nil {
 							// if we are in recovery just log the error as a warning.  If the data is on the L1 then we should consider it as confirmed.
 							// The executor/prover would simply skip a TX with an invalid nonce for example so we don't need to worry about that here.
@@ -325,7 +322,6 @@ func SpawnSequencingStage(
 
 						addedTransactions = append(addedTransactions, transaction)
 						addedReceipts = append(addedReceipts, receipt)
-						addedInnerTxs = append(addedInnerTxs, innerTx)
 
 						hasAnyTransactionsInThisBatch = true
 						nonEmptyBatchTimer.Reset(cfg.zk.SequencerNonEmptyBatchSealTime)
@@ -349,7 +345,7 @@ func SpawnSequencingStage(
 		} else {
 			for idx, transaction := range addedTransactions {
 				effectiveGas := effectiveGases[idx]
-				receipt, innerTx, innerOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, false)
+				receipt, innerOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, false)
 				if err != nil {
 					return err
 				}
@@ -358,7 +354,6 @@ func SpawnSequencingStage(
 					panic(fmt.Sprintf("overflowed twice during execution while adding tx with index %d", idx))
 				}
 				addedReceipts[idx] = receipt
-				addedInnerTxs[idx] = innerTx
 			}
 			runLoopBlocks = false // close the batch because there are no counters left
 		}
@@ -367,7 +362,7 @@ func SpawnSequencingStage(
 			return err
 		}
 
-		if err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, effectiveGases, infoTreeIndexProgress, addedInnerTxs); err != nil {
+		if err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, effectiveGases, infoTreeIndexProgress); err != nil {
 			return err
 		}
 

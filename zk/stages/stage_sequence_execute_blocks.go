@@ -78,7 +78,6 @@ func finaliseBlock(
 	transactions []types.Transaction,
 	receipts types.Receipts,
 	effectiveGases []uint8,
-	innerTxs [][]*zktypes.InnerTx,
 ) error {
 	stateWriter := state.NewPlainStateWriter(sdb.tx, sdb.tx, newHeader.Number.Uint64())
 	chainReader := stagedsync.ChainReader{
@@ -185,12 +184,6 @@ func finaliseBlock(
 	// now add in the zk batch to block references
 	if err := sdb.hermezDb.WriteBlockBatch(newNum.Uint64(), batch); err != nil {
 		return fmt.Errorf("write block batch error: %v", err)
-	}
-
-	if cfg.zk.EnableInnerTx {
-		if err := sdb.hermezDb.WriteInnerTxs(newNum.Uint64(), innerTxs); err != nil {
-			return err
-		}
 	}
 
 	return nil

@@ -6,11 +6,8 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 
-	"encoding/binary"
 	"encoding/json"
 
-	"github.com/ledgerwatch/erigon/common/dbutils"
-	"github.com/ledgerwatch/erigon/rlp"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
@@ -41,7 +38,6 @@ const L1_BATCH_DATA = "l1_batch_data"                                  // batch 
 const L1_INFO_TREE_HIGHEST_BLOCK = "l1_info_tree_highest_block"        // highest l1 block number found with L1 info tree updates
 const REUSED_L1_INFO_TREE_INDEX = "reused_l1_info_tree_index"          // block number => const 1
 const LATEST_USED_GER = "latest_used_ger"                              // batch number -> GER latest used GER
-const INNER_TX = "InnerTx"                                             // block_num_u64 + txId -> inner txs of transaction
 
 type HermezDb struct {
 	tx kv.RwTx
@@ -1155,52 +1151,4 @@ func (db *HermezDb) TruncateLatestUsedGers(fromBatch uint64) error {
 	}
 
 	return nil
-}
-
-func (db *HermezDb) WriteInnerTxs(number uint64, innerTxs [][]*types.InnerTx) error {
-	for txId, its := range innerTxs {
-		if len(its) == 0 {
-			continue
-		}
-
-		data, err := rlp.EncodeToBytes(its)
-		if err != nil {
-			return fmt.Errorf("encode inner tx for block %d: %w", number, err)
-		}
-
-		if err = db.tx.Append(INNER_TX, dbutils.LogKey(number, uint32(txId)), data); err != nil {
-			return fmt.Errorf("writing logs for block %d: %w", number, err)
-		}
-	}
-	return nil
-}
-
-func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
-	var blockInnerTxs [][]*types.InnerTx
-
-	prefix := make([]byte, 8)
-	binary.BigEndian.PutUint64(prefix, blockNum)
-
-	it, err := db.tx.Prefix(INNER_TX, prefix)
-	if err != nil {
-		log.Error("inner txs fetching failed", "err", err)
-		return nil
-	}
-	for it.HasNext() {
-		_, v, err := it.Next()
-		if err != nil {
-			log.Error("inner txs fetching failed", "err", err)
-			return nil
-		}
-
-		innerTxs := make([]*types.InnerTx, 0)
-		if err := rlp.DecodeBytes(v, &innerTxs); err != nil {
-			err = fmt.Errorf("inner txs unmarshal failed:  %w", err)
-			log.Error("inner txs fetching failed", "err", err)
-			return nil
-		}
-
-		blockInnerTxs = append(blockInnerTxs, innerTxs)
-	}
-	return blockInnerTxs
 }

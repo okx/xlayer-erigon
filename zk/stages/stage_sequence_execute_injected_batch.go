@@ -61,7 +61,7 @@ func processInjectedInitialBatch(
 		return err
 	}
 
-	txn, receipt, innerTx, effectiveGas, err := handleInjectedBatch(cfg, sdb, ibs, blockContext, injected, header, parentBlock, forkId)
+	txn, receipt, effectiveGas, err := handleInjectedBatch(cfg, sdb, ibs, blockContext, injected, header, parentBlock, forkId)
 	if err != nil {
 		return err
 	}
@@ -69,8 +69,7 @@ func processInjectedInitialBatch(
 	txns := types.Transactions{*txn}
 	receipts := types.Receipts{receipt}
 	effectiveGases := []uint8{effectiveGas}
-	innerTxs := [][]*zktypes.InnerTx{innerTx}
-	return doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts, effectiveGases, 0, innerTxs)
+	return doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts, effectiveGases, 0)
 }
 
 func handleInjectedBatch(
@@ -82,26 +81,26 @@ func handleInjectedBatch(
 	header *types.Header,
 	parentBlock *types.Block,
 	forkId uint64,
-) (*types.Transaction, *types.Receipt, []*zktypes.InnerTx, uint8, error) {
+) (*types.Transaction, *types.Receipt, uint8, error) {
 	decodedBlocks, err := zktx.DecodeBatchL2Blocks(injected.Transaction, 5)
 	if err != nil {
-		return nil, nil, nil, 0, err
+		return nil, nil, 0, err
 	}
 	if len(decodedBlocks) == 0 || len(decodedBlocks) > 1 {
-		return nil, nil, nil, 0, errors.New("expected 1 block for the injected batch")
+		return nil, nil, 0, errors.New("expected 1 block for the injected batch")
 	}
 	if len(decodedBlocks[0].Transactions) == 0 {
-		return nil, nil, nil, 0, errors.New("expected 1 transaction in the injected batch")
+		return nil, nil, 0, errors.New("expected 1 transaction in the injected batch")
 	}
 
 	batchCounters := vm.NewBatchCounterCollector(sdb.smt.GetDepth(), uint16(forkId), cfg.zk.ShouldCountersBeUnlimited(false))
 
 	// process the tx and we can ignore the counters as an overflow at this stage means no network anyway
 	effectiveGas := DeriveEffectiveGasPrice(cfg, decodedBlocks[0].Transactions[0])
-	receipt, innerTx, _, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, blockContext, header, decodedBlocks[0].Transactions[0], effectiveGas, false)
+	receipt, _, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, blockContext, header, decodedBlocks[0].Transactions[0], effectiveGas, false)
 	if err != nil {
-		return nil, nil, nil, 0, err
+		return nil, nil, 0, err
 	}
 
-	return &decodedBlocks[0].Transactions[0], receipt, innerTx, effectiveGas, nil
+	return &decodedBlocks[0].Transactions[0], receipt, effectiveGas, nil
 }

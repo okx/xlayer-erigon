@@ -95,6 +95,7 @@ services:
   erigon-prover:
     container_name: erigon-prover
     image: hermeznetwork/zkevm-prover:v6.0.3-RC17
+    platform: linux/amd64
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >

@@ -23,7 +23,7 @@ type Config struct {
 	IgnorePrice      *big.Int `toml:",omitempty"`
 
 	// XLayer config
-	Type         EstimatorType `toml:",omitempty"`
+	Type         string        `toml:",omitempty"`
 	UpdatePeriod time.Duration `toml:",omitempty"`
 	Factor       float64       `toml:",omitempty"`
 	KafkaURL     string        `toml:",omitempty"`
@@ -44,15 +44,13 @@ type Config struct {
 	EnableFollowerAdjustByL2L1Price bool `toml:",omitempty"`
 }
 
-type EstimatorType string
-
 const (
 	// DefaultType default gas price from config is set.
-	DefaultType EstimatorType = "default"
+	DefaultType string = "default"
 
 	// FollowerType calculate the gas price basing on the L1 gasPrice.
-	FollowerType EstimatorType = "follower"
+	FollowerType string = "follower"
 
 	// FixedType the gas price from config that the unit is usdt, XLayer config
-	FixedType EstimatorType = "fixed"
+	FixedType string = "fixed"
 )

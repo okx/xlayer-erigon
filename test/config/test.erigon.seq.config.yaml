@@ -44,3 +44,5 @@ db.read.concurrency: 20000
 txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
+
+gpo.type: "default"

@@ -45,4 +45,12 @@ txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
 
-gpo.type: "default"
+gpo.type: "follower"
+gpo.update-period: "10s"
+gpo.factor: 0.01
+gpo.kafka-url: "127.0.0.1"
+gpo.topic: "explorer_coinPrice_push"
+gpo.group-id: "web3_okbc_explorerchainprice"
+gpo.default-l1-coin-price: 2000
+gpo.default-l2-coin-price: 50
+gpo.enable-follower-adjust: true

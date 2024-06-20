@@ -130,6 +130,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.GpoDefaultL1CoinPriceFlag,
 	&utils.GpoDefaultL2CoinPriceFlag,
 	&utils.GpoEnableFollowerAdjustByL2L1PriceFlag,
+	&utils.GpoTrustedGasPriceProviderUrl,
 	&utils.InsecureUnlockAllowedFlag,
 	&utils.MetricsEnabledFlag,
 	&utils.MetricsHTTPFlag,

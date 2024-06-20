@@ -2,6 +2,8 @@ package commands
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"math/big"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	stageszk "github.com/ledgerwatch/erigon/zk/stages"
+	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -106,8 +109,35 @@ func (api *APIImpl) ProtocolVersion(ctx context.Context) (hexutil.Uint, error) {
 	return hexutil.Uint(ver), nil
 }
 
+func (api *APIImpl) getGPFromTrustedNode() (*hexutil.Big, error) {
+	res, err := client.JSONRPCCall(api.L2GasPircer.GetConfig().TrustedGasPriceProviderUrl, "eth_gasPrice")
+	if err != nil {
+		return nil, errors.New("failed to get gas price from trusted node")
+	}
+
+	if res.Error != nil {
+		return nil, errors.New(res.Error.Message)
+	}
+
+	var gasPrice uint64
+	err = json.Unmarshal(res.Result, &gasPrice)
+	if err != nil {
+		return nil, errors.New("failed to read gas price from trusted node")
+	}
+	return (*hexutil.Big)(new(big.Int).SetUint64(gasPrice)), nil
+}
+
 // GasPrice implements eth_gasPrice. Returns the current price per gas in wei.
 func (api *APIImpl) GasPrice_deprecated(ctx context.Context) (*hexutil.Big, error) {
+
+	if api.L2GasPircer.GetConfig().TrustedGasPriceProviderUrl != "" {
+		gp, err := api.getGPFromTrustedNode()
+		if err != nil {
+			return (*hexutil.Big)(api.L2GasPircer.GetConfig().Default), nil
+		}
+		return gp, nil
+	}
+
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -154,20 +184,6 @@ func (api *APIImpl) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, err
 	if err != nil {
 		return nil, err
 	}
-
-	rgp := api.L2GasPircer.GetLastRawGP()
-	if head := rawdb.ReadCurrentHeader(tx); head != nil && head.BaseFee != nil {
-		if rgp.Cmp(head.BaseFee) > 0 {
-			rgp.Sub(rgp, head.BaseFee)
-		} else {
-			rgp.SetUint64(0)
-		}
-	}
-
-	if tipcap.Cmp(rgp) < 0 {
-		tipcap = new(big.Int).Set(rgp)
-	}
-
 	return (*hexutil.Big)(tipcap), err
 }
 

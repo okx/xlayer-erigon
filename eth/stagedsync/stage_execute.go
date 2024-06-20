@@ -150,10 +150,9 @@ func executeBlock(
 	writeChangesets bool,
 	writeReceipts bool,
 	writeCallTraces bool,
-	writeInnerTxs bool,
 	initialCycle bool,
 	stateStream bool,
-	hermezDb *hermez_db.HermezDb,
+	roHermezDb state.ReadOnlyHermezDb,
 ) error {
 	blockNum := block.NumberU64()
 
@@ -188,7 +187,7 @@ func executeBlock(
 	} else {
 		// for zkEVM no receipts
 		//vmConfig.NoReceipts = true
-		execRs, err = core.ExecuteBlockEphemerally(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, tx, hermezDb)
+		execRs, err = core.ExecuteBlockEphemerally(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, tx, roHermezDb)
 	}
 	if err != nil {
 		return err
@@ -215,12 +214,6 @@ func executeBlock(
 			if err := rawdb.WriteBorReceipt(tx, block.Hash(), block.NumberU64(), stateSyncReceipt); err != nil {
 				return err
 			}
-		}
-	}
-
-	if writeInnerTxs {
-		if err := hermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
-			return err
 		}
 	}
 
@@ -495,9 +488,8 @@ Loop:
 		writeChangeSets := nextStagesExpectData || blockNum > cfg.prune.History.PruneTo(to)
 		writeReceipts := nextStagesExpectData || blockNum > cfg.prune.Receipts.PruneTo(to)
 		writeCallTraces := nextStagesExpectData || blockNum > cfg.prune.CallTraces.PruneTo(to)
-		writeInnerTxs := cfg.zk.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
 
-		if err = executeBlock(block, header, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb); err != nil {
+		if err = executeBlock(block, header, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, initialCycle, stateStream, hermezDb); err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Warn(fmt.Sprintf("[%s] Execution failed", logPrefix), "block", blockNum, "hash", block.Hash().String(), "err", err)
 				if cfg.hd != nil {

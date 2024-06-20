@@ -203,6 +203,21 @@ var (
 		Usage: "How often transactions should be committed to the storage",
 		Value: txpoolcfg.DefaultConfig.CommitEvery,
 	}
+	TxPoolEnableWhitelistFlag = cli.BoolFlag{
+		Name:  "txpool.enable.whitelist",
+		Usage: "Enable or disable tx sender white list",
+		Value: false,
+	}
+	TxPoolWhiteList = cli.StringFlag{
+		Name:  "txpool.whitelist",
+		Usage: "Comma separated list of addresses, who can send transactions",
+		Value: "",
+	}
+	TxPoolBlockedList = cli.StringFlag{
+		Name:  "txpool.blockedlist",
+		Usage: "Comma separated list of addresses, who can't send and receive transactions",
+		Value: "",
+	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",
@@ -1522,6 +1537,29 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
+
+	// XLayer config
+	if ctx.IsSet(TxPoolEnableWhitelistFlag.Name) {
+		cfg.EnableWhitelist = ctx.Bool(TxPoolEnableWhitelistFlag.Name)
+	}
+	if ctx.IsSet(TxPoolWhiteList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolWhiteList.Name))
+		cfg.WhiteList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.WhiteList[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolBlockedList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolBlockedList.Name))
+		cfg.BlockedList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.BlockedList[i] = sender.String()
+		}
+	}
 }
 
 func setEthash(ctx *cli.Context, datadir string, cfg *ethconfig.Config) {

@@ -1,0 +1,47 @@
+datadir: /home/erigon/data/
+chain: dynamic-mynetwork
+http: true
+private.api.addr: localhost:9091
+zkevm.l2-chain-id: 1001
+zkevm.l2-sequencer-rpc-url: erigon-seq:8545
+zkevm.l2-datastreamer-url: erigon-seq:6900
+zkevm.l1-chain-id: 1337
+zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
+
+zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+zkevm.address-zkevm: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+zkevm.address-admin: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
+zkevm.address-rollup: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+zkevm.address-ger-manager: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+
+zkevm.l1-rollup-id: 1
+zkevm.l1-first-block: 136
+zkevm.l1-block-range: 10
+zkevm.l1-query-delay: 100
+zkevm.rpc-ratelimit: 300
+zkevm.datastream-version: 2
+
+zkevm.executor-urls: erigon-stateless-executor:50071
+zkevm.executor-strict: false
+zkevm.witness-full: true
+
+zkevm.sequencer-initial-fork-id: 9
+zkevm.data-stream-host: "localhost"
+zkevm.data-stream-port: 6900
+zkevm.default-gas-price: 1000000000
+zkevm.max-gas-price: 0
+zkevm.gas-price-factor: 0.000001
+zkevm.allow-internal-transactions: true
+
+externalcl: true
+http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]
+http.addr: 0.0.0.0
+http.port: 8545
+http.vhosts: any
+http.corsdomain: any
+ws: true
+
+db.read.concurrency: 20000
+txpool.globalslots: 100000
+txpool.globalbasefeeslots: 100000
+txpool.globalqueue: 100000

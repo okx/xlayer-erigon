@@ -88,6 +88,7 @@ func CreateHermezBuckets(tx kv.RwTx) error {
 		L1_INFO_TREE_HIGHEST_BLOCK,
 		REUSED_L1_INFO_TREE_INDEX,
 		LATEST_USED_GER,
+		INNER_TX,
 	}
 	for _, t := range tables {
 		if err := tx.CreateBucket(t); err != nil {

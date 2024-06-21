@@ -125,9 +125,9 @@ services:
       - 6900:6900
     volumes:
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/root/dynamic-configs/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/root/dynamic-configs/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/root/dynamic-configs/dynamic-mynetwork-conf.json
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 

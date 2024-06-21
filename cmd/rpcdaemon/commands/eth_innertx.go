@@ -50,7 +50,6 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 
 	hermezReader := hermez_db.NewHermezDbReader(tx)
 	blockInnerTxs := hermezReader.GetInnerTxs(blockNum)
-	//blockInnerTxs := rawdb.ReadInnerTxs(tx, blockNum)
 	if len(blockInnerTxs) != len(block.Transactions()) {
 		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
 	}
@@ -101,7 +100,6 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 
 	hermezReader := hermez_db.NewHermezDbReader(tx)
 	blockInnerTxs := hermezReader.GetInnerTxs(n)
-	//blockInnerTxs := rawdb.ReadInnerTxs(tx, n)
 	if len(blockInnerTxs) != len(block.Transactions()) {
 		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
 	}

@@ -54,5 +54,5 @@ min-run: ## Runs a minimal node
 	$(RUN_DOCKER_L1_NETWORK)
 	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 3
+	sleep 20
 	$(RUN_DOCKER_RPC)

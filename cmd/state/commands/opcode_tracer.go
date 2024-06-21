@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcfg"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
-	"github.com/holiman/uint256"
 	chain2 "github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/log/v3"

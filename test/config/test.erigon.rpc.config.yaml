@@ -21,7 +21,8 @@ zkevm.l1-query-delay: 100
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
-zkevm.executor-urls: erigon-stateless-executor:50071
+#zkevm.executor-urls: erigon-stateless-executor:50071
+zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: true
 
@@ -31,7 +32,6 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
-zkevm.allow-internal-transactions: true
 
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]

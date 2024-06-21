@@ -23,8 +23,9 @@ import (
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
+
+	"github.com/ledgerwatch/erigon/chain"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 
 	"github.com/ledgerwatch/erigon/common/math"
@@ -224,7 +225,6 @@ func ExecuteBlockEphemerallyZk(
 		//	return nil, fmt.Errorf("bloom computed by execution: %x, in header: %x", bloom, header.Bloom)
 		//}
 	}
-
 	if !vmConfig.ReadOnly {
 		txs := blockTransactions
 		if _, _, _, err := FinalizeBlockExecution(engine, stateReader, block.Header(), txs, block.Uncles(), stateWriter, chainConfig, ibs, receipts, block.Withdrawals(), chainReader, false, excessDataGas); err != nil {

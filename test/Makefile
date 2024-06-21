@@ -7,6 +7,7 @@ DOCKER_AGGREGATOR_DB := erigon-aggregator-db
 DOCKER_PROVER := erigon-prover
 DOCKER_APPROVE := erigon-approve
 DOCKER_SEQ := erigon-seq
+DOCKER_RPC := erigon-rpc
 DOCKER_L1_NETWORK := erigon-mock-l1-network
 
 RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)
@@ -17,6 +18,7 @@ RUN_DOCKER_AGGREGATOR_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_AGGREGATOR_DB)
 RUN_DOCKER_PROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_PROVER)
 RUN_DOCKER_APPROVE := $(DOCKER_COMPOSE) up -d $(DOCKER_APPROVE)
 RUN_DOCKER_SEQ := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ)
+RUN_DOCKER_RPC := $(DOCKER_COMPOSE) up -d $(DOCKER_RPC)
 RUN_DOCKER_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_L1_NETWORK)
 
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
@@ -40,6 +42,8 @@ run: ## Runs a full node
 	$(RUN_DOCKER_SEQ_SENDER)
 	sleep 3
 	$(RUN_DOCKER_AGGREGATOR)
+	sleep 3
+	$(RUN_DOCKER_RPC)
 
 .PHONY: stop
 stop: ## Stops all services
@@ -50,3 +54,5 @@ min-run: ## Runs a minimal node
 	$(RUN_DOCKER_L1_NETWORK)
 	sleep 3
 	$(RUN_DOCKER_SEQ)
+	sleep 20
+	$(RUN_DOCKER_RPC)

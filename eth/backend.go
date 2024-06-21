@@ -812,7 +812,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			)
 
 			var legacyExecutors []legacy_executor_verifier.ILegacyExecutor
-			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" && cfg.ExecutorStrictMode {
+			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
 				levCfg := legacy_executor_verifier.Config{
 					GrpcUrls:              cfg.ExecutorUrls,
 					Timeout:               cfg.ExecutorRequestTimeout,

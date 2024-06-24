@@ -55,6 +55,10 @@ var (
 	priceBump    uint64
 
 	commitEvery time.Duration
+
+	enableWhiteList bool
+	whiteList       []string
+	blockList       []string
 )
 
 func init() {
@@ -78,6 +82,9 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&priceBump, "txpool.pricebump", txpoolcfg.DefaultConfig.PriceBump, "Price bump percentage to replace an already existing transaction")
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
+	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
+	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
+	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)
 }
 
 var rootCmd = &cobra.Command{
@@ -154,10 +161,22 @@ func doTxpool(ctx context.Context) error {
 		sender := common.HexToAddress(senderHex)
 		cfg.TracedSenders[i] = string(sender[:])
 	}
+	ethCfg := &ethconfig.Defaults
+	ethCfg.DeprecatedTxPool.EnableWhitelist = enableWhiteList
+	ethCfg.DeprecatedTxPool.WhiteList = make([]string, len(whiteList))
+	for i, addrHex := range whiteList {
+		addr := common.HexToAddress(addrHex)
+		ethCfg.DeprecatedTxPool.WhiteList[i] = addr.String()
+	}
+	ethCfg.DeprecatedTxPool.BlockedList = make([]string, len(blockList))
+	for i, addrHex := range blockList {
+		addr := common.HexToAddress(addrHex)
+		ethCfg.DeprecatedTxPool.BlockedList[i] = addr.String()
+	}
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)
-	txPoolDB, txPool, fetch, send, txpoolGrpcServer, err := txpooluitl.AllComponents(ctx, cfg, &ethconfig.Defaults,
+	txPoolDB, txPool, fetch, send, txpoolGrpcServer, err := txpooluitl.AllComponents(ctx, cfg, ethCfg,
 		kvcache.New(cacheConfig), newTxs, coreDB, sentryClients, kvClient)
 	if err != nil {
 		return err

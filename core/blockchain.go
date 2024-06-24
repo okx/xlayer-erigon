@@ -73,6 +73,8 @@ type EphemeralExecResult struct {
 	Difficulty       *math.HexOrDecimal256 `json:"currentDifficulty" gencodec:"required"`
 	GasUsed          math.HexOrDecimal64   `json:"gasUsed"`
 	StateSyncReceipt *types.Receipt        `json:"-"`
+
+	InnerTxs [][]*zktypes.InnerTx `json:"innerTxs"`
 }
 
 // ExecuteBlockEphemerally runs a block from provided stateReader and

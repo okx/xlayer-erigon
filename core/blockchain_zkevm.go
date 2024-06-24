@@ -26,6 +26,7 @@ import (
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
 
 	"github.com/ledgerwatch/erigon/chain"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -70,6 +71,8 @@ func ExecuteBlockEphemerallyZk(
 		rejectedTxs []*RejectedTx
 		includedTxs types.Transactions
 		receipts    types.Receipts
+
+		blockInnerTxs [][]*zktypes.InnerTx
 	)
 
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)
@@ -97,7 +100,7 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 
-		receipt, execResult, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage)
+		receipt, execResult, innerTxs, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage)
 		if err != nil {
 			return nil, err
 		}
@@ -154,6 +157,9 @@ func ExecuteBlockEphemerallyZk(
 			includedTxs = append(includedTxs, tx)
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
+			}
+			if !vmConfig.NoInnerTxs {
+				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
 		}
 		if !chainConfig.IsForkID7Etrog(block.NumberU64()) {
@@ -235,6 +241,7 @@ func ExecuteBlockEphemerallyZk(
 		Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
 		GasUsed:     math.HexOrDecimal64(*usedGas),
 		Rejected:    rejectedTxs,
+		InnerTxs:    blockInnerTxs,
 	}
 
 	return execRs, nil

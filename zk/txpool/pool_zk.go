@@ -62,7 +62,9 @@ func onSenderStateChange(isClaimAddr bool, senderID uint64, senderNonce uint64, 
 			return true
 		}
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
-			*minFeeCap = mt.Tx.FeeCap
+			if !isClaimAddr {
+				*minFeeCap = mt.Tx.FeeCap
+			}
 		}
 		mt.minFeeCap = *minFeeCap
 		if mt.Tx.Tip.IsUint64() {

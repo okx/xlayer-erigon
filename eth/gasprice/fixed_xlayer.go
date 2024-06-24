@@ -50,7 +50,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
 	res.Int(result)
 	minGasPrice := new(big.Int).Set(f.cfg.Default)
 	if minGasPrice.Cmp(result) == 1 { // minGasPrice > result
-		log.Warn("setting DefaultGasPriceWei for L2")
+		log.Warn(fmt.Sprintf("setting DefaultGasPrice for L2: %s", f.cfg.Default.String()))
 		result = minGasPrice
 	}
 	maxGasPrice := new(big.Int).Set(f.cfg.MaxPrice)
@@ -59,8 +59,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
 		result = maxGasPrice
 	}
 	var truncateValue *big.Int
-	log.Debug("Full L2 gas price value: ", result, ". Length: ", len(result.String()), ". L1 gas price value: ", l1GasPrice)
-
+	log.Debug(fmt.Sprintf("Full L2 gas price value: %s. Length: %d. L1 gas price: %s", result.String(), len(result.String()), l1GasPrice.String()))
 	numLength := len(result.String())
 	if numLength > 3 { //nolint:gomnd
 		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd
@@ -73,9 +72,9 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
 	} else {
 		truncateValue = result
 	}
-	log.Debug("Storing truncated L2 gas price: ", truncateValue, ", L2 native coin price: ", l2CoinPrice)
+	log.Debug(fmt.Sprintf("Storing truncated L2 gas price: %s, L2 native coin price: %g.", truncateValue.String(), l2CoinPrice))
 	if truncateValue != nil {
-		log.Info("Set l2 raw gas price: ", truncateValue.Uint64())
+		log.Info(fmt.Sprintf("Set l2 raw gas price: %d", truncateValue.Uint64()))
 		f.lastRawGP = truncateValue
 	} else {
 		log.Error("nil value detected. Skipping...")

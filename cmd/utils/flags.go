@@ -842,9 +842,15 @@ var (
 		Value: ethconfig.Defaults.GPO.Percentile,
 	}
 	GpoMaxGasPriceFlag = cli.Int64Flag{
-		Name:  "gpo.maxprice",
+		Name:  "gpo.max-price",
 		Usage: "Maximum gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.MaxPrice.Int64(),
+	}
+
+	GpoDefaultGasPriceFlag = cli.Int64Flag{
+		Name:  "gpo.default-price",
+		Usage: "Default gas price will be recommended by gpo",
+		Value: ethconfig.Defaults.GPO.Default.Int64(),
 	}
 
 	GpoTypeFlag = cli.StringFlag{
@@ -1546,6 +1552,11 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	if ctx.IsSet(GpoMaxGasPriceFlag.Name) {
 		cfg.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 	}
+
+	if ctx.IsSet(GpoDefaultGasPriceFlag.Name) {
+		cfg.Default = big.NewInt(ctx.Int64(GpoDefaultGasPriceFlag.Name))
+	}
+
 	if ctx.IsSet(GpoTypeFlag.Name) {
 		cfg.Type = ctx.String(GpoTypeFlag.Name)
 	}

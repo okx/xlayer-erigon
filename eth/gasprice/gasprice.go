@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
@@ -52,12 +52,12 @@ type Cache interface {
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
-	backend     OracleBackend
-	lastHead    libcommon.Hash
-	lastPrice   *big.Int
-	maxPrice    *big.Int
-	ignorePrice *big.Int
-	cache       Cache
+	backend      OracleBackend
+	lastHead     libcommon.Hash
+	defaultPrice *big.Int
+	maxPrice     *big.Int
+	ignorePrice  *big.Int
+	cache        Cache
 
 	checkBlocks                       int
 	percentile                        int
@@ -93,7 +93,7 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 	}
 	return &Oracle{
 		backend:          backend,
-		lastPrice:        params.Default,
+		defaultPrice:     params.Default,
 		maxPrice:         maxPrice,
 		ignorePrice:      ignorePrice,
 		checkBlocks:      blocks,
@@ -151,8 +151,12 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		// Don't need to pop it, just take from the top of the heap
 		price = txPrices[0].ToBig()
 	}
-	if price.Cmp(oracle.maxPrice) > 0 {
+	if oracle.maxPrice.Int64() > 0 && price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
+	}
+
+	if price.Cmp(oracle.defaultPrice) < 0 {
+		price = new(big.Int).Set(oracle.defaultPrice)
 	}
 
 	oracle.cache.SetLatest(headHash, price)
@@ -254,6 +258,12 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 			count = count + 1
 		}
 	}
+
+	if count == 0 {
+		defaultGP := uint256.NewInt(oracle.defaultPrice.Uint64())
+		heap.Push(s, defaultGP)
+	}
+
 	return nil
 }
 

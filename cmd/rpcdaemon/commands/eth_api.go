@@ -375,10 +375,10 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
-		//todo: confirm config
-		L2GasPircer: gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
+		L2GasPircer:                gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
 	}
 
+	apii.gasCache.latestPrice = apii.L2GasPircer.GetConfig().Default
 	go apii.runL2GasPriceSuggester()
 
 	return apii

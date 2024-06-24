@@ -2,25 +2,22 @@ package commands
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"math/big"
-	"time"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/chain"
+
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
-	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/rpc"
+
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	stageszk "github.com/ledgerwatch/erigon/zk/stages"
-	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
-	"github.com/ledgerwatch/log/v3"
 )
 
 // BlockNumber implements eth_blockNumber. Returns the block number of most recent block.
@@ -109,35 +106,8 @@ func (api *APIImpl) ProtocolVersion(ctx context.Context) (hexutil.Uint, error) {
 	return hexutil.Uint(ver), nil
 }
 
-func (api *APIImpl) getGPFromTrustedNode() (*hexutil.Big, error) {
-	res, err := client.JSONRPCCall(api.L2GasPircer.GetConfig().TrustedGasPriceProviderUrl, "eth_gasPrice")
-	if err != nil {
-		return nil, errors.New("failed to get gas price from trusted node")
-	}
-
-	if res.Error != nil {
-		return nil, errors.New(res.Error.Message)
-	}
-
-	var gasPrice uint64
-	err = json.Unmarshal(res.Result, &gasPrice)
-	if err != nil {
-		return nil, errors.New("failed to read gas price from trusted node")
-	}
-	return (*hexutil.Big)(new(big.Int).SetUint64(gasPrice)), nil
-}
-
 // GasPrice implements eth_gasPrice. Returns the current price per gas in wei.
 func (api *APIImpl) GasPrice_deprecated(ctx context.Context) (*hexutil.Big, error) {
-
-	if api.L2GasPircer.GetConfig().TrustedGasPriceProviderUrl != "" {
-		gp, err := api.getGPFromTrustedNode()
-		if err != nil {
-			return (*hexutil.Big)(api.L2GasPircer.GetConfig().Default), nil
-		}
-		return gp, nil
-	}
-
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -160,11 +130,6 @@ func (api *APIImpl) GasPrice_deprecated(ctx context.Context) (*hexutil.Big, erro
 		gasResult.Add(tipcap, head.BaseFee)
 	}
 
-	rgp := api.L2GasPircer.GetLastRawGP()
-	if gasResult.Cmp(rgp) < 0 {
-		gasResult = new(big.Int).Set(rgp)
-	}
-
 	return (*hexutil.Big)(gasResult), err
 }
 
@@ -185,24 +150,6 @@ func (api *APIImpl) MaxPriorityFeePerGas(ctx context.Context) (*hexutil.Big, err
 		return nil, err
 	}
 	return (*hexutil.Big)(tipcap), err
-}
-
-func (api *APIImpl) runL2GasPriceSuggester() {
-	cfg := api.L2GasPircer.GetConfig()
-	ctx := api.L2GasPircer.GetCtx()
-
-	//todo: apollo
-	updateTimer := time.NewTimer(cfg.UpdatePeriod)
-	for {
-		select {
-		case <-ctx.Done():
-			log.Info("Finishing l2 gas price suggester...")
-			return
-		case <-updateTimer.C:
-			api.L2GasPircer.UpdateGasPriceAvg(api.L1RpcUrl)
-			updateTimer.Reset(cfg.UpdatePeriod)
-		}
-	}
 }
 
 type feeHistoryResult struct {

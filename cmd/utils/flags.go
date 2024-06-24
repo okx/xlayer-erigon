@@ -937,12 +937,6 @@ var (
 		Value: true,
 	}
 
-	GpoTrustedGasPriceProviderUrl = cli.StringFlag{
-		Name:  "gpo.trusted-gp-provider-url",
-		Usage: "trusted provider url to get available gas price",
-		Value: "",
-	}
-
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1614,10 +1608,6 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 
 	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
 		cfg.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
-	}
-
-	if ctx.IsSet(GpoTrustedGasPriceProviderUrl.Name) {
-		cfg.TrustedGasPriceProviderUrl = ctx.String(GpoTrustedGasPriceProviderUrl.Name)
 	}
 }
 

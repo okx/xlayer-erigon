@@ -303,6 +303,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/0xPolygonHermez/zkevm-node => github.com/okx/xlayer-node v0.3.12
-
 replace github.com/tendermint/tendermint => github.com/bnb-chain/tendermint v0.31.12

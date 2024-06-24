@@ -1,8 +1,6 @@
 package apollo
 
 import (
-	// "github.com/0xPolygonHermez/zkevm-node/jsonrpc"
-	// "github.com/0xPolygonHermez/zkevm-node/log"
 	"github.com/apolloconfig/agollo/v4/storage"
 )
 

@@ -9,25 +9,27 @@ import (
 	"github.com/apolloconfig/agollo/v4/env/config"
 	"github.com/apolloconfig/agollo/v4/storage"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
 )
 
 // Client is the apollo client
 type Client struct {
 	*agollo.Client
-	config *ethconfig.ApolloConfig
+	config     *ethconfig.Config
+	nodeConfig *nodecfg.Config
 }
 
 // NewClient creates a new apollo client
-func NewClient(conf *ethconfig.ApolloConfig) *Client {
-	if conf == nil || !conf.Enable || conf.IP == "" || conf.AppID == "" || conf.NamespaceName == "" {
-		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", conf))
+func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
+	if cfg == nil || !cfg.Zk.XLayer.Apollo.Enable || cfg.Zk.XLayer.Apollo.IP == "" || cfg.Zk.XLayer.Apollo.AppID == "" || cfg.Zk.XLayer.Apollo.NamespaceName == "" {
+		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", cfg))
 		return nil
 	}
 	c := &config.AppConfig{
-		IP:             conf.IP,
-		AppID:          conf.AppID,
-		NamespaceName:  conf.NamespaceName,
+		IP:             cfg.Zk.XLayer.Apollo.IP,
+		AppID:          cfg.Zk.XLayer.Apollo.AppID,
+		NamespaceName:  cfg.Zk.XLayer.Apollo.NamespaceName,
 		Cluster:        "default",
 		IsBackupConfig: false,
 	}
@@ -41,8 +43,9 @@ func NewClient(conf *ethconfig.ApolloConfig) *Client {
 	}
 
 	apc := &Client{
-		Client: client,
-		config: conf,
+		Client:     client,
+		config:     cfg,
+		nodeConfig: nodeCfg,
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})
 
@@ -54,7 +57,7 @@ func (c *Client) LoadConfig() (loaded bool) {
 	if c == nil {
 		return false
 	}
-	namespaces := strings.Split(c.config.NamespaceName, ",")
+	namespaces := strings.Split(c.config.Zk.XLayer.Apollo.NamespaceName, ",")
 	for _, namespace := range namespaces {
 		cache := c.GetConfigCache(namespace)
 		cache.Range(func(key, value interface{}) bool {

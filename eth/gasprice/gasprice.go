@@ -159,6 +159,8 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		price = new(big.Int).Set(oracle.defaultPrice)
 	}
 
+	//todo: judge congestion
+
 	oracle.cache.SetLatest(headHash, price)
 
 	return price, nil

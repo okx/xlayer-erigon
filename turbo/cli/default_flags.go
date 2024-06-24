@@ -216,6 +216,10 @@ var DefaultFlags = []cli.Flag{
 	&utils.DebugLimit,
 	&utils.DebugStep,
 	&utils.DebugStepAfter,
+	&utils.NacosURLsFlag,
+	&utils.NacosNamespaceIdFlag,
+	&utils.NacosApplicationNameFlag,
+	&utils.NacosExternalListenAddrFlag,
 	&utils.PoolManagerUrl,
 	&utils.DisableVirtualCounters,
 }

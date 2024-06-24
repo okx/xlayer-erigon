@@ -620,6 +620,27 @@ var (
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
 	}
+	// XLayer nacos
+	NacosURLsFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-urls",
+		Usage: "Nacos urls.",
+		Value: "",
+	}
+	NacosNamespaceIdFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-namespace-id",
+		Usage: "Nacos namespace Id.",
+		Value: "",
+	}
+	NacosApplicationNameFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-application-name",
+		Usage: "Nacos application name",
+		Value: "",
+	}
+	NacosExternalListenAddrFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-external-listen-addr",
+		Usage: "Nacos external listen addr.",
+		Value: "",
+	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",
 		Usage: "Does limit amount of goroutines to process 1 batch request. Means 1 bach request can't overload server. 1 batch still can have unlimited amount of request",

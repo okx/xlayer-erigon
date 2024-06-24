@@ -6,12 +6,11 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
 
-func (api *APIImpl) getGPFromTrustedNode() (*hexutil.Big, error) {
+func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 	res, err := client.JSONRPCCall(api.l2RpcUrl, "eth_gasPrice")
 	if err != nil {
 		return nil, errors.New("failed to get gas price from trusted node")
@@ -26,7 +25,7 @@ func (api *APIImpl) getGPFromTrustedNode() (*hexutil.Big, error) {
 	if err != nil {
 		return nil, errors.New("failed to read gas price from trusted node")
 	}
-	return (*hexutil.Big)(new(big.Int).SetUint64(gasPrice)), nil
+	return new(big.Int).SetUint64(gasPrice), nil
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {

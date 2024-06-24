@@ -379,7 +379,6 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		L2GasPircer: gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
 	}
 
-	apii.L2GasPircer.UpdateGasPriceAvg(apii.L1RpcUrl)
 	go apii.runL2GasPriceSuggester()
 
 	return apii

@@ -56,10 +56,7 @@ type Zk struct {
 	DebugStepAfter uint64
 
 	// For Xlayer
-	NacosURLs               string
-	NacosNamespaceId        string
-	NacosApplicationName    string
-	NacosExternalListenAddr string
+	XLayer XLayerConfig
 
 	PoolManagerUrl         string
 	DisableVirtualCounters bool

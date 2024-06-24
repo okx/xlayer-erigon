@@ -70,6 +70,22 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		panic("Effective gas price for contract deployment must be in interval [0; 1]")
 	}
 
+	// X Layer configs
+	xlayerCfg := ethconfig.XLayerConfig{
+		Apollo: ethconfig.ApolloConfig{
+			Enable:        ctx.Bool(utils.ApolloEnableFlag.Name),
+			IP:            ctx.String(utils.ApolloIPAddr.Name),
+			AppID:         ctx.String(utils.ApolloAppId.Name),
+			NamespaceName: ctx.String(utils.ApolloNamespaceName.Name),
+		},
+		Nacos: ethconfig.NacosConfig{
+			URLs:               ctx.String(utils.NacosURLsFlag.Name),
+			NamespaceId:        ctx.String(utils.NacosNamespaceIdFlag.Name),
+			ApplicationName:    ctx.String(utils.NacosApplicationNameFlag.Name),
+			ExternalListenAddr: ctx.String(utils.NacosExternalListenAddrFlag.Name),
+		},
+	}
+
 	cfg.Zk = &ethconfig.Zk{
 		L2ChainId:                              ctx.Uint64(utils.L2ChainIdFlag.Name),
 		L2RpcUrl:                               ctx.String(utils.L2RpcUrlFlag.Name),
@@ -116,10 +132,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DebugLimit:                             ctx.Uint64(utils.DebugLimit.Name),
 		DebugStep:                              ctx.Uint64(utils.DebugStep.Name),
 		DebugStepAfter:                         ctx.Uint64(utils.DebugStepAfter.Name),
-		NacosURLs:                              ctx.String(utils.NacosURLsFlag.Name),
-		NacosNamespaceId:                       ctx.String(utils.NacosNamespaceIdFlag.Name),
-		NacosApplicationName:                   ctx.String(utils.NacosApplicationNameFlag.Name),
-		NacosExternalListenAddr:                ctx.String(utils.NacosExternalListenAddrFlag.Name),
+		XLayer:                                 xlayerCfg,
 		PoolManagerUrl:                         ctx.String(utils.PoolManagerUrl.Name),
 		DisableVirtualCounters:                 ctx.Bool(utils.DisableVirtualCounters.Name),
 		ExecutorPayloadOutput:                  ctx.String(utils.ExecutorPayloadOutput.Name),

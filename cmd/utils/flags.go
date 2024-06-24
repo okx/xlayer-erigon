@@ -46,6 +46,8 @@ import (
 	"os"
 	"path"
 
+	"time"
+
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
 	"github.com/ledgerwatch/erigon/common/paths"
@@ -60,7 +62,6 @@ import (
 	"github.com/ledgerwatch/erigon/p2p/netutil"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"time"
 )
 
 // These are all the command line flags we support.
@@ -619,6 +620,23 @@ var (
 	DebugStepAfter = cli.UintFlag{
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
+	}
+	// XLayer apollo
+	ApolloEnableFlag = cli.BoolFlag{
+		Name:  "zkevm.apollo-enable",
+		Usage: "Apollo enable flag.",
+	}
+	ApolloIPAddr = cli.StringFlag{
+		Name:  "zkevm.apollo-ip-addr",
+		Usage: "Apollo IP address.",
+	}
+	ApolloAppId = cli.StringFlag{
+		Name:  "zkevm.apollo-app-id",
+		Usage: "Apollo App ID.",
+	}
+	ApolloNamespaceName = cli.StringFlag{
+		Name:  "zkevm.apollo-namespace-name",
+		Usage: "Apollo namespace name.",
 	}
 	// XLayer nacos
 	NacosURLsFlag = cli.StringFlag{

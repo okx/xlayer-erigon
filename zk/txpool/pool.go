@@ -24,6 +24,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ledgerwatch/erigon/rlp"
 	"math"
 	"math/big"
 	"runtime"
@@ -39,6 +40,7 @@ import (
 	"github.com/google/btree"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
+	core_types "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/log/v3"
 
@@ -141,6 +143,10 @@ const (
 	InitCodeTooLarge    DiscardReason = 22 // EIP-3860 - transaction init code is too large
 	UnsupportedTx       DiscardReason = 23 // unsupported transaction type
 	OverflowZkCounters  DiscardReason = 24 // unsupported transaction type
+
+	SenderDisallowedSendTx      DiscardReason = 25 // sender is not allowed to send transactions
+	ReceiverDisallowedReceiveTx DiscardReason = 26 // receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 27 // the transaction is sent by a no whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -195,6 +201,12 @@ func (r DiscardReason) String() string {
 		return "unsupported transaction type"
 	case OverflowZkCounters:
 		return "overflow zk-counters"
+	case SenderDisallowedSendTx:
+		return "blocked sender"
+	case ReceiverDisallowedReceiveTx:
+		return "blocked receiver"
+	case NoWhiteListedSender:
+		return "You are not allowed to send transactions on the X Layer as we are under the phase 1, X layer will be open to the public soon"
 	default:
 		panic(fmt.Sprintf("discard reason: %d", r))
 	}
@@ -294,6 +306,7 @@ type TxPool struct {
 	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
+	wbCfg                   WBConfig
 	chainID                 uint256.Int
 	lastSeenBlock           atomic.Uint64
 	started                 atomic.Bool
@@ -353,6 +366,11 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		shanghaiTime:            shanghaiTime,
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
+		wbCfg: WBConfig{
+			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
+		},
 	}, nil
 }
 
@@ -644,7 +662,7 @@ func (p *TxPool) AddRemoteTxs(_ context.Context, newTxs types.TxSlots) {
 	}
 }
 
-func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.CacheView) DiscardReason {
+func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.CacheView, from common.Address) DiscardReason {
 	isShanghai := p.isShanghai()
 	if isShanghai {
 		if txn.DataLen > fixedgas.MaxInitCodeSize {
@@ -705,6 +723,31 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		}
 		return InsufficientFunds
 	}
+
+	// check if sender is blocked
+	if p.checkBlockedAddr(from) {
+		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
+		return SenderDisallowedSendTx
+	}
+
+	// check if receiver is blocked
+	if !txn.Creation {
+		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
+		to := txnDec.GetTo()
+		if err == nil && to != nil {
+			if p.checkBlockedAddr(*to) {
+				log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
+				return ReceiverDisallowedReceiveTx
+			}
+		}
+	}
+
+	// check if sender is whitelisted
+	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
+		return NoWhiteListedSender
+	}
+
 	return Success
 }
 
@@ -776,7 +819,7 @@ func (p *TxPool) validateTxs(txs *types.TxSlots, stateCache kvcache.CacheView) (
 
 	goodCount := 0
 	for i, txn := range txs.Txs {
-		reason := p.validateTx(txn, txs.IsLocal[i], stateCache)
+		reason := p.validateTx(txn, txs.IsLocal[i], stateCache, txs.Senders.AddressAt(i))
 		if reason == Success {
 			goodCount++
 			// Success here means no DiscardReason yet, so leave it NotSet
@@ -1551,7 +1594,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 
 		isLocalTx := p.isLocalLRU.Contains(string(k))
 
-		if reason := p.validateTx(txn, isLocalTx, cacheView); reason != NotSet && reason != Success {
+		if reason := p.validateTx(txn, isLocalTx, cacheView, addr); reason != NotSet && reason != Success {
 			return nil
 		}
 		txs.Resize(uint(i + 1))

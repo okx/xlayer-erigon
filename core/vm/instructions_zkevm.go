@@ -103,7 +103,9 @@ func opStaticCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCon
 	toAddr := libcommon.Address(addr.Bytes20())
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
+	innerTx, newIndex := beforeOp(interpreter, STATICCAL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
+	afterOp(interpreter, STATICCAL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -142,8 +144,10 @@ func opSendAll_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContex
 	}
 
 	if beneficiaryAddr != callerAddr {
+		innerTx, newIndex := beforeOp(interpreter, SUICIDE_TYP, scope.Contract.Address(), &beneficiaryAddr, nil, nil, 0, balance.ToBig())
 		interpreter.evm.IntraBlockState().AddBalance(beneficiaryAddr, balance)
 		interpreter.evm.IntraBlockState().SubBalance(callerAddr, balance)
+		afterOp(interpreter, SUICIDE_TYP, 0, newIndex, innerTx, nil, nil)
 	}
 	return nil, errStopToken
 }
@@ -296,7 +300,9 @@ func opCreate_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 
 	scope.Contract.UseGas(gas)
 
+	innerTx, newIndex := beforeOp(interpreter, CREATE_TYP, scope.Contract.Address(), nil, nil, input, gas, value.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create(scope.Contract, input, gas, &value, 0)
+	afterOp(interpreter, CREATE_TYP, gas-returnGas, newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error. If the ruleset is
 	// homestead we must check for CodeStoreOutOfGasError (homestead only
@@ -336,7 +342,9 @@ func opCreate2_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContex
 	scope.Contract.UseGas(gas)
 	// reuse size int for stackvalue
 	stackValue := size
+	innerTx, newIndex := beforeOp(interpreter, CREATE2_TYP, scope.Contract.Address(), nil, nil, input, gas, endowment.ToBig())
 	res, addr, returnGas, suberr := interpreter.evm.Create2(scope.Contract, input, gas, &endowment, &salt)
+	afterOp(interpreter, CREATE2_TYP, gas-returnGas, newIndex, innerTx, &addr, suberr)
 
 	// Push item on the stack based on the returned error.
 	if suberr != nil {
@@ -375,7 +383,9 @@ func opCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 		gas += params.CallStipend
 	}
 
+	innerTx, newIndex := beforeOp(interpreter, CALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, &value, false /* bailout */, 0)
+	afterOp(interpreter, CALL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 
 	if err != nil {
 		temp.Clear()
@@ -410,7 +420,9 @@ func opCallCode_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 		gas += params.CallStipend
 	}
 
+	innerTx, newIndex := beforeOp(interpreter, CALLCODE_TYP, scope.Contract.Address(), &toAddr, &toAddr, args, gas, value.ToBig())
 	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, &value)
+	afterOp(interpreter, CALLCODE_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -440,7 +452,11 @@ func opDelegateCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeC
 	// Get arguments from the memory.
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
+	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
+	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
+	innerTx.ValueWei = scope.Contract.value.String()
+	afterOp(interpreter, DELEGATECALL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()
 	} else {

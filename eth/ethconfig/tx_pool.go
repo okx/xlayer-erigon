@@ -43,6 +43,16 @@ type DeprecatedTxPoolConfig struct {
 	StartOnInit   bool
 	TracedSenders []string // List of senders for which tx pool should print out debugging info
 	CommitEvery   time.Duration
+
+	// XLayer config
+	// BlockedList is the blocked address list
+	BlockedList []string
+	// EnableWhitelist is a flag to enable/disable the whitelist
+	EnableWhitelist bool
+	// WhiteList is the white address list
+	WhiteList []string
+	// FreeClaimGasAddr is the address list for claim
+	FreeClaimGasAddr []string
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

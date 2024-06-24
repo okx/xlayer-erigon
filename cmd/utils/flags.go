@@ -206,6 +206,20 @@ var (
 	TxPoolFreeClaimGasFlag = cli.StringFlag{
 		Name:  "txpool.freeclaimgas",
 		Usage: "support free gas for claim addrs",
+	}
+	TxPoolEnableWhitelistFlag = cli.BoolFlag{
+		Name:  "txpool.enable.whitelist",
+		Usage: "Enable or disable tx sender white list",
+		Value: false,
+	}
+	TxPoolWhiteList = cli.StringFlag{
+		Name:  "txpool.whitelist",
+		Usage: "Comma separated list of addresses, who can send transactions",
+		Value: "",
+	}
+	TxPoolBlockedList = cli.StringFlag{
+		Name:  "txpool.blockedlist",
+		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
 	}
 	// Miner settings
@@ -587,6 +601,11 @@ var (
 		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
 		Value: "",
 	}
+	AllowInternalTransactions = cli.BoolFlag{
+		Name:  "zkevm.allow-internal-transactions",
+		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
 	DebugNoSync = cli.BoolFlag{
 		Name:  "debug.no-sync",
 		Usage: "Disable syncing",
@@ -604,6 +623,27 @@ var (
 	DebugStepAfter = cli.UintFlag{
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
+	}
+	// XLayer nacos
+	NacosURLsFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-urls",
+		Usage: "Nacos urls.",
+		Value: "",
+	}
+	NacosNamespaceIdFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-namespace-id",
+		Usage: "Nacos namespace Id.",
+		Value: "",
+	}
+	NacosApplicationNameFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-application-name",
+		Usage: "Nacos application name",
+		Value: "",
+	}
+	NacosExternalListenAddrFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-external-listen-addr",
+		Usage: "Nacos external listen addr.",
+		Value: "",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",
@@ -1527,6 +1567,29 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
+
+	// XLayer config
+	if ctx.IsSet(TxPoolEnableWhitelistFlag.Name) {
+		cfg.EnableWhitelist = ctx.Bool(TxPoolEnableWhitelistFlag.Name)
+	}
+	if ctx.IsSet(TxPoolWhiteList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolWhiteList.Name))
+		cfg.WhiteList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.WhiteList[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolBlockedList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolBlockedList.Name))
+		cfg.BlockedList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.BlockedList[i] = sender.String()
+		}
+	}
 }
 
 func setEthash(ctx *cli.Context, datadir string, cfg *ethconfig.Config) {

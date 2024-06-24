@@ -33,6 +33,7 @@ import (
 
 	erigonchain "github.com/gateway-fm/cdk-erigon-lib/chain"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/exp/slices"
@@ -748,6 +749,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		// entering ZK territory!
 		cfg := backend.config
 
+		// For Xlayer
+		if len(cfg.NacosURLs) > 0 {
+			nacos.StartNacosClient(cfg.NacosURLs, cfg.NacosNamespaceId, cfg.NacosApplicationName, cfg.NacosExternalListenAddr)
+		}
+
 		// update the chain config with the zero gas from the flags
 		backend.chainConfig.SupportGasless = cfg.Gasless
 
@@ -812,7 +818,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			)
 
 			var legacyExecutors []legacy_executor_verifier.ILegacyExecutor
-			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" && cfg.ExecutorStrictMode {
+			if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" {
 				levCfg := legacy_executor_verifier.Config{
 					GrpcUrls:              cfg.ExecutorUrls,
 					Timeout:               cfg.ExecutorRequestTimeout,

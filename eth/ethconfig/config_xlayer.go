@@ -1,8 +1,9 @@
 package ethconfig
 
 type XLayerConfig struct {
-	Apollo ApolloConfig
-	Nacos  NacosConfig
+	Apollo        ApolloConfig
+	Nacos         NacosConfig
+	EnableInnerTx bool
 }
 
 // NacosConfig is the config for nacos

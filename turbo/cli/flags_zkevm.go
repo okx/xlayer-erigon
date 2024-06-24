@@ -84,6 +84,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 			ApplicationName:    ctx.String(utils.NacosApplicationNameFlag.Name),
 			ExternalListenAddr: ctx.String(utils.NacosExternalListenAddrFlag.Name),
 		},
+		EnableInnerTx: ctx.Bool(utils.AllowInternalTransactions.Name),
 	}
 
 	cfg.Zk = &ethconfig.Zk{
@@ -136,7 +137,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		PoolManagerUrl:                         ctx.String(utils.PoolManagerUrl.Name),
 		DisableVirtualCounters:                 ctx.Bool(utils.DisableVirtualCounters.Name),
 		ExecutorPayloadOutput:                  ctx.String(utils.ExecutorPayloadOutput.Name),
-		EnableInnerTx:                          ctx.Bool(utils.AllowInternalTransactions.Name),
 	}
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.L2ChainId)

@@ -2,6 +2,8 @@
 package node
 
 import (
+	"strings"
+
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
@@ -14,7 +16,6 @@ import (
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
-	"strings"
 )
 
 // ErigonNode represents a single node, that runs sync and p2p network.

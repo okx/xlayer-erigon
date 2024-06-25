@@ -8,9 +8,12 @@ import (
 	"github.com/apolloconfig/agollo/v4"
 	"github.com/apolloconfig/agollo/v4/env/config"
 	"github.com/apolloconfig/agollo/v4/storage"
+	"github.com/urfave/cli/v2"
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
+	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
+	"github.com/ledgerwatch/erigon/turbo/debug"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -19,6 +22,7 @@ type Client struct {
 	*agollo.Client
 	config     *ethconfig.Config
 	nodeConfig *nodecfg.Config
+	flags      []cli.Flag
 }
 
 // NewClient creates a new apollo client
@@ -47,6 +51,7 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 		Client:     client,
 		config:     cfg,
 		nodeConfig: nodeCfg,
+		flags:      append(erigoncli.DefaultFlags, debug.Flags...),
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})
 
@@ -65,13 +70,13 @@ func (c *Client) LoadConfig() (loaded bool) {
 			loaded = true
 			switch namespace {
 			case L2GasPricer:
-				c.loadL2GasPricer(value)
+				// c.loadL2GasPricer(value)
 			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
-				c.loadJsonRPC(value)
+				// c.loadJsonRPC(value)
 			case Sequencer:
-				c.loadSequencer(value)
+				// c.loadSequencer(value)
 			case Pool:
-				c.loadPool(value)
+				// c.loadPool(value)
 			}
 			return true
 		})
@@ -92,13 +97,13 @@ func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 			case L2GasPricerHalt, SequencerHalt, JsonRPCROHalt, JsonRPCExplorerHalt, JsonRPCSubgraphHalt, JsonRPCLightHalt, JsonRPCBridgeHalt, JsonRPCWOHalt, JsonRPCUnlimitedHalt:
 				c.fireHalt(key, value)
 			case L2GasPricer:
-				c.fireL2GasPricer(key, value)
+				// c.fireL2GasPricer(key, value)
 			case Sequencer:
-				c.fireSequencer(key, value)
+				// c.fireSequencer(key, value)
 			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
-				c.fireJsonRPC(key, value)
+				// c.fireJsonRPC(key, value)
 			case Pool:
-				c.firePool(key, value)
+				// c.firePool(key, value)
 			}
 		}
 	}

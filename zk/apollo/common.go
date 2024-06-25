@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/apolloconfig/agollo/v4/storage"
-	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v2"
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -17,15 +19,38 @@ import (
 )
 
 func (c *Client) unmarshal(value interface{}) (*nodecfg.Config, *ethconfig.Config, error) {
-	mockCtx := cli.NewContext(nil, nil, nil)
-	err := setFlagsFromBytes(mockCtx, value)
+	config := make(map[string]interface{})
+	err := yaml.Unmarshal([]byte(value.(string)), config)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to set flags from bytes: %v", err))
+		log.Error(fmt.Sprintf("failed to load config: %v error: %v", value, err))
 		return nil, nil, err
 	}
 
-	nodeCfg := node.NewNodConfigUrfave(mockCtx)
-	ethCfg := node.NewEthConfigUrfave(mockCtx, nodeCfg)
+	// sets global flags to value in apollo config
+	ctx := createMockContext(c.flags)
+	for key, value := range config {
+		if !ctx.IsSet(key) {
+			if reflect.ValueOf(value).Kind() == reflect.Slice {
+				sliceInterface := value.([]interface{})
+				s := make([]string, len(sliceInterface))
+				for i, v := range sliceInterface {
+					s[i] = fmt.Sprintf("%v", v)
+				}
+				err := ctx.Set(key, strings.Join(s, ","))
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed setting %s flag with values=%s error=%s", key, s, err)
+				}
+			} else {
+				err := ctx.Set(key, fmt.Sprintf("%v", value))
+				if err != nil {
+					return nil, nil, fmt.Errorf("failed setting %s flag with value=%v error=%s", key, value, err)
+				}
+			}
+		}
+	}
+
+	nodeCfg := node.NewNodConfigUrfave(ctx)
+	ethCfg := node.NewEthConfigUrfave(ctx, nodeCfg)
 
 	return nodeCfg, ethCfg, nil
 }

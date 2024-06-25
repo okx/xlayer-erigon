@@ -12,7 +12,7 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 		Zk: &ethconfig.Zk{
 			XLayer: ethconfig.XLayerConfig{
 				Apollo: ethconfig.ApolloConfig{
-					IP:            "",
+					IP:            "0.0.0.0",
 					AppID:         "xlayer-devnet",
 					NamespaceName: "jsonrpc-ro.txt,jsonrpc-roHalt.properties",
 					Enable:        true,

@@ -20,9 +20,9 @@ import (
 // Client is the apollo client
 type Client struct {
 	*agollo.Client
-	config     *ethconfig.Config
-	nodeConfig *nodecfg.Config
-	flags      []cli.Flag
+	ethCfg  *ethconfig.Config
+	nodeCfg *nodecfg.Config
+	flags   []cli.Flag
 }
 
 // NewClient creates a new apollo client
@@ -48,10 +48,10 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	}
 
 	apc := &Client{
-		Client:     client,
-		config:     cfg,
-		nodeConfig: nodeCfg,
-		flags:      append(erigoncli.DefaultFlags, debug.Flags...),
+		Client:  client,
+		ethCfg:  cfg,
+		nodeCfg: nodeCfg,
+		flags:   append(erigoncli.DefaultFlags, debug.Flags...),
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})
 
@@ -63,20 +63,20 @@ func (c *Client) LoadConfig() (loaded bool) {
 	if c == nil {
 		return false
 	}
-	namespaces := strings.Split(c.config.Zk.XLayer.Apollo.NamespaceName, ",")
+	namespaces := strings.Split(c.ethCfg.Zk.XLayer.Apollo.NamespaceName, ",")
 	for _, namespace := range namespaces {
 		cache := c.GetConfigCache(namespace)
 		cache.Range(func(key, value interface{}) bool {
 			loaded = true
 			switch namespace {
 			case L2GasPricer:
-				// c.loadL2GasPricer(value)
+				c.loadConfig(value)
 			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
-				// c.loadJsonRPC(value)
+				c.loadConfig(value)
 			case Sequencer:
-				// c.loadSequencer(value)
+				c.loadConfig(value)
 			case Pool:
-				// c.loadPool(value)
+				c.loadConfig(value)
 			}
 			return true
 		})

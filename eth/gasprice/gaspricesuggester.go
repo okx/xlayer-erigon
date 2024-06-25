@@ -13,7 +13,7 @@ import (
 
 // L2GasPricer interface for gas price suggester.
 type L2GasPricer interface {
-	UpdateGasPriceAvg(string)
+	UpdateGasPriceAvg(*big.Int)
 	GetLastRawGP() *big.Int
 	GetConfig() gaspricecfg.Config
 	GetCtx() context.Context

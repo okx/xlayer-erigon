@@ -29,15 +29,8 @@ func newFixedGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *Fix
 }
 
 // UpdateGasPriceAvg updates the gas price.
-func (f *FixedGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
+func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	//todo:apollo
-
-	// Get L1 gasprice
-	l1GasPrice, err := GetL1GasPrice(l1RpcUrl)
-	if err != nil {
-		log.Error("cannot get l1 gas price. Skipping update...")
-		return
-	}
 
 	l2CoinPrice := f.ratePrc.GetL2CoinPrice()
 	if l2CoinPrice < minCoinPrice {

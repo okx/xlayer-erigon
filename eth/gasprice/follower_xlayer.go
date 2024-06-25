@@ -39,15 +39,8 @@ func newFollowerGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *
 }
 
 // UpdateGasPriceAvg updates the gas price.
-func (f *FollowerGasPrice) UpdateGasPriceAvg(l1RpcUrl string) {
+func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	//todo: apollo
-
-	// Get L1 gasprice
-	l1GasPrice, err := GetL1GasPrice(l1RpcUrl)
-	if err != nil {
-		log.Error("cannot get l1 gas price. Skipping update...")
-		return
-	}
 
 	if big.NewInt(0).Cmp(l1GasPrice) == 0 {
 		log.Warn("gas price 0 received. Skipping update...")

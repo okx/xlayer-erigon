@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
@@ -33,7 +34,11 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 	ctx := api.L2GasPircer.GetCtx()
 
 	//todo: apollo
-	api.L2GasPircer.UpdateGasPriceAvg(api.L1RpcUrl)
+	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
+	// if err != nil, do nothing
+	if err == nil {
+		api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+	}
 	updateTimer := time.NewTimer(cfg.UpdatePeriod)
 	for {
 		select {
@@ -41,7 +46,10 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			log.Info("Finishing l2 gas price suggester...")
 			return
 		case <-updateTimer.C:
-			api.L2GasPircer.UpdateGasPriceAvg(api.L1RpcUrl)
+			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
+			if err == nil {
+				api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+			}
 			updateTimer.Reset(cfg.UpdatePeriod)
 		}
 	}

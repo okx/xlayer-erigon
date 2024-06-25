@@ -100,6 +100,7 @@ func CreateHermezBuckets(tx kv.RwTx) error {
 		L1_INFO_LEAVES,
 		L1_INFO_ROOTS,
 		INVALID_BATCHES,
+		INNER_TX,
 	}
 	for _, t := range tables {
 		if err := tx.CreateBucket(t); err != nil {

@@ -131,6 +131,22 @@ services:
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
+  erigon-rpc:
+    container_name: erigon-rpc
+    image: cdk-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=0
+    ports:
+      - 8124:8545
+      - 6901:6900
+    volumes:
+      - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
+      - ./config/dynamic-mynetwork-allocs.json:/root/dynamic-configs/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/root/dynamic-configs/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/root/dynamic-configs/dynamic-mynetwork-conf.json
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
   erigon-mock-l1-network:
     container_name: erigon-mock-l1-network
     image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11

@@ -147,7 +147,6 @@ func (s *L1Syncer) Run(lastCheckedBlock uint64) {
 		for {
 			select {
 			case <-s.quit:
-				log.Info("L1 syncer thread stopped")
 				return
 			default:
 			}

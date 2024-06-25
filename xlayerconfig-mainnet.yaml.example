@@ -21,6 +21,11 @@ zkevm.l1-query-delay: 1000
 zkevm.rpc-ratelimit: 250
 zkevm.datastream-version: 2
 
+zkevm.nacos-urls: ""
+zkevm.nacos-namespace-id: ""
+zkevm.nacos-application-name: ""
+zkevm.nacos-external-listen-addr: ""
+
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0

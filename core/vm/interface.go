@@ -22,8 +22,8 @@ import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
-
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 // CallContext provides a basic interface for the EVM calling conventions. The EVM
@@ -53,6 +53,8 @@ type VMInterface interface {
 	Context() evmtypes.BlockContext
 	IntraBlockState() evmtypes.IntraBlockState
 	TxContext() evmtypes.TxContext
+	AddInnerTx(innerTx *zktypes.InnerTx)
+	GetInnerTxMeta() *InnerTxMeta
 }
 
 // VMInterpreter exposes additional EVM methods for use in the interpreter.

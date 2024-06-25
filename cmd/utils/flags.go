@@ -616,6 +616,11 @@ var (
 		Usage: "The URL of the data availability service",
 		Value: "",
 	}
+	AllowInternalTransactions = cli.BoolFlag{
+		Name:  "zkevm.allow-internal-transactions",
+		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
 	DebugNoSync = cli.BoolFlag{
 		Name:  "debug.no-sync",
 		Usage: "Disable syncing",
@@ -633,6 +638,27 @@ var (
 	DebugStepAfter = cli.UintFlag{
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
+	}
+	// XLayer nacos
+	NacosURLsFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-urls",
+		Usage: "Nacos urls.",
+		Value: "",
+	}
+	NacosNamespaceIdFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-namespace-id",
+		Usage: "Nacos namespace Id.",
+		Value: "",
+	}
+	NacosApplicationNameFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-application-name",
+		Usage: "Nacos application name",
+		Value: "",
+	}
+	NacosExternalListenAddrFlag = cli.StringFlag{
+		Name:  "zkevm.nacos-external-listen-addr",
+		Usage: "Nacos external listen addr.",
+		Value: "",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",

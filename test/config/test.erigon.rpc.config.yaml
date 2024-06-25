@@ -3,8 +3,8 @@ chain: dynamic-mynetwork
 http: true
 private.api.addr: localhost:9091
 zkevm.l2-chain-id: 1001
-zkevm.l2-sequencer-rpc-url:
-zkevm.l2-datastreamer-url:
+zkevm.l2-sequencer-rpc-url: erigon-seq:8545
+zkevm.l2-datastreamer-url: erigon-seq:6900
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
 
@@ -32,6 +32,7 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
+zkevm.allow-internal-transactions: true
 
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]

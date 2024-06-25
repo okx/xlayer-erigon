@@ -367,9 +367,10 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
 		wbCfg: WBConfig{
-			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
+			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
 		},
 	}, nil
 }
@@ -952,19 +953,6 @@ func (p *TxPool) cache() kvcache.Cache {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return p._stateCache
-}
-
-func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
-	senderAddr, ok := p.senders.senderID2Addr[senderID]
-	if !ok {
-		return false
-	}
-	for _, addr := range p.cfg.FreeClaimGasAddr {
-		if senderAddr.String() == addr {
-			return true
-		}
-	}
-	return false
 }
 
 func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,

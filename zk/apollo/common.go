@@ -1,41 +1,33 @@
 package apollo
 
 import (
-	"bytes"
 	"crypto/rand"
 	"fmt"
 	"math/big"
 	"os"
 	"time"
 
-	// zkevmCfg "github.com/0xPolygonHermez/zkevm-node/config"
 	"github.com/apolloconfig/agollo/v4/storage"
+	"github.com/urfave/cli/v2"
+
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/node/nodecfg"
+	"github.com/ledgerwatch/erigon/turbo/node"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
 )
 
-// TODO: The correct refactor will be to get the upstream implementataions from cdk-erigon
-// to resolve library dependency mismatches. Temporary solution will be to directly import
-// some of the configurations here.
-func (c *Client) unmarshal(value interface{}) (*zkevmCfg.Config, error) {
-	v := viper.New()
-	v.SetConfigType("toml")
-	err := v.ReadConfig(bytes.NewBuffer([]byte(value.(string))))
+func (c *Client) unmarshal(value interface{}) (*nodecfg.Config, *ethconfig.Config, error) {
+	mockCtx := cli.NewContext(nil, nil, nil)
+	err := setFlagsFromBytes(mockCtx, value)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to load config: %v error: %v", value, err))
-		return nil, err
+		log.Error(fmt.Sprintf("failed to set flags from bytes: %v", err))
+		return nil, nil, err
 	}
-	dstConf := zkevmCfg.Config{}
-	decodeHooks := []viper.DecoderConfigOption{
-		// this allows arrays to be decoded from env var separated by ",", example: MY_VAR="value1,value2,value3"
-		viper.DecodeHook(mapstructure.ComposeDecodeHookFunc(mapstructure.TextUnmarshallerHookFunc(), mapstructure.StringToSliceHookFunc(","))),
-	}
-	if err = v.Unmarshal(&dstConf, decodeHooks...); err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v error: %v", value, err))
-		return nil, err
-	}
-	return &dstConf, nil
+
+	nodeCfg := node.NewNodConfigUrfave(mockCtx)
+	ethCfg := node.NewEthConfigUrfave(mockCtx, nodeCfg)
+
+	return nodeCfg, ethCfg, nil
 }
 
 const (

@@ -70,12 +70,16 @@ func (c *Client) LoadConfig() (loaded bool) {
 			loaded = true
 			switch namespace {
 			case L2GasPricer:
+				// TODO: Switch to load service config
 				c.loadConfig(value)
 			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
+				// TODO: Switch to load specific service config
 				c.loadConfig(value)
 			case Sequencer:
+				// TODO: Switch to load specific service config
 				c.loadConfig(value)
 			case Pool:
+				// TODO: Switch to load specific service config
 				c.loadConfig(value)
 			}
 			return true
@@ -97,13 +101,17 @@ func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 			case L2GasPricerHalt, SequencerHalt, JsonRPCROHalt, JsonRPCExplorerHalt, JsonRPCSubgraphHalt, JsonRPCLightHalt, JsonRPCBridgeHalt, JsonRPCWOHalt, JsonRPCUnlimitedHalt:
 				c.fireHalt(key, value)
 			case L2GasPricer:
-				// c.fireL2GasPricer(key, value)
+				// TODO: Switch to fire specific service config
+				c.fireConfig(key, value)
 			case Sequencer:
-				// c.fireSequencer(key, value)
+				// TODO: Switch to fire specific service config
+				c.fireConfig(key, value)
 			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
-				// c.fireJsonRPC(key, value)
+				// TODO: Switch to fire specific service config
+				c.fireConfig(key, value)
 			case Pool:
-				// c.firePool(key, value)
+				// TODO: Switch to fire specific service config
+				c.fireConfig(key, value)
 			}
 		}
 	}

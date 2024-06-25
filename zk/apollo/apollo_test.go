@@ -11,7 +11,7 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 	c := &ethconfig.Config{
 		Zk: &ethconfig.Zk{
 			XLayer: ethconfig.XLayerConfig{
-				Apollo: ethconfig.ApolloConfig{
+				Apollo: ethconfig.ApolloClientConfig{
 					IP:            "0.0.0.0",
 					AppID:         "xlayer-devnet",
 					NamespaceName: "jsonrpc-ro.txt,jsonrpc-roHalt.properties",

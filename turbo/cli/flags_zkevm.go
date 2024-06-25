@@ -72,7 +72,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 
 	// X Layer configs
 	xlayerCfg := ethconfig.XLayerConfig{
-		Apollo: ethconfig.ApolloConfig{
+		Apollo: ethconfig.ApolloClientConfig{
 			Enable:        ctx.Bool(utils.ApolloEnableFlag.Name),
 			IP:            ctx.String(utils.ApolloIPAddr.Name),
 			AppID:         ctx.String(utils.ApolloAppId.Name),

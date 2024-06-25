@@ -1,7 +1,7 @@
 package ethconfig
 
 type XLayerConfig struct {
-	Apollo        ApolloConfig
+	Apollo        ApolloClientConfig
 	Nacos         NacosConfig
 	EnableInnerTx bool
 }
@@ -14,8 +14,8 @@ type NacosConfig struct {
 	ExternalListenAddr string
 }
 
-// ApolloConfig is the config for apollo
-type ApolloConfig struct {
+// ApolloClientConfig is the config for apollo
+type ApolloClientConfig struct {
 	Enable        bool
 	IP            string
 	AppID         string

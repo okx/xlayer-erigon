@@ -7,10 +7,12 @@ import (
 	"math/big"
 	"time"
 
+	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
+	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
@@ -70,7 +72,43 @@ func (api *APIImpl) GasPrice_nonRedirected(ctx context.Context) (*hexutil.Big, e
 		gasResult = new(big.Int).Set(rgp)
 	}
 
+	if !api.isCongested(ctx) {
+		gasResult = getAvgPrice(rgp, gasResult)
+	}
+
 	return (*hexutil.Big)(gasResult), err
+}
+
+func (api *APIImpl) isCongested(ctx context.Context) bool {
+
+	latestBlockTxNum, err := api.getLatestBlockTxNum(ctx)
+	if err != nil {
+		return false
+	}
+	isLatestBlockEmpty := latestBlockTxNum == 0
+
+	poolStatus, err := api.txPool.Status(ctx, &proto_txpool.StatusRequest{})
+	if err != nil {
+		return false
+	}
+
+	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPircer.GetConfig().CongestionThreshold
+
+	return !isLatestBlockEmpty && isPendingTxCongested
+}
+
+func (api *APIImpl) getLatestBlockTxNum(ctx context.Context) (int, error) {
+	tx, err := api.db.BeginRo(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer tx.Rollback()
+
+	b, err := api.blockByNumber(ctx, rpc.LatestBlockNumber, tx)
+	if err != nil {
+		return 0, err
+	}
+	return len(b.Transactions()), nil
 }
 
 func (api *APIImpl) l1GasPrice() (*big.Int, error) {
@@ -97,4 +135,10 @@ func (api *APIImpl) l1GasPrice() (*big.Int, error) {
 	}
 
 	return price, nil
+}
+
+func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
+	avg := new(big.Int).Add(low, high)
+	avg = avg.Quo(avg, big.NewInt(2)) //nolint:gomnd
+	return avg
 }

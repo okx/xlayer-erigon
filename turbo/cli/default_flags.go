@@ -136,6 +136,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.GpoDefaultL2CoinPriceFlag,
 	&utils.GpoGasPriceUsdtFlag,
 	&utils.GpoEnableFollowerAdjustByL2L1PriceFlag,
+	&utils.GpoCongestionThresholdFlag,
 	&utils.InsecureUnlockAllowedFlag,
 	&utils.MetricsEnabledFlag,
 	&utils.MetricsHTTPFlag,

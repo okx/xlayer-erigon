@@ -984,6 +984,11 @@ var (
 		Value: true,
 	}
 
+	GpoCongestionThresholdFlag = cli.IntFlag{
+		Name:  "gpo.congestion-threshold",
+		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
+		Value: 0,
+	}
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1660,6 +1665,10 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 
 	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
 		cfg.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
+	}
+
+	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
+		cfg.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)
 	}
 }
 

@@ -30,7 +30,7 @@ func (c *ApolloConfig) Enable() bool {
 func UpdateRPCConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
-	getApolloConfig().conf = apolloConfig
+	// TODO: Add specific gasprice configs to update dynamically
 	getApolloConfig().Unlock()
 }
 

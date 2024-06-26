@@ -45,7 +45,6 @@ import (
 	"encoding/json"
 	"os"
 	"path"
-
 	"time"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"

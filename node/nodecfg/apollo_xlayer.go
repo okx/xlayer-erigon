@@ -30,7 +30,7 @@ func (c *ApolloConfig) Enable() bool {
 func UpdateRPCConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
-	// TODO: Add specific gasprice configs to update dynamically
+	// TODO: Add specific RPC configs to update dynamically
 	getApolloConfig().Unlock()
 }
 
@@ -38,7 +38,7 @@ func UpdateRPCConfig(apolloConfig Config) {
 func UpdateSequencerConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
-	// TODO: Add gasprice configs to update dynamically
+	// TODO: Add sequencer configs to update dynamically
 	getApolloConfig().Unlock()
 }
 

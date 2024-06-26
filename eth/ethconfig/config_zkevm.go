@@ -55,12 +55,12 @@ type Zk struct {
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	// For Xlayer
-	XLayer XLayerConfig
-
 	PoolManagerUrl         string
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
+
+	// For Xlayer
+	XLayer XLayerConfig
 }
 
 var DefaultZkConfig = &Zk{}

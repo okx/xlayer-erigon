@@ -73,34 +73,3 @@ func (c *Client) fireHalt(key string, value *storage.ConfigChange) {
 		}
 	}
 }
-
-// TODO: Split loading of configuration into the respective services.
-func (c *Client) loadConfig(value interface{}) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
-	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
-	}
-
-	// nacos is read from from env, so we will need to cache and restore it
-	nacosConfigRest := c.ethCfg.Zk.XLayer.Nacos
-
-	c.ethCfg = ethCfg
-	c.nodeCfg = nodeCfg
-	c.ethCfg.Zk.XLayer.Nacos = nacosConfigRest
-	log.Info(fmt.Sprintf("loaded json-rpc from apollo config: %+v", value.(string)))
-}
-
-// TODO: Split firing of configuration into the respective services.
-func (c *Client) fireConfig(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
-	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
-	}
-
-	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))
-	log.Info(fmt.Sprintf("apollo eth backend config changed: %+v", value.NewValue.(string)))
-	nodecfg.UpdateConfig(*nodeCfg)
-	ethconfig.UpdateConfig(*ethCfg)
-}

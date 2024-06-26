@@ -45,6 +45,7 @@ import (
 	"encoding/json"
 	"os"
 	"path"
+	"time"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
@@ -60,7 +61,6 @@ import (
 	"github.com/ledgerwatch/erigon/p2p/netutil"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"time"
 )
 
 // These are all the command line flags we support.
@@ -481,6 +481,11 @@ var (
 		Name:  "zkevm.sequencer-non-empty-batch-seal-time",
 		Usage: "Batch seal time. Defaults to 3s",
 		Value: "3s",
+	}
+	SequencerFullBatchSleepDuration = cli.DurationFlag{
+		Name:  "zkevm.sequencer-full-batch-sleep-duration",
+		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
+		Value: 0 * time.Second,
 	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",

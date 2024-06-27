@@ -52,12 +52,12 @@ type Cache interface {
 // Oracle recommends gas prices based on the content of recent
 // blocks. Suitable for both light and full clients.
 type Oracle struct {
-	backend      OracleBackend
-	lastHead     libcommon.Hash
-	defaultPrice *big.Int
-	maxPrice     *big.Int
-	ignorePrice  *big.Int
-	cache        Cache
+	backend     OracleBackend
+	lastHead    libcommon.Hash
+	lastPrice   *big.Int
+	maxPrice    *big.Int
+	ignorePrice *big.Int
+	cache       Cache
 
 	checkBlocks                       int
 	percentile                        int
@@ -93,7 +93,7 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 	}
 	return &Oracle{
 		backend:          backend,
-		defaultPrice:     params.Default,
+		lastPrice:        params.Default,
 		maxPrice:         maxPrice,
 		ignorePrice:      ignorePrice,
 		checkBlocks:      blocks,
@@ -155,8 +155,8 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		price = new(big.Int).Set(oracle.maxPrice)
 	}
 
-	if price.Cmp(oracle.defaultPrice) < 0 {
-		price = new(big.Int).Set(oracle.defaultPrice)
+	if price.Cmp(oracle.lastPrice) < 0 {
+		price = new(big.Int).Set(oracle.lastPrice)
 	}
 
 	oracle.cache.SetLatest(headHash, price)
@@ -260,7 +260,7 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 	}
 
 	if count == 0 {
-		defaultGP := uint256.NewInt(oracle.defaultPrice.Uint64())
+		defaultGP := uint256.NewInt(oracle.lastPrice.Uint64())
 		heap.Push(s, defaultGP)
 	}
 

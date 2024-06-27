@@ -104,6 +104,8 @@ func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 				c.fireJsonRPC(key, value)
 			case Pool:
 				c.firePool(key, value)
+			case Test:
+				c.fireConfig(key, value)
 			}
 		}
 	}

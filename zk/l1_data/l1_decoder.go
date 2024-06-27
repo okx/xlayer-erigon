@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"strings"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -25,6 +26,14 @@ type ValidiumBatchData struct {
 	ForcedGlobalExitRoot [32]byte
 	ForcedTimestamp      uint64
 	ForcedBlockHashL1    [32]byte
+}
+
+// PreEtrogForkID6BatchData is an auto generated low-level Go binding around an user-defined struct.
+type PreEtrogForkID6BatchData struct {
+	Transactions       []byte
+	GlobalExitRoot     [32]byte
+	Timestamp          uint64
+	MinForcedTimestamp uint64
 }
 
 func BuildSequencesForRollup(data []byte) ([]RollupBaseEtrogBatchData, error) {
@@ -65,6 +74,12 @@ func BuildSequencesForValidium(data []byte, daUrl string) ([]RollupBaseEtrogBatc
 	return sequences, nil
 }
 
+func BuildPreEtrogForkID6SequencesForRollup(data []byte) ([]PreEtrogForkID6BatchData, error) {
+	var sequences []PreEtrogForkID6BatchData
+	err := json.Unmarshal(data, &sequences)
+	return sequences, err
+}
+
 func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, uint64, error) {
 	// we need to know which version of the ABI to use here so lets find it
 	idAsString := fmt.Sprintf("%x", txData[:4])
@@ -92,16 +107,21 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	var coinbase common.Address
 	var limitTimstamp uint64
 
-	isValidium := false
-
 	switch idAsString {
-	case contracts.SequenceBatchesIdv5_0:
+	case contracts.KeySequenceBatchForkID6PreEtrog:
 		cb, ok := data[1].(common.Address)
 		if !ok {
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 1 in the l1 call data to be address")
 		}
 		coinbase = cb
-	case contracts.SequenceBatchesIdv6_6:
+
+	case contracts.KeySequenceBatchesForkID7Etrog:
+		cb, ok := data[1].(common.Address)
+		if !ok {
+			return nil, common.Address{}, 0, fmt.Errorf("expected position 1 in the l1 call data to be address")
+		}
+		coinbase = cb
+	case contracts.KeySequenceBatchesForkID8Elderberry:
 		cb, ok := data[3].(common.Address)
 		if !ok {
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 3 in the l1 call data to be address")
@@ -112,11 +132,10 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 1 in the l1 call data to be the limit timestamp")
 		}
 		limitTimstamp = ts
-	case contracts.SequenceBatchesValidiumElderBerry:
+	case contracts.KeySequenceBatchesForkID8ValidiumElderBerry:
 		if daUrl == "" {
 			return nil, common.Address{}, 0, fmt.Errorf("data availability url is required for validium")
 		}
-		isValidium = true
 		cb, ok := data[3].(common.Address)
 		if !ok {
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 3 in the l1 call data to be address")
@@ -128,30 +147,48 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 		}
 		limitTimstamp = ts
 	default:
+		log.Error(fmt.Sprintf("Unknown l1 call data: %s", idAsString))
 		return nil, common.Address{}, 0, fmt.Errorf("unknown l1 call data")
 	}
 
-	var sequences []RollupBaseEtrogBatchData
+	var etrogSequences []RollupBaseEtrogBatchData
+	var preEtrogSequences []PreEtrogForkID6BatchData
 
 	bytedata, err := json.Marshal(data[0])
 	if err != nil {
 		return nil, coinbase, 0, err
 	}
 
-	if isValidium {
-		sequences, err = BuildSequencesForValidium(bytedata, daUrl)
-	} else {
-		sequences, err = BuildSequencesForRollup(bytedata)
+	switch idAsString {
+	case contracts.KeySequenceBatchForkID6PreEtrog:
+		preEtrogSequences, err = BuildPreEtrogForkID6SequencesForRollup(bytedata)
+	case contracts.KeySequenceBatchesForkID7Etrog, contracts.KeySequenceBatchesForkID8Elderberry:
+		etrogSequences, err = BuildSequencesForRollup(bytedata)
+	case contracts.KeySequenceBatchesForkID8ValidiumElderBerry:
+		etrogSequences, err = BuildSequencesForValidium(bytedata, daUrl)
+	default:
+		log.Error(fmt.Sprintf("Unknown l1 call data: %s", idAsString))
 	}
 
 	if err != nil {
 		return nil, coinbase, 0, err
 	}
 
-	batchL2Datas := make([][]byte, len(sequences))
-	for idx, sequence := range sequences {
-		batchL2Datas[idx] = sequence.Transactions
+	if len(preEtrogSequences) > 0 {
+		batchL2Datas := make([][]byte, len(preEtrogSequences))
+		for idx, sequence := range preEtrogSequences {
+			batchL2Datas[idx] = sequence.Transactions
+		}
+		return batchL2Datas, coinbase, limitTimstamp, err
 	}
 
-	return batchL2Datas, coinbase, limitTimstamp, err
+	if len(etrogSequences) > 0 {
+		batchL2Datas := make([][]byte, len(etrogSequences))
+		for idx, sequence := range etrogSequences {
+			batchL2Datas[idx] = sequence.Transactions
+		}
+		return batchL2Datas, coinbase, limitTimstamp, err
+	}
+
+	return nil, coinbase, 0, fmt.Errorf("no sequences found")
 }

@@ -767,14 +767,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		var l1Topics [][]libcommon.Hash
 		var l1Contracts []libcommon.Address
 		if isSequencer {
-			l1Topics = [][]libcommon.Hash{{contracts.InitialSequenceBatchesTopic}}
+			l1Topics = [][]libcommon.Hash{{contracts.InitialSequenceBatchesTopicForkID8}}
 			l1Contracts = []libcommon.Address{cfg.AddressZkevm}
 		} else {
 			l1Topics = [][]libcommon.Hash{{
-				contracts.SequencedBatchTopicPreEtrog,
-				contracts.SequencedBatchTopicEtrog,
-				contracts.VerificationTopicPreEtrog,
-				contracts.VerificationTopicEtrog,
+				contracts.SequencedBatchTopicPreEtrogForkID6,
+				contracts.SequencedBatchTopicEtrogForkID7,
+				contracts.VerificationTopicPreEtrogForkID6,
+				contracts.VerificationTopicEtrogForkID7,
 				contracts.VerificationValidiumTopicEtrog,
 			}}
 			l1Contracts = []libcommon.Address{cfg.AddressRollup, cfg.AddressAdmin, cfg.AddressZkevm}
@@ -797,7 +797,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		l1InfoTreeSyncer := syncer.NewL1Syncer(
 			ethermanClients,
 			[]libcommon.Address{cfg.AddressGerManager},
-			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic}},
+			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopicPreEtrogForkID5, contracts.UpdateL1InfoTreeTopicEtrogForkID6}},
 			cfg.L1BlockRange,
 			cfg.L1QueryDelay,
 			cfg.L1HighestBlockType,
@@ -844,8 +844,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 			l1BlockSyncer := syncer.NewL1Syncer(
 				ethermanClients,
-				[]libcommon.Address{cfg.AddressZkevm},
-				[][]libcommon.Hash{{contracts.SequenceBatchesTopic}},
+				[]libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup},
+				[][]libcommon.Hash{{contracts.SequenceBatchesTopicElderberryForkID8, contracts.UpdateZkEVMVersionTopic, contracts.SequencedBatchTopicPreEtrogForkID6}},
 				cfg.L1BlockRange,
 				cfg.L1QueryDelay,
 				cfg.L1HighestBlockType,

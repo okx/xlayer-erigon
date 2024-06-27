@@ -113,11 +113,13 @@ func UpdateZkEVMBlockCfg(cfg ForkConfigWriter, hermezDb ForkReader, logPrefix st
 
 func RecoverySetBlockConfigForks(blockNum uint64, forkId uint64, cfg ForkConfigWriter, logPrefix string) error {
 	for _, fork := range chain.ForkIdsOrdered {
+		log.Info(fmt.Sprintf("[%s] Setting fork id %v to block %v", logPrefix, fork, blockNum))
 		if uint64(fork) <= forkId {
 			if err := cfg.SetForkIdBlock(fork, blockNum); err != nil {
 				log.Error(fmt.Sprintf("[%s] Error setting fork id %v to block %v", logPrefix, forkId, blockNum))
 				return err
 			}
+			log.Info(fmt.Sprintf("[%s] Set fork id %v to block %v", logPrefix, fork, blockNum))
 		}
 	}
 

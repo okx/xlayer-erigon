@@ -1,20 +1,20 @@
 package stages
 
 import (
+	"context"
+	"fmt"
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
-	"fmt"
-	"github.com/ledgerwatch/log/v3"
-	"context"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/zk/contracts"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/l1infotree"
+	"github.com/ledgerwatch/log/v3"
 	"sort"
 	"time"
-	"github.com/ledgerwatch/erigon/zk/l1infotree"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
 )
 
 type L1InfoTreeCfg struct {
@@ -42,7 +42,10 @@ func SpawnL1InfoTreeStage(
 ) (err error) {
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting L1 Info Tree stage", logPrefix))
-	defer log.Info(fmt.Sprintf("[%s] Finished L1 Info Tree stage", logPrefix))
+	defer func() {
+		log.Info(fmt.Sprintf("[%s] Finished L1 Info Tree stage", logPrefix))
+		//time.Sleep(10000 * time.Second)
+	}()
 
 	freshTx := tx == nil
 	if freshTx {
@@ -123,7 +126,13 @@ LOOP:
 		for _, l := range chunk {
 			header := headersMap[l.BlockNumber]
 			switch l.Topics[0] {
-			case contracts.UpdateL1InfoTreeTopic:
+			case contracts.UpdateL1InfoTreeTopicEtrogForkID6, contracts.UpdateL1InfoTreeTopicPreEtrogForkID5:
+				//if l.Topics[0] == contracts.UpdateL1InfoTreeTopicPreEtrogForkID5 {
+				//	log.Info(fmt.Sprintf("[%s] Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID5, block: %v", logPrefix, header.Number))
+				//} else {
+				//	log.Info(fmt.Sprintf("[%s] Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID6+, block: %v", logPrefix, header.Number))
+				//}
+
 				if !treeInitialised {
 					tree, allLeaves, err = initialiseL1InfoTree(hermezDb)
 					if err != nil {

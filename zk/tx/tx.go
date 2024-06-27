@@ -1,12 +1,11 @@
 package tx
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
-
-	"bytes"
 
 	"regexp"
 	"strings"
@@ -74,7 +73,6 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 			log.Debug("error parsing header length: ", err)
 			return result, err
 		}
-
 		// if num is 11 then we are trying to parse a `changeL2Block` transaction
 		if num == changeL2BlockTxType {
 			hasStarted := pos > 0
@@ -185,6 +183,9 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 	currentData.DeltaTimestamp = currentDelta
 	currentData.L1InfoTreeIndex = currentL1InfoTreeIndex
 	result = append(result, currentData)
+
+	a := fmt.Sprintf("currentData.DeltaTimestamp: %v, currentData.L1InfoTreeIndex: %v ,txs:%v", currentData.DeltaTimestamp, currentData.L1InfoTreeIndex, len(currentData.Transactions))
+	log.Info(a)
 
 	return result, nil
 }

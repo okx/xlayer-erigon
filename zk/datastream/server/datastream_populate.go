@@ -9,10 +9,10 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	eritypes "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 )
 
 const GenesisForkId = 0 // genesis fork is always 0 in the datastream
@@ -70,10 +70,16 @@ func WriteBlocksToStream(
 	from, to uint64,
 	logPrefix string,
 ) error {
+	// TODO
+	return nil
 	var err error
 
+	log.Info(fmt.Sprintf("[%s] Writing blocks to stream", logPrefix), "from", from, "to", to)
 	// if from is higher than the last datastream block number - unwind the stream
 	highestDatastreamBlock, err := srv.GetHighestBlockNumber()
+	log.Info(fmt.Sprintf("[%s] Highest datastream block", logPrefix), "block", highestDatastreamBlock)
+	time.Sleep(10000 * time.Second)
+
 	if err != nil {
 		return err
 	}

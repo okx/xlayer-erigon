@@ -3,7 +3,6 @@ package stages
 import (
 	"context"
 	"fmt"
-
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/iden3/go-iden3-crypto/keccak256"
@@ -86,7 +85,8 @@ Loop:
 			for _, l := range logs {
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
-				case contracts.InitialSequenceBatchesTopic:
+				case contracts.InitialSequenceBatchesTopicForkID8:
+					log.Info(fmt.Sprintf("[%s] Handling initial sequence batch, block: %v", logPrefix, header.Number))
 					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
 						return err
 					}

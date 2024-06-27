@@ -219,14 +219,14 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 	var stateRoot, l1InfoRoot common.Hash
 
 	switch log.Topics[0] {
-	case contracts.SequencedBatchTopicPreEtrog:
+	case contracts.SequencedBatchTopicPreEtrogForkID6:
 		batchLogType = logSequence
 		batchNum = new(big.Int).SetBytes(log.Topics[1].Bytes()).Uint64()
-	case contracts.SequencedBatchTopicEtrog:
+	case contracts.SequencedBatchTopicEtrogForkID7:
 		batchLogType = logSequence
 		batchNum = new(big.Int).SetBytes(log.Topics[1].Bytes()).Uint64()
 		l1InfoRoot = common.BytesToHash(log.Data[:32])
-	case contracts.VerificationTopicPreEtrog:
+	case contracts.VerificationTopicPreEtrogForkID6:
 		batchLogType = logVerify
 		batchNum = new(big.Int).SetBytes(log.Topics[1].Bytes()).Uint64()
 		stateRoot = common.BytesToHash(log.Data[:32])
@@ -238,7 +238,7 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 		} else {
 			batchLogType = logIncompatible
 		}
-	case contracts.VerificationTopicEtrog:
+	case contracts.VerificationTopicEtrogForkID7:
 		if isRollupIdMatching {
 			batchLogType = logVerify
 			batchNum = common.BytesToHash(log.Data[:32]).Big().Uint64()
@@ -246,7 +246,12 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 		} else {
 			batchLogType = logIncompatible
 		}
-	case contracts.UpdateL1InfoTreeTopic:
+	case contracts.UpdateL1InfoTreeTopicPreEtrogForkID5, contracts.UpdateL1InfoTreeTopicEtrogForkID6:
+		if log.Topics[0] == contracts.UpdateL1InfoTreeTopicPreEtrogForkID5 {
+			fmt.Println(fmt.Sprintf("Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID5, block: %v", log.BlockNumber))
+		} else {
+			fmt.Println(fmt.Sprintf("Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID6+, block: %v", log.BlockNumber))
+		}
 		batchLogType = logL1InfoTreeUpdate
 	default:
 		batchLogType = logUnknown

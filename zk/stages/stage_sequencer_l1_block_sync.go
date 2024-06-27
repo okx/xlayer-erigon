@@ -2,22 +2,25 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk/constants"
+	"strings"
 	"time"
 
-	"errors"
-
+	"encoding/binary"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/accounts/abi"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/contracts"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
 	"github.com/ledgerwatch/erigon/zk/syncer"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/log/v3"
-	"encoding/binary"
 )
 
 type SequencerL1BlockSyncCfg struct {
@@ -81,7 +84,7 @@ func SpawnSequencerL1BlockSyncStage(
 	// check if the highest batch from the L1 is higher than the config value if it is set
 	if cfg.zkCfg.L1SyncStopBatch > 0 {
 		// stop completely if we have executed past the stop batch
-		if highestKnownBatch > cfg.zkCfg.L1SyncStopBatch {
+		if highestKnownBatch >= cfg.zkCfg.L1SyncStopBatch {
 			log.Info("Stopping L1 sync stage based on configured stop batch", "config", cfg.zkCfg.L1SyncStopBatch, "highest-known", highestKnownBatch)
 			time.Sleep(1 * time.Second)
 			return nil
@@ -130,82 +133,176 @@ LOOP:
 	for {
 		select {
 		case logs := <-logChan:
+			log.Info(fmt.Sprintf("recv logs len:%v", len(logs)))
 			for _, l := range logs {
-				// for some reason some endpoints seem to not have certain transactions available to
-				// them even they are perfectly valid and other RPC nodes return them fine.  So, leaning
-				// on the internals of the syncer which will round-robin through available RPC nodes, we
-				// can attempt a few times to get the transaction before giving up and returning an error
-				var transaction types.Transaction
-				attempts := 0
-				for {
-					transaction, _, err = cfg.syncer.GetTransaction(l.TxHash)
-					if err == nil {
-						break
-					} else {
-						log.Warn("Error getting transaction, attempting again", "hash", l.TxHash.String(), "err", err)
-						attempts++
-						if attempts > 50 {
-							return err
+				switch l.Topics[0] {
+				case contracts.SequenceBatchesTopicElderberryForkID8:
+					// for some reason some endpoints seem to not have certain transactions available to
+					// them even they are perfectly valid and other RPC nodes return them fine.  So, leaning
+					// on the internals of the syncer which will round-robin through available RPC nodes, we
+					// can attempt a few times to get the transaction before giving up and returning an error
+					var transaction types.Transaction
+					attempts := 0
+					for {
+						transaction, _, err = cfg.syncer.GetTransaction(l.TxHash)
+						if err == nil {
+							break
+						} else {
+							log.Warn("Error getting transaction, attempting again", "hash", l.TxHash.String(), "err", err)
+							attempts++
+							if attempts > 50 {
+								return err
+							}
+							time.Sleep(500 * time.Millisecond)
 						}
-						time.Sleep(500 * time.Millisecond)
 					}
-				}
 
-				lastBatchSequenced := l.Topics[1].Big().Uint64()
-				latestBatch = lastBatchSequenced
+					lastBatchSequenced := l.Topics[1].Big().Uint64()
+					latestBatch = lastBatchSequenced
 
-				l1InfoRoot := l.Data
-				if len(l1InfoRoot) != 32 {
-					log.Error(fmt.Sprintf("[%s] L1 info root is not 32 bytes", logPrefix), "tx-hash", l.TxHash.String())
-					return errors.New("l1 info root is not 32 bytes")
-				}
+					l1InfoRoot := l.Data
+					if len(l1InfoRoot) != 32 {
+						log.Error(fmt.Sprintf("[%s] L1 info root is not 32 bytes", logPrefix), "tx-hash", l.TxHash.String())
+						return errors.New("l1 info root is not 32 bytes")
+					}
 
-				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
-				if err != nil {
-					return err
-				}
-
-				limitTimestampBytes := make([]byte, 8)
-				binary.BigEndian.PutUint64(limitTimestampBytes, limitTimestamp)
-
-				// here we find the first batch number that was sequenced by working backwards
-				// from the latest batch in the original event
-				initBatch := lastBatchSequenced - uint64(len(batches)-1)
-
-				log.Debug(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
-					"hash", transaction.Hash().String(),
-					"initBatch", initBatch,
-					"batches", len(batches),
-				)
-
-				// iterate over the batches in reverse order to ensure that the batches are written in the correct order
-				// this is important because the batches are written in reverse order
-				for idx, batch := range batches {
-					b := initBatch + uint64(idx)
-					data := make([]byte, 20+32+8+len(batch))
-					copy(data, coinbase.Bytes())
-					copy(data[20:], l1InfoRoot)
-					copy(data[52:], limitTimestampBytes)
-					copy(data[60:], batch)
-
-					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
+					batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
+					if err != nil {
 						return err
 					}
 
-					// disabled for now as it adds extra work into the process
-					// todo: find a way to only call this if debug logging is enabled
-					// debugLogProgress(batch, cfg, totalBlocks, logPrefix, b)
+					limitTimestampBytes := make([]byte, 8)
+					binary.BigEndian.PutUint64(limitTimestampBytes, limitTimestamp)
 
-					// check if we need to stop here based on config
-					if cfg.zkCfg.L1SyncStopBatch > 0 {
-						stopBlockMap[b] = struct{}{}
-						if checkStopBlockMap(highestBatch, cfg.zkCfg.L1SyncStopBatch, stopBlockMap) {
-							log.Info("Stopping L1 sync based on stop batch config")
-							break LOOP
+					// here we find the first batch number that was sequenced by working backwards
+					// from the latest batch in the original event
+					initBatch := lastBatchSequenced - uint64(len(batches)-1)
+
+					log.Info(fmt.Sprintf("[%s] Processing L1 sequence elderberry forkID8 transaction", logPrefix),
+						"hash", transaction.Hash().String(),
+						"initBatch", initBatch,
+						"batches", len(batches),
+					)
+
+					// iterate over the batches in reverse order to ensure that the batches are written in the correct order
+					// this is important because the batches are written in reverse order
+					for idx, batch := range batches {
+						b := initBatch + uint64(idx)
+						data := make([]byte, 20+32+8+len(batch))
+						copy(data, coinbase.Bytes())
+						copy(data[20:], l1InfoRoot)
+						copy(data[52:], limitTimestampBytes)
+						copy(data[60:], batch)
+						if err := hermezDb.WriteL1BatchData(b, data); err != nil {
+							return err
+						}
+
+						// disabled for now as it adds extra work into the process
+						// todo: find a way to only call this if debug logging is enabled
+						// debugLogProgress(batch, cfg, totalBlocks, logPrefix, b)
+
+						// check if we need to stop here based on config
+						if cfg.zkCfg.L1SyncStopBatch > 0 {
+							stopBlockMap[b] = struct{}{}
+							if checkStopBlockMap(highestBatch, cfg.zkCfg.L1SyncStopBatch, stopBlockMap) {
+								log.Info("Stopping L1 sync based on stop batch config----1")
+								break LOOP
+							}
 						}
 					}
-				}
+				case contracts.UpdateZkEVMVersionTopic:
+					contractAbi, err := abi.JSON(strings.NewReader(contracts.SequenceBatchesAbiForkID6PreEtrog))
+					if err != nil {
+						log.Error(fmt.Sprintf("[%s] Error creating contract ABI, error:%v", logPrefix, err))
+						return err
+					}
+					updateVersion := new(contracts.UpdateZkEVMVersion)
+					if err := contractAbi.UnpackIntoInterface(updateVersion, "UpdateZkEVMVersion", l.Data); err != nil {
+						log.Error(fmt.Sprintf("[%s] Error unpacking zkEVM version update event", logPrefix), "err", err)
+						return err
+					}
 
+					if err := hermezDb.WriteForkIdBatch(updateVersion.ForkID, updateVersion.NumBatch); err != nil {
+						log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+						return err
+					}
+					log.Info(fmt.Sprintf("WriteForkIdBatch, ForkID:%v, batch:%v", updateVersion.ForkID, updateVersion.NumBatch))
+
+					stopBlockMap[updateVersion.NumBatch] = struct{}{}
+					log.Info(fmt.Sprintf("[%s] Received zkEVM version update, %v,%v,%v,%v", logPrefix, updateVersion.Version, updateVersion.NumBatch, updateVersion.ForkID, l.TxHash))
+					//time.Sleep(10 * time.Second)
+				case contracts.SequencedBatchTopicPreEtrogForkID6:
+					var transaction types.Transaction
+					attempts := 0
+					for {
+						transaction, _, err = cfg.syncer.GetTransaction(l.TxHash)
+						if err == nil {
+							break
+						} else {
+							log.Warn("Error getting transaction, attempting again", "hash", l.TxHash.String(), "err", err)
+							attempts++
+							if attempts > 50 {
+								return err
+							}
+							time.Sleep(500 * time.Millisecond)
+						}
+					}
+
+					lastBatchSequenced := l.Topics[1].Big().Uint64()
+					latestBatch = lastBatchSequenced
+
+					batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
+					if err != nil {
+						return err
+					}
+
+					l1InfoRoot := make([]byte, 32)
+					limitTimestampBytes := make([]byte, 8)
+					binary.BigEndian.PutUint64(limitTimestampBytes, limitTimestamp)
+
+					// here we find the first batch number that was sequenced by working backwards
+					// from the latest batch in the original event
+					initBatch := lastBatchSequenced - uint64(len(batches)-1)
+
+					log.Info(fmt.Sprintf("[%s] Processing L1 sequence pre etrog forkID6 transaction", logPrefix),
+						"hash", transaction.Hash().String(),
+						"initBatch", initBatch,
+						"batches", len(batches),
+					)
+
+					// iterate over the batches in reverse order to ensure that the batches are written in the correct order
+					// this is important because the batches are written in reverse order
+					for idx, batch := range batches {
+						b := initBatch + uint64(idx)
+						data := make([]byte, 20+32+8+len(batch))
+						copy(data, coinbase.Bytes())
+						copy(data[20:], l1InfoRoot)
+						copy(data[52:], limitTimestampBytes)
+						copy(data[60:], batch)
+						log.Info(fmt.Sprintf("WriteL1BatchData, batch:%v, len:%v", b, len(data)))
+						if err := hermezDb.WriteL1BatchData(b, data); err != nil {
+							return err
+						}
+
+						// disabled for now as it adds extra work into the process
+						// todo: find a way to only call this if debug logging is enabled
+						// debugLogProgress(batch, cfg, totalBlocks, logPrefix, b)
+
+						// check if we need to stop here based on config
+						if cfg.zkCfg.L1SyncStopBatch > 0 {
+							stopBlockMap[b] = struct{}{}
+							log.Info(fmt.Sprintf("highestBatch:%v, cfg.zkCfg.L1SyncStopBatch:%v", highestBatch, cfg.zkCfg.L1SyncStopBatch))
+							if checkStopBlockMap(highestBatch, cfg.zkCfg.L1SyncStopBatch, stopBlockMap) {
+								log.Info("Stopping L1 sync based on stop batch config----2")
+								break LOOP
+							}
+						}
+					}
+
+					log.Debug(fmt.Sprintf("[%s] Finished processing pre-etrog sequenced batch", logPrefix))
+				default:
+					panic(fmt.Sprintf("received unexpected topic from l1 sequencer sync stage: %s", l.Topics[0].String()))
+				}
 			}
 		case msg := <-progressChan:
 			log.Info(fmt.Sprintf("[%s] %s", logPrefix, msg))
@@ -216,6 +313,11 @@ LOOP:
 				break LOOP
 			}
 		}
+	}
+
+	if checkAndWriteForkIdBatch(logPrefix, highestKnownBatch, hermezDb, cfg.zkCfg.SequencerInitialForkId) != nil {
+		log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix))
+		return err
 	}
 
 	lastCheckedBlock := cfg.syncer.GetLastCheckedL1Block()
@@ -259,10 +361,70 @@ func haveAllBatchesInDb(highestBatch uint64, cfg SequencerL1BlockSyncCfg, hermez
 	return hasEverything, nil
 }
 
+func checkAndWriteForkIdBatch(logPrefix string, highestKnownBatch uint64, hermezDb *hermez_db.HermezDb, initForkID uint64) error {
+	fork4Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID4))
+	fork5Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID5Dragonfruit))
+	fork6Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID6IncaBerry))
+	fork7Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID7Etrog))
+	fork8Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID8Elderberry))
+	fork9Batch, _ := hermezDb.GetForkIdBatch(uint64(constants.ForkID9Elderberry2))
+
+	log.Info(fmt.Sprintf("[%s] Highest known batch: %v, fork4Batch:%v, fork5Batch:%v, fork6Batch:%v, fork7Batch:%v, fork8Batch:%v, fork9Batch:%v, ", logPrefix, highestKnownBatch, fork4Batch, fork5Batch, fork6Batch, fork7Batch, fork8Batch, fork9Batch))
+
+	lastBatch, _ := hermezDb.GetLastL1BatchData()
+	for i := highestKnownBatch; i <= lastBatch; i++ {
+		if fork9Batch != 0 && i >= fork9Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID9Elderberry2)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId9 batch", logPrefix), "batch", i)
+		} else if fork8Batch != 0 && i >= fork8Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID8Elderberry)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId8 batch", logPrefix), "batch", i)
+		} else if fork7Batch != 0 && i >= fork7Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID7Etrog)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId7 batch", logPrefix), "batch", i)
+		} else if fork6Batch != 0 && i >= fork6Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID6IncaBerry)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId6 batch", logPrefix), "batch", i)
+		} else if fork5Batch != 0 && i >= fork5Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID5Dragonfruit)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId5 batch", logPrefix), "batch", i)
+		} else if fork4Batch != 0 && i >= fork4Batch {
+			if err := hermezDb.WriteForkId(i, uint64(constants.ForkID4)); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote forkId4 batch", logPrefix), "batch", i)
+		} else {
+			if err := hermezDb.WriteForkId(i, initForkID); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error writing forkId block to db", logPrefix), "err", err)
+				return err
+			}
+			log.Info(fmt.Sprintf("[%s] Wrote initForkID %v batch", logPrefix, initForkID), "batch", i)
+		}
+	}
+	return nil
+}
+
 // checks the stop block map for any gaps between the known lowest and target block height
 func checkStopBlockMap(earliest, target uint64, stopBlockMap map[uint64]struct{}) bool {
 	for i := earliest; i <= target; i++ {
 		if _, ok := stopBlockMap[i]; !ok {
+			log.Info(fmt.Sprintf("stop block map missing block %v", i))
 			return false
 		}
 	}

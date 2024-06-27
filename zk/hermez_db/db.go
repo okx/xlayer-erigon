@@ -19,6 +19,7 @@ const L1VERIFICATIONS = "hermez_l1Verifications"                       // l1bloc
 const L1SEQUENCES = "hermez_l1Sequences"                               // l1blockno, batchno -> l1txhash
 const FORKIDS = "hermez_forkIds"                                       // batchNo -> forkId
 const FORKID_BLOCK = "hermez_forkIdBlock"                              // forkId -> startBlock
+const FORKID_BATCH = "hermez_forkIdBatch"                              // forkId -> startBatch
 const BLOCKBATCHES = "hermez_blockBatches"                             // l2blockno -> batchno
 const GLOBAL_EXIT_ROOTS = "hermez_globalExitRootsSaved"                // GER -> true
 const BLOCK_GLOBAL_EXIT_ROOTS = "hermez_globalExitRoots"               // l2blockno -> GER
@@ -74,6 +75,7 @@ func CreateHermezBuckets(tx kv.RwTx) error {
 		L1SEQUENCES,
 		FORKIDS,
 		FORKID_BLOCK,
+		FORKID_BATCH,
 		BLOCKBATCHES,
 		GLOBAL_EXIT_ROOTS,
 		BLOCK_GLOBAL_EXIT_ROOTS,
@@ -944,6 +946,18 @@ func (db *HermezDbReader) GetLowestBatchByFork(forkId uint64) (uint64, error) {
 
 }
 
+func (db *HermezDb) WriteForkIdBatch(forkId, batchNo uint64) error {
+	return db.tx.Put(FORKID_BATCH, Uint64ToBytes(forkId), Uint64ToBytes(batchNo))
+}
+
+func (db *HermezDbReader) GetForkIdBatch(forkId uint64) (uint64, error) {
+	v, err := db.tx.GetOne(FORKID_BATCH, Uint64ToBytes(forkId))
+	if err != nil {
+		return 0, err
+	}
+	return BytesToUint64(v), nil
+}
+
 func (db *HermezDbReader) GetForkIdBlock(forkId uint64) (uint64, bool, error) {
 	c, err := db.tx.Cursor(FORKID_BLOCK)
 	if err != nil {
@@ -1197,6 +1211,7 @@ func (db *HermezDb) WriteL1InjectedBatch(batch *types.L1InjectedBatch) error {
 
 	k := Uint64ToBytes(nextIndex)
 	v := batch.Marshall()
+	log.Info(fmt.Sprintf("[HermezDb] Writing L1 injected batch %d, v len:%v", nextIndex, len(v)))
 	return db.tx.Put(L1_INJECTED_BATCHES, k, v)
 }
 

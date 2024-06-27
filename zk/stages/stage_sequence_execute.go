@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk/constants"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -38,7 +39,9 @@ func SpawnSequencingStage(
 ) (err error) {
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
-	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
+	defer func() {
+		log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
+	}()
 
 	freshTx := tx == nil
 	if freshTx {
@@ -69,9 +72,9 @@ func SpawnSequencingStage(
 	getHeader := func(hash common.Hash, number uint64) *types.Header { return rawdb.ReadHeader(sdb.tx, hash, number) }
 
 	l1Recovery := cfg.zk.L1SyncStartBlock > 0
-
-	// injected batch
-	if executionAt == 0 {
+	log.Info(fmt.Sprintf("[%s] L1 recovery: %v, forkID:%v", logPrefix, l1Recovery, forkId))
+	// injected batch for Fork8Elderberry
+	if executionAt == 0 && forkId >= uint64(constants.ForkID8Elderberry) {
 		// set the block height for the fork we're running at to ensure contract interactions are correct
 		if err = utils.RecoverySetBlockConfigForks(1, forkId, cfg.chainConfig, logPrefix); err != nil {
 			return err
@@ -91,6 +94,7 @@ func SpawnSequencingStage(
 		}
 
 		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64())
+		log.Info("writing injected batch to stream", "batch", 1)
 		if err = server.WriteBlocksToStream(tx, sdb.hermezDb.HermezDbReader, srv, cfg.stream, 1, 1, logPrefix); err != nil {
 			return err
 		}
@@ -100,7 +104,6 @@ func SpawnSequencingStage(
 				return err
 			}
 		}
-
 		return nil
 	}
 
@@ -141,7 +144,7 @@ func SpawnSequencingStage(
 
 	if l1Recovery {
 		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch, "L1SyncStopBatch", cfg.zk.L1SyncStopBatch)
 			time.Sleep(1 * time.Second)
 			return nil
 		}
@@ -151,56 +154,64 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
-
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
-		if decodedBlocksSize == 0 {
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
-			time.Sleep(1 * time.Second)
-			return nil
-		}
+		if forkId >= uint64(constants.ForkID8Elderberry) {
+			if decodedBlocksSize == 0 && thisBatch > 1 {
+				log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+				time.Sleep(1 * time.Second)
+				return nil
+			}
 
-		// now look up the index associated with this info root
-		var infoTreeIndex uint64
-		if nextBatchData.L1InfoRoot == SpecialZeroIndexHash {
-			infoTreeIndex = 0
-		} else {
-			found := false
-			infoTreeIndex, found, err = sdb.hermezDb.GetL1InfoTreeIndexByRoot(nextBatchData.L1InfoRoot)
+			// now look up the index associated with this info root
+			var infoTreeIndex uint64
+			if nextBatchData.L1InfoRoot == SpecialZeroIndexHash {
+				infoTreeIndex = 0
+			} else {
+				found := false
+				infoTreeIndex, found, err = sdb.hermezDb.GetL1InfoTreeIndexByRoot(nextBatchData.L1InfoRoot)
+				if err != nil {
+					log.Error(fmt.Sprintf("[%s] Error looking up L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()), "err", err)
+					return err
+				}
+				if !found {
+					log.Error(fmt.Sprintf("[%s] Could not find L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()))
+					return fmt.Errorf("could not find L1 info tree index for root %s", nextBatchData.L1InfoRoot.String())
+				}
+			}
+
+			// now let's detect a bad batch and skip it if we have to
+			currentBlock, err := rawdb.ReadBlockByNumber(sdb.tx, executionAt)
 			if err != nil {
+				log.Error(fmt.Sprintf("[%s] Error reading block %d", logPrefix, executionAt), "err", err)
 				return err
 			}
-			if !found {
-				return fmt.Errorf("could not find L1 info tree index for root %s", nextBatchData.L1InfoRoot.String())
+			badBatch, err := checkForBadBatch(thisBatch, sdb.hermezDb, currentBlock.Time(), infoTreeIndex, nextBatchData.LimitTimestamp, nextBatchData.DecodedData)
+			if err != nil {
+				log.Error(fmt.Sprintf("[%s] Error checking for bad batch %d", logPrefix, thisBatch), "err", err)
+				return err
 			}
-		}
 
-		// now let's detect a bad batch and skip it if we have to
-		currentBlock, err := rawdb.ReadBlockByNumber(sdb.tx, executionAt)
-		if err != nil {
-			return err
-		}
-		badBatch, err := checkForBadBatch(thisBatch, sdb.hermezDb, currentBlock.Time(), infoTreeIndex, nextBatchData.LimitTimestamp, nextBatchData.DecodedData)
-		if err != nil {
-			return err
-		}
-
-		if badBatch {
-			log.Info(fmt.Sprintf("[%s] Skipping bad batch %d...", logPrefix, thisBatch))
-			// store the fact that this batch was invalid during recovery - will be used for the stream later
-			if err = sdb.hermezDb.WriteInvalidBatch(thisBatch); err != nil {
-				return err
+			if badBatch {
+				log.Info(fmt.Sprintf("[%s] Skipping bad batch %d...", logPrefix, thisBatch))
+				// store the fact that this batch was invalid during recovery - will be used for the stream later
+				if err = sdb.hermezDb.WriteInvalidBatch(thisBatch); err != nil {
+					log.Error(fmt.Sprintf("[%s] Error storing invalid batch %d", logPrefix, thisBatch), "err", err)
+					return err
+				}
+				if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
+					log.Error(fmt.Sprintf("[%s] Error saving highest seen batch number %d", logPrefix, thisBatch), "err", err)
+					return err
+				}
+				if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
+					log.Error(fmt.Sprintf("[%s] Error storing fork id %d for batch %d", logPrefix, forkId, thisBatch), "err", err)
+					return err
+				}
+				return nil
 			}
-			if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
-				return err
-			}
-			if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
-				return err
-			}
-			return nil
 		}
 	}
 
-	log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, thisBatch))
+	log.Info(fmt.Sprintf("[%s] Starting batch %d, executionAt:%v, runLoopBlocks:%v", logPrefix, thisBatch, executionAt, runLoopBlocks))
 
 	var blockNumber uint64
 	for blockNumber = executionAt; runLoopBlocks; blockNumber++ {
@@ -208,8 +219,10 @@ func SpawnSequencingStage(
 			decodedBlocksIndex := blockNumber - executionAt
 			if decodedBlocksIndex == decodedBlocksSize {
 				runLoopBlocks = false
+				log.Info(fmt.Sprintf("[%s] No more blocks to recover, decodedBlocksIndex:%v, decodedBlocksSize:%v, blockNumber:%v, executionAt:%v", logPrefix, decodedBlocksIndex, decodedBlocksSize, blockNumber, executionAt))
 				break
 			}
+			log.Info(fmt.Sprintf("[%s] Starting block %d...", logPrefix, blockNumber))
 
 			decodedBlock = nextBatchData.DecodedData[decodedBlocksIndex]
 			deltaTimestamp = uint64(decodedBlock.DeltaTimestamp)
@@ -330,7 +343,12 @@ func SpawnSequencingStage(
 						var effectiveGas uint8
 
 						if l1Recovery {
-							effectiveGas = l1EffectiveGases[i]
+							if forkId < uint64(constants.ForkID5Dragonfruit) {
+								effectiveGas = 0
+							} else {
+								effectiveGas = l1EffectiveGases[i]
+							}
+
 						} else {
 							effectiveGas = DeriveEffectiveGasPrice(cfg, transaction)
 							effectiveGases = append(effectiveGases, effectiveGas)
@@ -439,9 +457,20 @@ func SpawnSequencingStage(
 	// batch information
 	if !cfg.zk.HasExecutors() {
 		srv := server.NewDataStreamServer(cfg.stream, cfg.chainConfig.ChainID.Uint64())
-		if err = server.WriteBlocksToStream(tx, sdb.hermezDb.HermezDbReader, srv, cfg.stream, executionAt+1, blockNumber, logPrefix); err != nil {
-			return err
+		log.Info("writing batch to stream", "batch", thisBatch)
+		if executionAt+1 <= blockNumber {
+			if err = server.WriteBlocksToStream(tx, sdb.hermezDb.HermezDbReader, srv, cfg.stream, executionAt+1, blockNumber, logPrefix); err != nil {
+				return err
+			}
+		} else {
+			if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error saving highest seen batch number %d", logPrefix, thisBatch), "err", err)
+				return err
+			}
+
+			log.Info(fmt.Sprintf("[%s] No blocks to write to stream, exe:%v, block:%v, save HighestSeenBatchNumber:%v", logPrefix, executionAt+1, blockNumber, thisBatch))
 		}
+
 	}
 
 	log.Info(fmt.Sprintf("[%s] Finish batch %d...", logPrefix, thisBatch))

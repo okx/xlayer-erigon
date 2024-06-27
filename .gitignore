@@ -4,6 +4,13 @@
 # or operating system, you probably want to add a global ignore instead:
 #   git config --global core.excludesfile ~/.gitignore_global
 
+data/
+data-hermez-main
+data-hermez-main.zip
+data-hermez-main-log.zip
+data-hermez-main-log
+data-hermez-main-no-log
+
 /tmp
 */**/*un~
 */**/*.test

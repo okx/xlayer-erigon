@@ -15,8 +15,8 @@ import (
 	"encoding/binary"
 
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
-	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	"github.com/ledgerwatch/erigon/rpc"
+	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 )
 
 var (
@@ -402,7 +402,7 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 				em := s.getNextEtherman()
 				logs, err = em.FilterLogs(context.Background(), query)
 				if err != nil {
-					log.Debug("getSequencedLogs retry error", "err", err)
+					log.Error("getSequencedLogs retry error", "err", err)
 					retry++
 					if retry > 5 {
 						results <- jobResult{
@@ -413,6 +413,12 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 					}
 					time.Sleep(time.Duration(retry*2) * time.Second)
 					continue
+				}
+				for i := 0; i < len(logs); i++ {
+					//log.Info("L1 log", "block", logs[i].BlockNumber, "tx", logs[i].TxHash, "index", logs[i].Index, "address", logs[i].Address.String(), "data", logs[i].Data)
+					for j := 0; j < len(logs[i].Topics); j++ {
+						//log.Info("L1 log topic", "topic", logs[i].Topics[j].String())
+					}
 				}
 				break
 			}

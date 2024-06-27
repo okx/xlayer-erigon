@@ -31,8 +31,8 @@ run: ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_AGGREGATOR_DB)
 	sleep 3
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 3
+#	$(RUN_DOCKER_STATELESS_EXECUTOR)
+#	sleep 3
 	$(RUN_DOCKER_PROVER)
 	sleep 3
 	$(RUN_DOCKER_SEQ)

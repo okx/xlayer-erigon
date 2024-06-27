@@ -19,7 +19,7 @@ services:
 
   erigon-state-db:
     container_name: erigon-state-db
-    image: postgres
+    image: postgres:15
     ports:
       - 5432:5432
     volumes:
@@ -54,7 +54,7 @@ services:
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.1-RC7
+    image: xzavier2048/zkevm-aggregator
     ports:
       - 50081:50081
     volumes:
@@ -94,7 +94,7 @@ services:
 
   erigon-prover:
     container_name: erigon-prover
-    image: hermeznetwork/zkevm-prover:v6.0.3-RC17
+    image: xzavier2048/zkevm-mock-prover
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >

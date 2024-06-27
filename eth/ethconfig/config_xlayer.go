@@ -1,9 +1,14 @@
 package ethconfig
 
+import "time"
+
 type XLayerConfig struct {
 	Apollo        ApolloClientConfig
 	Nacos         NacosConfig
 	EnableInnerTx bool
+
+	// Sequencer
+	SequencerFullBatchSleepDuration time.Duration
 }
 
 // NacosConfig is the config for nacos

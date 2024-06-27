@@ -84,7 +84,8 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 			ApplicationName:    ctx.String(utils.NacosApplicationNameFlag.Name),
 			ExternalListenAddr: ctx.String(utils.NacosExternalListenAddrFlag.Name),
 		},
-		EnableInnerTx: ctx.Bool(utils.AllowInternalTransactions.Name),
+		EnableInnerTx:                   ctx.Bool(utils.AllowInternalTransactions.Name),
+		SequencerFullBatchSleepDuration: ctx.Duration(utils.SequencerFullBatchSleepDuration.Name),
 	}
 
 	cfg.Zk = &ethconfig.Zk{
@@ -113,7 +114,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		SequencerBlockSealTime:                 sequencerBlockSealTime,
 		SequencerBatchSealTime:                 sequencerBatchSealTime,
 		SequencerNonEmptyBatchSealTime:         sequencerNonEmptyBatchSealTime,
-		SequencerFullBatchSleepDuration:        ctx.Duration(utils.SequencerFullBatchSleepDuration.Name),
 		ExecutorUrls:                           strings.Split(ctx.String(utils.ExecutorUrls.Name), ","),
 		ExecutorStrictMode:                     ctx.Bool(utils.ExecutorStrictMode.Name),
 		ExecutorRequestTimeout:                 ctx.Duration(utils.ExecutorRequestTimeout.Name),

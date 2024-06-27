@@ -402,7 +402,7 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 				em := s.getNextEtherman()
 				logs, err = em.FilterLogs(context.Background(), query)
 				if err != nil {
-					log.Error("getSequencedLogs retry error", "err", err)
+					log.Debug("getSequencedLogs retry error", "err", err)
 					retry++
 					if retry > 5 {
 						results <- jobResult{

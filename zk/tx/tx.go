@@ -184,8 +184,9 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 	currentData.L1InfoTreeIndex = currentL1InfoTreeIndex
 	result = append(result, currentData)
 
-	a := fmt.Sprintf("currentData.DeltaTimestamp: %v, currentData.L1InfoTreeIndex: %v ,txs:%v", currentData.DeltaTimestamp, currentData.L1InfoTreeIndex, len(currentData.Transactions))
-	log.Info(a)
+	for _, tx := range currentData.Transactions {
+		log.Info(fmt.Sprintf("tx: %v", tx.Hash()))
+	}
 
 	return result, nil
 }

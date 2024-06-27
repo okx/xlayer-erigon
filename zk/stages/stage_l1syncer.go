@@ -247,11 +247,6 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 			batchLogType = logIncompatible
 		}
 	case contracts.UpdateL1InfoTreeTopicPreEtrogForkID5, contracts.UpdateL1InfoTreeTopicEtrogForkID6:
-		if log.Topics[0] == contracts.UpdateL1InfoTreeTopicPreEtrogForkID5 {
-			fmt.Println(fmt.Sprintf("Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID5, block: %v", log.BlockNumber))
-		} else {
-			fmt.Println(fmt.Sprintf("Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID6+, block: %v", log.BlockNumber))
-		}
 		batchLogType = logL1InfoTreeUpdate
 	default:
 		batchLogType = logUnknown

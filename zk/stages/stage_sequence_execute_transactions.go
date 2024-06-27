@@ -2,8 +2,6 @@ package stages
 
 import (
 	"context"
-	"fmt"
-	"github.com/ledgerwatch/erigon/zkevm/log"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -82,13 +80,10 @@ func getNextL1BatchData(batchNumber uint64, forkId uint64, hermezDb *hermez_db.H
 	// stage, if it is not there we need to panic as we're in a bad state
 	batchL2Data, err := hermezDb.GetL1BatchData(batchNumber)
 	if err != nil {
-		log.Error("error getting l1 batch data from db")
 		return nextData, err
 	}
-	log.Info(fmt.Sprintf("Found in db for batch %d", batchNumber))
 	if len(batchL2Data) == 0 {
 		// end of the line for batch recovery so return empty
-		log.Error("no l1 batch data found in db")
 		return nextData, nil
 	}
 
@@ -100,13 +95,11 @@ func getNextL1BatchData(batchNumber uint64, forkId uint64, hermezDb *hermez_db.H
 
 	nextData.DecodedData, err = zktx.DecodeBatchL2Blocks(batchL2Data, forkId)
 	if err != nil {
-		log.Error("error decoding l1 batch data")
 		return nextData, err
 	}
 
 	// no data means no more work to do - end of the line
 	if len(nextData.DecodedData) == 0 {
-		log.Warn("no l1 batch data decoded")
 		return nextData, nil
 	}
 
@@ -126,7 +119,7 @@ func getNextL1BatchData(batchNumber uint64, forkId uint64, hermezDb *hermez_db.H
 			nextData.IsWorkRemaining = false
 		}
 	}
-	log.Info(fmt.Sprintf("l1 batch data decoded, transactionsInBatch:%v", transactionsInBatch))
+
 	return nextData, err
 }
 

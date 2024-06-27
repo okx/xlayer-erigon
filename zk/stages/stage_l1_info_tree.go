@@ -126,12 +126,6 @@ LOOP:
 			header := headersMap[l.BlockNumber]
 			switch l.Topics[0] {
 			case contracts.UpdateL1InfoTreeTopicEtrogForkID6, contracts.UpdateL1InfoTreeTopicPreEtrogForkID5:
-				//if l.Topics[0] == contracts.UpdateL1InfoTreeTopicPreEtrogForkID5 {
-				//	log.Info(fmt.Sprintf("[%s] Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID5, block: %v", logPrefix, header.Number))
-				//} else {
-				//	log.Info(fmt.Sprintf("[%s] Handling update l1 info tree, UpdateL1InfoTreeTopicPreEtrogForkID6+, block: %v", logPrefix, header.Number))
-				//}
-
 				if !treeInitialised {
 					tree, allLeaves, err = initialiseL1InfoTree(hermezDb)
 					if err != nil {

@@ -205,7 +205,6 @@ LOOP:
 						if cfg.zkCfg.L1SyncStopBatch > 0 {
 							stopBlockMap[b] = struct{}{}
 							if checkStopBlockMap(highestBatch, cfg.zkCfg.L1SyncStopBatch, stopBlockMap) {
-								log.Info("Stopping L1 sync based on stop batch config----1")
 								break LOOP
 							}
 						}
@@ -293,7 +292,6 @@ LOOP:
 							stopBlockMap[b] = struct{}{}
 							log.Info(fmt.Sprintf("highestBatch:%v, cfg.zkCfg.L1SyncStopBatch:%v", highestBatch, cfg.zkCfg.L1SyncStopBatch))
 							if checkStopBlockMap(highestBatch, cfg.zkCfg.L1SyncStopBatch, stopBlockMap) {
-								log.Info("Stopping L1 sync based on stop batch config----2")
 								break LOOP
 							}
 						}

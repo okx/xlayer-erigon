@@ -17,7 +17,7 @@ func (c *Client) loadL2GasPricer(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Check and switch to loading only l2gaspricer configs
+	// TODO: Switch to loading only l2gaspricer configs
 	c.ethCfg = ethCfg
 	c.nodeCfg = nodeCfg
 	log.Info(fmt.Sprintf("loaded l2gaspricer from apollo config: %+v", value.(string)))

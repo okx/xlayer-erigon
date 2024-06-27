@@ -2,6 +2,7 @@ package apollo
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -24,7 +25,7 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 	client := NewClient(c, nc)
 
 	client.LoadConfig()
-	t.Log(c.Zk.XLayer.Nacos)
-	// time.Sleep(2 * time.Minute)
-	t.Log(c.Zk.XLayer.Nacos)
+	t.Log(c.Zk.XLayer)
+	time.Sleep(2 * time.Minute)
+	t.Log(c.Zk.XLayer)
 }

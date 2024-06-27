@@ -17,7 +17,7 @@ func (c *Client) loadPool(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Check and switch to loading only pool configs
+	// TODO: Switch to loading only pool configs
 	c.ethCfg = ethCfg
 	c.nodeCfg = nodeCfg
 	log.Info(fmt.Sprintf("loaded pool from apollo config: %+v", value.(string)))

@@ -17,7 +17,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-func (api *APIImpl) GasPrice_xlayer(ctx context.Context) (*hexutil.Big, error) {
+func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (api *APIImpl) GasPrice_xlayer(ctx context.Context) (*hexutil.Big, error) {
 	}
 	chainId := cc.ChainID
 	if !api.isZkNonSequencer(chainId) {
-		return api.GasPrice_nonRedirectedXL(ctx)
+		return api.gasPriceNonRedirectedXL(ctx)
 	}
 
 	price, err := api.getGPFromTrustedNode()
@@ -41,7 +41,7 @@ func (api *APIImpl) GasPrice_xlayer(ctx context.Context) (*hexutil.Big, error) {
 	return (*hexutil.Big)(price), nil
 }
 
-func (api *APIImpl) GasPrice_nonRedirectedXL(ctx context.Context) (*hexutil.Big, error) {
+func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err

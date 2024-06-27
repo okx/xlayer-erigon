@@ -259,6 +259,7 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 		}
 	}
 
+	// xlayer
 	if count == 0 {
 		defaultGP := uint256.NewInt(oracle.lastPrice.Uint64())
 		heap.Push(s, defaultGP)

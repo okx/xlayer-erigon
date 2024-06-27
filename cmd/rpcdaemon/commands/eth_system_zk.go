@@ -146,9 +146,3 @@ func (api *APIImpl) l1GasPrice() (*big.Int, error) {
 
 	return price, nil
 }
-
-func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
-	avg := new(big.Int).Add(low, high)
-	avg = avg.Quo(avg, big.NewInt(2)) //nolint:gomnd
-	return avg
-}

@@ -25,7 +25,7 @@ func (c *Client) loadSequencer(value interface{}) {
 
 // fireSequencer fires the sequencer config change
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
 		return

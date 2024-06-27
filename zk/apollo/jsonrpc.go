@@ -25,7 +25,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 
 // fireJsonRPC fires the json-rpc config change
 func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
 		return

@@ -25,7 +25,7 @@ func (c *Client) loadL2GasPricer(value interface{}) {
 
 // fireL2GasPricer fires the l2gaspricer config change
 func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
 		return

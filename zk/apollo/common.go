@@ -87,7 +87,7 @@ func (c *Client) loadConfig(value interface{}) {
 }
 
 func (c *Client) fireConfig(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
 		return

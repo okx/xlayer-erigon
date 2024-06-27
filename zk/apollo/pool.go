@@ -25,7 +25,7 @@ func (c *Client) loadPool(value interface{}) {
 
 // firePool fires the pool config change
 func (c *Client) firePool(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
 		return

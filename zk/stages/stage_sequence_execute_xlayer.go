@@ -9,7 +9,7 @@ import (
 )
 
 func tryToSleepSequencer(localDuration time.Duration, logPrefix string) {
-	fullBatchSleepDuration := ethconfig.getFullBatchSleepDuration(localDuration)
+	fullBatchSleepDuration := ethconfig.GetFullBatchSleepDuration(localDuration)
 	if fullBatchSleepDuration > 0 {
 		log.Info(fmt.Sprintf("[%s] Slow down sequencer: %v", logPrefix, fullBatchSleepDuration))
 		time.Sleep(fullBatchSleepDuration)

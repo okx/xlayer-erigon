@@ -1,6 +1,9 @@
 package ethconfig
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // ApolloConfig is the apollo eth backend dynamic config
 type ApolloConfig struct {
@@ -62,4 +65,17 @@ func UpdateL2GasPricerConfig(apolloConfig Config) {
 	getApolloConfig().EnableApollo = true
 	// TODO: Add l2gaspricer configs to update dynamically
 	getApolloConfig().Unlock()
+}
+
+func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
+	var ret time.Duration
+	if getApolloConfig().Enable() {
+		getApolloConfig().RLock()
+		defer getApolloConfig().RUnlock()
+		ret = getApolloConfig().conf.Zk.SequencerFullBatchSleepDuration
+	} else {
+		ret = localDuration
+	}
+
+	return ret
 }

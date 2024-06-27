@@ -142,7 +142,8 @@ func SpawnSequencingStage(
 
 	decodedBlocksSize := uint64(0)
 
-	if l1Recovery {
+	if l1Recovery && forkId >= uint64(constants.ForkID8Elderberry) {
+		log.Info(fmt.Sprintf("[%s] Starting L1 recovery for batch %d, forkId %d", logPrefix, thisBatch, forkId))
 		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch, "L1SyncStopBatch", cfg.zk.L1SyncStopBatch)
 			time.Sleep(1 * time.Second)
@@ -155,60 +156,75 @@ func SpawnSequencingStage(
 			return err
 		}
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
-		if forkId >= uint64(constants.ForkID8Elderberry) {
-			if decodedBlocksSize == 0 && thisBatch > 1 {
-				log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
-				time.Sleep(1 * time.Second)
-				return nil
-			}
 
-			// now look up the index associated with this info root
-			var infoTreeIndex uint64
-			if nextBatchData.L1InfoRoot == SpecialZeroIndexHash {
-				infoTreeIndex = 0
-			} else {
-				found := false
-				infoTreeIndex, found, err = sdb.hermezDb.GetL1InfoTreeIndexByRoot(nextBatchData.L1InfoRoot)
-				if err != nil {
-					log.Error(fmt.Sprintf("[%s] Error looking up L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()), "err", err)
-					return err
-				}
-				if !found {
-					log.Error(fmt.Sprintf("[%s] Could not find L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()))
-					return fmt.Errorf("could not find L1 info tree index for root %s", nextBatchData.L1InfoRoot.String())
-				}
-			}
+		if decodedBlocksSize == 0 && thisBatch > 1 {
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+			time.Sleep(1 * time.Second)
+			return nil
+		}
 
-			// now let's detect a bad batch and skip it if we have to
-			currentBlock, err := rawdb.ReadBlockByNumber(sdb.tx, executionAt)
+		// now look up the index associated with this info root
+		var infoTreeIndex uint64
+		if nextBatchData.L1InfoRoot == SpecialZeroIndexHash {
+			infoTreeIndex = 0
+		} else {
+			found := false
+			infoTreeIndex, found, err = sdb.hermezDb.GetL1InfoTreeIndexByRoot(nextBatchData.L1InfoRoot)
 			if err != nil {
-				log.Error(fmt.Sprintf("[%s] Error reading block %d", logPrefix, executionAt), "err", err)
+				log.Error(fmt.Sprintf("[%s] Error looking up L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()), "err", err)
 				return err
 			}
-			badBatch, err := checkForBadBatch(thisBatch, sdb.hermezDb, currentBlock.Time(), infoTreeIndex, nextBatchData.LimitTimestamp, nextBatchData.DecodedData)
-			if err != nil {
-				log.Error(fmt.Sprintf("[%s] Error checking for bad batch %d", logPrefix, thisBatch), "err", err)
-				return err
-			}
-
-			if badBatch {
-				log.Info(fmt.Sprintf("[%s] Skipping bad batch %d...", logPrefix, thisBatch))
-				// store the fact that this batch was invalid during recovery - will be used for the stream later
-				if err = sdb.hermezDb.WriteInvalidBatch(thisBatch); err != nil {
-					log.Error(fmt.Sprintf("[%s] Error storing invalid batch %d", logPrefix, thisBatch), "err", err)
-					return err
-				}
-				if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
-					log.Error(fmt.Sprintf("[%s] Error saving highest seen batch number %d", logPrefix, thisBatch), "err", err)
-					return err
-				}
-				if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
-					log.Error(fmt.Sprintf("[%s] Error storing fork id %d for batch %d", logPrefix, forkId, thisBatch), "err", err)
-					return err
-				}
-				return nil
+			if !found {
+				log.Error(fmt.Sprintf("[%s] Could not find L1 info tree index for root %s", logPrefix, nextBatchData.L1InfoRoot.String()))
+				return fmt.Errorf("could not find L1 info tree index for root %s", nextBatchData.L1InfoRoot.String())
 			}
 		}
+
+		// now let's detect a bad batch and skip it if we have to
+		currentBlock, err := rawdb.ReadBlockByNumber(sdb.tx, executionAt)
+		if err != nil {
+			log.Error(fmt.Sprintf("[%s] Error reading block %d", logPrefix, executionAt), "err", err)
+			return err
+		}
+		badBatch, err := checkForBadBatch(thisBatch, sdb.hermezDb, currentBlock.Time(), infoTreeIndex, nextBatchData.LimitTimestamp, nextBatchData.DecodedData)
+		if err != nil {
+			log.Error(fmt.Sprintf("[%s] Error checking for bad batch %d", logPrefix, thisBatch), "err", err)
+			return err
+		}
+
+		if badBatch {
+			log.Info(fmt.Sprintf("[%s] Skipping bad batch %d...", logPrefix, thisBatch))
+			// store the fact that this batch was invalid during recovery - will be used for the stream later
+			if err = sdb.hermezDb.WriteInvalidBatch(thisBatch); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error storing invalid batch %d", logPrefix, thisBatch), "err", err)
+				return err
+			}
+			if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error saving highest seen batch number %d", logPrefix, thisBatch), "err", err)
+				return err
+			}
+			if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error storing fork id %d for batch %d", logPrefix, forkId, thisBatch), "err", err)
+				return err
+			}
+			return nil
+		}
+	}
+
+	if l1Recovery && forkId < uint64(constants.ForkID8Elderberry) {
+		log.Info(fmt.Sprintf("[%s] Starting L1 recovery for batch %d, forkId %d", logPrefix, thisBatch, forkId))
+		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch, "L1SyncStopBatch", cfg.zk.L1SyncStopBatch)
+			time.Sleep(1 * time.Second)
+			return nil
+		}
+
+		// let's check if we have any L1 data to recover
+		nextBatchData, err = getNextL1BatchData(thisBatch, forkId, sdb.hermezDb)
+		if err != nil {
+			return err
+		}
+		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
 	}
 
 	log.Info(fmt.Sprintf("[%s] Starting batch %d, executionAt:%v, runLoopBlocks:%v", logPrefix, thisBatch, executionAt, runLoopBlocks))

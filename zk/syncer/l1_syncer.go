@@ -414,12 +414,6 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 					time.Sleep(time.Duration(retry*2) * time.Second)
 					continue
 				}
-				for i := 0; i < len(logs); i++ {
-					//log.Info("L1 log", "block", logs[i].BlockNumber, "tx", logs[i].TxHash, "index", logs[i].Index, "address", logs[i].Address.String(), "data", logs[i].Data)
-					for j := 0; j < len(logs[i].Topics); j++ {
-						//log.Info("L1 log topic", "topic", logs[i].Topics[j].String())
-					}
-				}
 				break
 			}
 

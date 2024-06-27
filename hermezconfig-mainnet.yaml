@@ -1,0 +1,39 @@
+datadir: ./data/
+chain: hermez-mainnet
+http: true
+private.api.addr: localhost:9091
+zkevm.l2-chain-id: 1101
+zkevm.l2-sequencer-rpc-url: https://zkevm-rpc.com
+zkevm.l2-datastreamer-url: stream.zkevm-rpc.com:6900
+zkevm.l1-chain-id: 1
+#zkevm.l1-rpc-url: https://rpc.eth.gateway.fm/
+zkevm.l1-rpc-url: http://localhost:6969?endpoint=https://rpc.ankr.com/eth/xxx&chainid=1101
+
+zkevm.address-sequencer: "0x148Ee7dAF16574cD020aFa34CC658f8F3fbd2800"
+zkevm.address-zkevm: "0x519E42c24163192Dca44CD3fBDCEBF6be9130987"
+zkevm.address-admin: "0x242daE44F5d8fb54B198D03a94dA45B5a4413e21"
+zkevm.address-rollup: "0x5132A183E9F3CB7C848b0AAC5Ae0c4f0491B7aB2"
+zkevm.address-ger-manager: "0x580bda1e7A0CFAe92Fa7F6c20A3794F169CE3CFb"
+
+zkevm.default-gas-price: 1
+zkevm.max-gas-price: 0
+zkevm.gas-price-factor: 0.0375
+
+zkevm.l1-rollup-id: 1
+zkevm.l1-block-range: 2000
+zkevm.l1-query-delay: 1000
+zkevm.l1-first-block: 16896700
+zkevm.l1-sync-start-block: 16896700
+zkevm.l1-sync-stop-batch: 10
+zkevm.rpc-ratelimit: 250
+zkevm.datastream-version: 2
+zkevm.data-stream-host: localhost
+zkevm.executor-strict: false
+zkevm.sequencer-initial-fork-id: 4
+
+externalcl: true
+http.api: [eth, debug, net, trace, web3, erigon, zkevm]
+http.addr: 0.0.0.0
+http.vhosts: any
+http.corsdomain: any
+ws: true

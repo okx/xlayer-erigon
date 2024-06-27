@@ -56,16 +56,12 @@ type Zk struct {
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	// For Xlayer
-	NacosURLs               string
-	NacosNamespaceId        string
-	NacosApplicationName    string
-	NacosExternalListenAddr string
-
 	PoolManagerUrl         string
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
-	EnableInnerTx          bool // XLayer
+
+	// For Xlayer
+	XLayer XLayerConfig
 }
 
 var DefaultZkConfig = &Zk{}

@@ -625,6 +625,23 @@ var (
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
 	}
+	// XLayer apollo
+	ApolloEnableFlag = cli.BoolFlag{
+		Name:  "zkevm.apollo-enable",
+		Usage: "Apollo enable flag.",
+	}
+	ApolloIPAddr = cli.StringFlag{
+		Name:  "zkevm.apollo-ip-addr",
+		Usage: "Apollo IP address.",
+	}
+	ApolloAppId = cli.StringFlag{
+		Name:  "zkevm.apollo-app-id",
+		Usage: "Apollo App ID.",
+	}
+	ApolloNamespaceName = cli.StringFlag{
+		Name:  "zkevm.apollo-namespace-name",
+		Usage: "Apollo namespace name.",
+	}
 	// XLayer nacos
 	NacosURLsFlag = cli.StringFlag{
 		Name:  "zkevm.nacos-urls",

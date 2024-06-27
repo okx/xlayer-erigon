@@ -374,7 +374,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
-		EnableInnerTx:              ethCfg.EnableInnerTx,
+		EnableInnerTx:              ethCfg.XLayer.EnableInnerTx,
 	}
 }
 

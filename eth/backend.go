@@ -750,8 +750,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		cfg := backend.config
 
 		// For Xlayer
-		if len(cfg.NacosURLs) > 0 {
-			nacos.StartNacosClient(cfg.NacosURLs, cfg.NacosNamespaceId, cfg.NacosApplicationName, cfg.NacosExternalListenAddr)
+		if len(cfg.XLayer.Nacos.URLs) > 0 {
+			nacos.StartNacosClient(cfg.XLayer.Nacos.URLs, cfg.XLayer.Nacos.NamespaceId, cfg.XLayer.Nacos.ApplicationName, cfg.XLayer.Nacos.ExternalListenAddr)
 		}
 
 		// update the chain config with the zero gas from the flags

@@ -21,6 +21,11 @@ zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 250
 zkevm.datastream-version: 2
 
+zkevm.apollo-enable: false
+zkevm.apollo-ip-addr: ""
+zkevm.apollo-app-id: ""
+zkevm.apollo-namespace-name: ""
+
 zkevm.nacos-urls: ""
 zkevm.nacos-namespace-id: ""
 zkevm.nacos-application-name: ""
@@ -30,3 +35,11 @@ externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0
 http.port: 8545
+http.timeouts.read: "60s"
+http.timeouts.write: "60s"
+rpc.batch.concurrency: 2
+rpc.batch.limit: 20
+ws: true
+ws.addr: 0.0.0.0
+ws.port: 8133
+ws.api: "eth"

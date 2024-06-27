@@ -16,6 +16,12 @@ func getApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 
+func (c *ApolloConfig) get() Config {
+	c.RLock()
+	defer c.RUnlock()
+	return c.conf
+}
+
 // Enable returns true if apollo is enabled
 func (c *ApolloConfig) Enable() bool {
 	if c == nil || !c.EnableApollo {
@@ -56,10 +62,4 @@ func UpdateL2GasPricerConfig(apolloConfig Config) {
 	getApolloConfig().EnableApollo = true
 	// TODO: Add l2gaspricer configs to update dynamically
 	getApolloConfig().Unlock()
-}
-
-func (c *ApolloConfig) get() Config {
-	c.RLock()
-	defer c.RUnlock()
-	return c.conf
 }

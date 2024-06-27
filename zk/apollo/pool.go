@@ -28,7 +28,7 @@ func (c *Client) firePool(key string, value *storage.ConfigChange) {
 	nodeCfg, ethCfg, err := c.unmarshal(value)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		return
 	}
 
 	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))

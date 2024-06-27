@@ -78,7 +78,6 @@ func WriteBlocksToStream(
 	// if from is higher than the last datastream block number - unwind the stream
 	highestDatastreamBlock, err := srv.GetHighestBlockNumber()
 	log.Info(fmt.Sprintf("[%s] Highest datastream block", logPrefix), "block", highestDatastreamBlock)
-	time.Sleep(10000 * time.Second)
 
 	if err != nil {
 		return err

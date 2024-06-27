@@ -44,7 +44,6 @@ func SpawnL1InfoTreeStage(
 	log.Info(fmt.Sprintf("[%s] Starting L1 Info Tree stage", logPrefix))
 	defer func() {
 		log.Info(fmt.Sprintf("[%s] Finished L1 Info Tree stage", logPrefix))
-		//time.Sleep(10000 * time.Second)
 	}()
 
 	freshTx := tx == nil

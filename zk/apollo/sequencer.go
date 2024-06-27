@@ -17,7 +17,7 @@ func (c *Client) loadSequencer(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Check and switch to loading only sequencer configs
+	// TODO: Switch to loading only sequencer configs
 	c.ethCfg = ethCfg
 	c.nodeCfg = nodeCfg
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
@@ -25,10 +25,10 @@ func (c *Client) loadSequencer(value interface{}) {
 
 // fireSequencer fires the sequencer config change
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		return
 	}
 
 	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))

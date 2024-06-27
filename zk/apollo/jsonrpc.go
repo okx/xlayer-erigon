@@ -17,7 +17,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Check and switch to loading only JSON-RPC configs
+	// TODO: Switch to loading only JSON-RPC configs
 	c.ethCfg = ethCfg
 	c.nodeCfg.Http = nodeCfg.Http
 	log.Info(fmt.Sprintf("loaded json-rpc from apollo config: %+v", value.(string)))
@@ -25,10 +25,10 @@ func (c *Client) loadJsonRPC(value interface{}) {
 
 // fireJsonRPC fires the json-rpc config change
 func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		return
 	}
 
 	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))

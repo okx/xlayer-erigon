@@ -17,7 +17,7 @@ func (c *Client) loadPool(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Check and switch to loading only pool configs
+	// TODO: Switch to loading only pool configs
 	c.ethCfg = ethCfg
 	c.nodeCfg = nodeCfg
 	log.Info(fmt.Sprintf("loaded pool from apollo config: %+v", value.(string)))
@@ -25,10 +25,10 @@ func (c *Client) loadPool(value interface{}) {
 
 // firePool fires the pool config change
 func (c *Client) firePool(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		return
 	}
 
 	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))

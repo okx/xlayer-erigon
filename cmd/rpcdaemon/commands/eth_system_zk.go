@@ -5,14 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
-	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
 	"github.com/ledgerwatch/erigon/common/hexutil"
-	"github.com/ledgerwatch/erigon/core/rawdb"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/eth/gasprice"
-	"github.com/ledgerwatch/erigon/rpc"
+	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
@@ -23,6 +20,7 @@ type L1GasPrice struct {
 }
 
 func (api *APIImpl) GasPrice(ctx context.Context) (*hexutil.Big, error) {
+	return api.GasPrice_xlayer(ctx)
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -37,78 +35,90 @@ func (api *APIImpl) GasPrice(ctx context.Context) (*hexutil.Big, error) {
 		return api.GasPrice_nonRedirected(ctx)
 	}
 
-	price, err := api.getGPFromTrustedNode()
+	if api.BaseAPI.gasless {
+		var price hexutil.Big
+		return &price, nil
+	}
+
+	res, err := client.JSONRPCCall(api.l2RpcUrl, "eth_gasPrice")
 	if err != nil {
-		log.Error("eth_gasPrice error: ", err)
-		return (*hexutil.Big)(api.L2GasPircer.GetConfig().Default), nil
+		return nil, err
+	}
+
+	if res.Error != nil {
+		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
+	}
+	if res.Error != nil {
+		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
+	}
+
+	var resultString string
+	if err := json.Unmarshal(res.Result, &resultString); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal result: %v", err)
+	}
+
+	price, ok := big.NewInt(0).SetString(resultString[2:], 16)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert result to big.Int")
 	}
 
 	return (*hexutil.Big)(price), nil
 }
 
 func (api *APIImpl) GasPrice_nonRedirected(ctx context.Context) (*hexutil.Big, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	cc, err := api.chainConfig(tx)
-	if err != nil {
-		return nil, err
-	}
-	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
-	tipcap, err := oracle.SuggestTipCap(ctx)
-	gasResult := big.NewInt(0)
-	gasResult.Set(tipcap)
-	if err != nil {
-		return nil, err
-	}
-	if head := rawdb.ReadCurrentHeader(tx); head != nil && head.BaseFee != nil {
-		gasResult.Add(tipcap, head.BaseFee)
+	if api.BaseAPI.gasless {
+		var price hexutil.Big
+		return &price, nil
 	}
 
-	rgp := api.L2GasPircer.GetLastRawGP()
-	if gasResult.Cmp(rgp) < 0 {
-		gasResult = new(big.Int).Set(rgp)
+	// if gas price timestamp is older than 3 seconds, update it
+	if time.Since(api.L1GasPrice.timestamp) > 3*time.Second || api.L1GasPrice.gasPrice == nil {
+		l1GasPrice, err := api.l1GasPrice()
+		if err != nil {
+			return nil, err
+		}
+		api.L1GasPrice = L1GasPrice{
+			timestamp: time.Now(),
+			gasPrice:  l1GasPrice,
+		}
 	}
 
-	if !api.isCongested(ctx) {
-		gasResult = getAvgPrice(rgp, gasResult)
+	// Apply factor to calculate l2 gasPrice
+	factor := big.NewFloat(0).SetFloat64(api.GasPriceFactor)
+	res := new(big.Float).Mul(factor, big.NewFloat(0).SetInt(api.L1GasPrice.gasPrice))
+
+	// Store l2 gasPrice calculated
+	result := new(big.Int)
+	res.Int(result)
+	minGasPrice := big.NewInt(0).SetUint64(api.DefaultGasPrice)
+	if minGasPrice.Cmp(result) == 1 { // minGasPrice > result
+		result = minGasPrice
+	}
+	maxGasPrice := new(big.Int).SetUint64(api.MaxGasPrice)
+	if api.MaxGasPrice > 0 && result.Cmp(maxGasPrice) == 1 { // result > maxGasPrice
+		result = maxGasPrice
 	}
 
-	return (*hexutil.Big)(gasResult), err
-}
-
-func (api *APIImpl) isCongested(ctx context.Context) bool {
-
-	latestBlockTxNum, err := api.getLatestBlockTxNum(ctx)
-	if err != nil {
-		return false
+	var truncateValue *big.Int
+	log.Debug("Full L2 gas price value: ", result, ". Length: ", len(result.String()))
+	numLength := len(result.String())
+	if numLength > 3 { //nolint:gomnd
+		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd
+		var ok bool
+		value := result.String()[:3] + fmt.Sprintf(aux, 0)
+		truncateValue, ok = new(big.Int).SetString(value, encoding.Base10)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert result to big.Int")
+		}
+	} else {
+		truncateValue = result
 	}
-	isLatestBlockEmpty := latestBlockTxNum == 0
 
-	poolStatus, err := api.txPool.Status(ctx, &proto_txpool.StatusRequest{})
-	if err != nil {
-		return false
+	if truncateValue == nil {
+		return nil, fmt.Errorf("truncateValue nil value detected")
 	}
 
-	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPircer.GetConfig().CongestionThreshold
-
-	return !isLatestBlockEmpty && isPendingTxCongested
-}
-
-func (api *APIImpl) getLatestBlockTxNum(ctx context.Context) (int, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return 0, err
-	}
-	defer tx.Rollback()
-
-	b, err := api.blockByNumber(ctx, rpc.LatestBlockNumber, tx)
-	if err != nil {
-		return 0, err
-	}
-	return len(b.Transactions()), nil
+	return (*hexutil.Big)(truncateValue), nil
 }
 
 func (api *APIImpl) l1GasPrice() (*big.Int, error) {

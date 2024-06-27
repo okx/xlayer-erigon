@@ -28,6 +28,7 @@ import (
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zk/syncer"
+	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/witness"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 )
@@ -278,12 +279,15 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, batchNumber rpc.B
 	// collect blocks in batch
 	batch.Blocks = []interface{}{}
 	batch.Transactions = []interface{}{}
+	var batchBlocks []*eritypes.Block
+	var batchTxs []eritypes.Transaction
 	// handle genesis - not in the hermez tables so requires special treament
 	if batchNumber == 0 {
 		blk, err := api.ethApi.BaseAPI.blockByNumberWithSenders(tx, 0)
 		if err != nil {
 			return nil, err
 		}
+		batchBlocks = append(batchBlocks, blk)
 		batch.Blocks = append(batch.Blocks, blk.Hash())
 		// no txs in genesis
 	}
@@ -292,8 +296,10 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, batchNumber rpc.B
 		if err != nil {
 			return nil, err
 		}
+		batchBlocks = append(batchBlocks, blk)
 		batch.Blocks = append(batch.Blocks, blk.Hash())
 		for _, btx := range blk.Transactions() {
+			batchTxs = append(batchTxs, btx)
 			batch.Transactions = append(batch.Transactions, btx.Hash())
 		}
 	}
@@ -358,13 +364,6 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, batchNumber rpc.B
 		batch.VerifyBatchTxHash = &ver.L1TxHash
 	}
 
-	// batch l2 data
-	batchL2Data, err := hermezDb.GetL1BatchData(bn)
-	if err != nil {
-		return nil, err
-	}
-	batch.BatchL2Data = batchL2Data
-
 	// exit roots
 	infoTreeUpdate, err := hermezDb.GetL1InfoTreeUpdateByGer(batch.GlobalExitRoot)
 	if err != nil {
@@ -374,6 +373,50 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, batchNumber rpc.B
 		batch.MainnetExitRoot = infoTreeUpdate.MainnetExitRoot
 		batch.RollupExitRoot = infoTreeUpdate.RollupExitRoot
 	}
+
+	if infoTreeUpdate == nil {
+		return nil, errors.New("infoTreeUpdate is nil")
+	}
+
+	// batch l2 data - must build on the fly
+	forkId, err := hermezDb.GetForkId(bn)
+	if err != nil {
+		return nil, err
+	}
+
+	// last batch last block for deltaTimestamp calc
+	lastBlockNoInPreviousBatch := batchBlocks[0].NumberU64() - 1
+	lastBlockInPreviousBatch, err := rawdb.ReadBlockByNumber(tx, lastBlockNoInPreviousBatch)
+	if err != nil {
+		return nil, err
+	}
+
+	var batchL2Data []byte
+	for i := 0; i < len(batchBlocks); i++ {
+		var dTs uint32
+		if i == 0 {
+			dTs = uint32(batchBlocks[i].Time() - lastBlockInPreviousBatch.Time())
+		} else {
+			dTs = uint32(batchBlocks[i].Time() - batchBlocks[i-1].Time())
+		}
+		iti, err := hermezDb.GetBlockL1InfoTreeIndex(batchBlocks[i].NumberU64())
+
+		egTx := make(map[common.Hash]uint8)
+		for _, txn := range batchBlocks[i].Transactions() {
+			eg, err := hermezDb.GetEffectiveGasPricePercentage(txn.Hash())
+			if err != nil {
+				return nil, err
+			}
+			egTx[txn.Hash()] = eg
+		}
+
+		bl2d, err := zktx.GenerateBlockBatchL2Data(uint16(forkId), dTs, uint32(iti), batchBlocks[i].Transactions(), egTx)
+		if err != nil {
+			return nil, err
+		}
+		batchL2Data = append(batchL2Data, bl2d...)
+	}
+	batch.BatchL2Data = batchL2Data
 
 	// currently gives 'error execution reverted' when calling the L1
 	//oaih, err := api.l1Syncer.GetOldAccInputHash(ctx, &api.config.AddressRollup, ApiRollupId, bn+1)

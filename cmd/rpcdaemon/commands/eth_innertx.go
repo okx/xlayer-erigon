@@ -30,14 +30,14 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 		return nil, err
 	}
 	if !ok {
-		return nil, nil
+		return nil, fmt.Errorf("can't get the matching block")
 	}
 	block, err := api.blockByNumberWithSenders(tx, blockNum)
 	if err != nil {
 		return nil, err
 	}
 	if block == nil {
-		return nil, nil
+		return nil, fmt.Errorf("can't get the matching block")
 	}
 
 	var txnIndex uint64
@@ -70,7 +70,7 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 	defer tx.Rollback()
 
 	if number == rpc.PendingBlockNumber {
-		return nil, nil
+		return nil, fmt.Errorf("not supported pending block number")
 	}
 
 	// get latest executed block
@@ -82,7 +82,7 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 	// return null if requested block  is higher than executed
 	// made for consistency with zkevm
 	if number > 0 && executedBlock < uint64(number.Int64()) {
-		return nil, nil
+		return nil, fmt.Errorf("can't get the matching block")
 	}
 
 	n, _, _, err := rpchelper.GetBlockNumber(rpc.BlockNumberOrHashWithNumber(number), tx, api.filters)
@@ -95,7 +95,7 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 		return nil, err
 	}
 	if block == nil {
-		return nil, nil
+		return nil, fmt.Errorf("can't get the matching block")
 	}
 
 	hermezReader := hermez_db.NewHermezDbReader(tx)

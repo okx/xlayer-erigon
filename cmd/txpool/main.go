@@ -59,6 +59,11 @@ var (
 	enableWhiteList bool
 	whiteList       []string
 	blockList       []string
+
+	enableFreeGasByNonce bool
+	freeGasExAddress     []string
+	freeGasCountPerAddr  uint64
+	freeGasLimit         uint64
 )
 
 func init() {
@@ -85,6 +90,11 @@ func init() {
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)
+
+	rootCmd.Flags().BoolVar(&enableFreeGasByNonce, utils.TxPoolEnableFreeGasByNonce.Name, false, utils.TxPoolEnableFreeGasByNonce.Usage)
+	rootCmd.Flags().StringSliceVar(&freeGasExAddress, utils.TxPoolFreeGasExAddress.Name, []string{}, utils.TxPoolFreeGasExAddress.Usage)
+	rootCmd.PersistentFlags().Uint64Var(&freeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Name, 3, utils.TxPoolFreeGasCountPerAddr.Usage)
+	rootCmd.PersistentFlags().Uint64Var(&freeGasLimit, utils.TxPoolFreeGasLimit.Name, 3, utils.TxPoolFreeGasLimit.Usage)
 }
 
 var rootCmd = &cobra.Command{

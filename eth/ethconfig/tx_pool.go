@@ -51,6 +51,15 @@ type DeprecatedTxPoolConfig struct {
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
+
+	// EnableFreeGasByNonce enable free gas
+	EnableFreeGasByNonce bool
+	// FreeGasExAddress is the ex address which can be free gas for the transfer receiver
+	FreeGasExAddress []string
+	// FreeGasCountPerAddr is the count limit of free gas tx per address
+	FreeGasCountPerAddr uint64
+	// FreeGasLimit is the max gas allowed use to do a free gas tx
+	FreeGasLimit uint64
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

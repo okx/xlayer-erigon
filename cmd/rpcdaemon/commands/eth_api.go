@@ -380,7 +380,8 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		EnableInnerTx:              ethCfg.EnableInnerTx,
 	}
 
-	apii.gasCache.latestPrice = apii.L2GasPircer.GetConfig().Default
+	// set default gas price
+	apii.gasCache.SetLatest(common.Hash{}, apii.L2GasPircer.GetConfig().Default)
 	go apii.runL2GasPriceSuggester()
 
 	return apii

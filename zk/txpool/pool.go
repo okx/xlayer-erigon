@@ -369,6 +369,11 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
 			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
 			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
+
+			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
+			FreeGasExAddress:     ethCfg.DeprecatedTxPool.FreeGasExAddress,
+			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
+			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
 		},
 	}, nil
 }

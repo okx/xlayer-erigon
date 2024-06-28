@@ -3,6 +3,8 @@ package txpool
 import (
 	"bytes"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/hex"
+	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -32,13 +34,14 @@ func calcProtocolBaseFee(baseFee uint64) uint64 {
 // which sub pool they will need to go to. Sice this depends on other transactions from the same sender by with lower
 // nonces, and also affect other transactions from the same sender with higher nonce, it loops through all transactions
 // for a given senderID
-func onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
+func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
 	protocolBaseFee, blockGasLimit uint64, pending *PendingPool, baseFee, queued *SubPool, discard func(*metaTx, DiscardReason)) {
 	noGapsNonce := senderNonce
 	cumulativeRequiredBalance := uint256.NewInt(0)
 	minFeeCap := uint256.NewInt(0).SetAllOne()
 	minTip := uint64(math.MaxUint64)
 	var toDel []*metaTx // can't delete items while iterate them
+	freeGas, claim := p.checkFreeGas(senderID)
 	byNonce.ascend(senderID, func(mt *metaTx) bool {
 		if mt.Tx.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: onSenderStateChange loop iteration idHash=%x senderID=%d, senderNonce=%d, txn.nonce=%d, currentSubPool=%s", mt.Tx.IDHash, senderID, senderNonce, mt.Tx.Nonce, mt.currentSubPool))
@@ -61,12 +64,47 @@ func onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint
 			toDel = append(toDel, mt)
 			return true
 		}
+		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
+		if p.checkFreeGasExAddress(senderID) {
+			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+			if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
+				addrHex := "0x" + inputHex[10:74]
+				p.freeGasAddress[addrHex] = true
+			} else {
+				// todo: dex for okb, put 'to' addr into free gas cache
+
+			}
+		} else if claim && mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
+			// todo if the rlp is same with zknode
+			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+			addrHex := "0x" + inputHex[4490:4554]
+			p.freeGasAddress[addrHex] = true
+		}
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
-			*minFeeCap = mt.Tx.FeeCap
+			if freeGas {
+				// todo get dynamic gp
+				if claim {
+					//*minFeeCap = dynamicGP * factorClaim
+				} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
+					//*minFeeCap = dynamicGP
+				}
+			} else {
+				*minFeeCap = mt.Tx.FeeCap
+			}
+
 		}
 		mt.minFeeCap = *minFeeCap
 		if mt.Tx.Tip.IsUint64() {
-			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
+			if freeGas {
+				// todo get dynamic gp
+				if claim {
+					//minTip = dynamicGP * factorClaim
+				} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
+					//minTip = dynamicGP
+				}
+			} else {
+				minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
+			}
 		}
 		mt.minTip = minTip
 

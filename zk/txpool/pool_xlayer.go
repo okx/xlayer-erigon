@@ -41,12 +41,31 @@ func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	return false
 }
 
-func (p *TxPool) checkFreeGasExAddress(addr common.Address) bool {
-	// check from config
+func (p *TxPool) checkFreeGasExAddress(senderID uint64) bool {
+	addr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false
+	}
 	for _, e := range p.wbCfg.FreeGasExAddress {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
 	}
 	return false
+}
+
+func (p *TxPool) checkFreeGas(senderID uint64) (bool, bool) {
+	addr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false, false
+	}
+
+	// is claim tx
+	//for _, e := range p.wbCfg.FreeClaimGasAddr {
+	//	if common.HexToAddress(e) == addr {
+	//		return true, true
+	//	}
+	//}
+	free := p.freeGasAddress[addr.String()]
+	return free, false
 }

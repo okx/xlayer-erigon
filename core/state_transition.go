@@ -18,6 +18,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 
 	"github.com/holiman/uint256"
 
@@ -439,7 +440,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 			output2.Add(output2, amount),
 		)
 	}
-
+	log.Info(fmt.Sprintf("TransitionDb: gas used:%v", st.gasUsed()))
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),
 		Err:        vmerr,

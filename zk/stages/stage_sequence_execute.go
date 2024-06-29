@@ -234,10 +234,10 @@ func SpawnSequencingStage(
 			decodedBlocksIndex := blockNumber - executionAt
 			if decodedBlocksIndex == decodedBlocksSize {
 				runLoopBlocks = false
-				log.Info(fmt.Sprintf("[%s] No more blocks to recover, decodedBlocksIndex:%v, decodedBlocksSize:%v, blockNumber:%v, executionAt:%v", logPrefix, decodedBlocksIndex, decodedBlocksSize, blockNumber, executionAt))
+				log.Info(fmt.Sprintf("[%s] 111No more blocks to recover, decodedBlocksIndex:%v, decodedBlocksSize:%v, blockNumber:%v, executionAt:%v", logPrefix, decodedBlocksIndex, decodedBlocksSize, blockNumber, executionAt))
 				break
 			}
-			log.Info(fmt.Sprintf("[%s] No more blocks to recover, decodedBlocksIndex:%v, decodedBlocksSize:%v, blockNumber:%v, executionAt:%v", logPrefix, decodedBlocksIndex, decodedBlocksSize, blockNumber, executionAt))
+			log.Info(fmt.Sprintf("[%s] 222No more blocks to recover, decodedBlocksIndex:%v, decodedBlocksSize:%v, blockNumber:%v, executionAt:%v", logPrefix, decodedBlocksIndex, decodedBlocksSize, blockNumber, executionAt))
 
 			decodedBlock = nextBatchData.DecodedData[decodedBlocksIndex]
 			deltaTimestamp = uint64(decodedBlock.DeltaTimestamp)
@@ -246,6 +246,11 @@ func SpawnSequencingStage(
 		}
 
 		log.Info(fmt.Sprintf("[%s] Starting block %d, tx len:%d", logPrefix, blockNumber+1, len(blockTransactions)))
+
+		if len(blockTransactions) > 1 {
+			log.Info(fmt.Sprintf("[%s] Starting block %d, tx len:%d", logPrefix, blockNumber+1, len(blockTransactions)))
+			time.Sleep(10000 * time.Second)
+		}
 
 		reRunBlockAfterOverflow := blockNumber == lastStartedBn
 		lastStartedBn = blockNumber
@@ -353,10 +358,15 @@ func SpawnSequencingStage(
 						cfg.txPool.UnlockFlusher()
 					}
 
+					if len(blockTransactions) > 1 {
+						log.Info(fmt.Sprintf("[%s] Starting block %d, tx len:%d", logPrefix, blockNumber+1, len(blockTransactions)))
+						time.Sleep(10000 * time.Second)
+					}
+
 					for i, transaction := range blockTransactions {
 						var receipt *types.Receipt
 						var effectiveGas uint8
-						log.Info(fmt.Sprintf("[%s] Adding transaction to batch...", logPrefix), "hash", transaction.Hash(), "to", transaction.GetTo())
+						log.Info(fmt.Sprintf("[%s] Adding transaction to batch...", logPrefix), "hash", transaction.Hash(), "to", transaction.GetTo(), "block num", header.Number)
 
 						if l1Recovery {
 							if forkId < uint64(constants.ForkID5Dragonfruit) {
@@ -412,6 +422,7 @@ func SpawnSequencingStage(
 						addedTransactions = append(addedTransactions, transaction)
 						addedReceipts = append(addedReceipts, receipt)
 						log.Info(fmt.Sprintf("[%s] Attempt transaction result", logPrefix), "hash", transaction.Hash(), "to", transaction.GetTo(), "receipt.Status", receipt.Status, "effectiveGas", effectiveGas)
+						//time.Sleep(10000 * time.Second)
 
 						hasAnyTransactionsInThisBatch = true
 						nonEmptyBatchTimer.Reset(cfg.zk.SequencerNonEmptyBatchSealTime)
@@ -452,11 +463,17 @@ func SpawnSequencingStage(
 			return err
 		}
 
+		//log.LvlInfo
+
 		if err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, effectiveGases, infoTreeIndexProgress); err != nil {
 			return err
 		}
 
 		log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, thisBlockNumber, len(addedTransactions)))
+		if thisBlockNumber == 1 {
+			time.Sleep(10000 * time.Second)
+		}
+
 	}
 
 	counters, err := batchCounters.CombineCollectors()

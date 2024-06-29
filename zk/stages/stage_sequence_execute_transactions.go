@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"github.com/0xPolygonHermez/zkevm-data-streamer/log"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -192,6 +193,8 @@ func attemptAddTransaction(
 	if err != nil {
 		return nil, false, err
 	}
+
+	log.Info("Transaction executed", "hash", transaction.Hash().String(), "status", receipt.Status, "gasUsed", receipt.GasUsed, "effectiveGasPrice", effectiveGasPrice, "len logs", len(receipt.Logs))
 
 	if forkId <= uint64(constants.ForkID7Etrog) && errors.Is(execResult.Err, vm.ErrUnsupportedPrecompile) {
 		receipt.Status = 1

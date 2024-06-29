@@ -176,6 +176,16 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 		}
 
 		currentData.Transactions = append(currentData.Transactions, legacyTx)
+
+		if forkID < uint64(constants.ForkID6IncaBerry) {
+			currentData.DeltaTimestamp = currentDelta
+			currentData.L1InfoTreeIndex = currentL1InfoTreeIndex
+			result = append(result, currentData)
+			currentData = DecodedBatchL2Data{}
+			log.Info(fmt.Sprintf("DecodeBatchL2Blocks Fork5 single txs: %v", legacyTx.Hash()))
+		} else {
+			log.Info(fmt.Sprintf("DecodeBatchL2Blocks Fork6 multi txs: %v", legacyTx.Hash()))
+		}
 	}
 
 	// always capture the last data as there won't have been a change l2 block to seal it off

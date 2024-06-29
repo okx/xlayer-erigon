@@ -17,6 +17,8 @@
 package core
 
 import (
+	"fmt"
+	"github.com/0xPolygonHermez/zkevm-data-streamer/log"
 	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -47,6 +49,7 @@ func GetTxContext(config *chain.Config, engine consensus.EngineReader, ibs *stat
 		msg.SetGasPrice(CalculateEffectiveGas(msg.GasPrice(), effectiveGasPricePercentage))
 		msg.SetFeeCap(CalculateEffectiveGas(msg.FeeCap(), effectiveGasPricePercentage))
 	}
+	log.Info(fmt.Sprintf("IsForkID5Dragonfruit:%v, ", evm.ChainRules().IsForkID5Dragonfruit))
 
 	if msg.FeeCap().IsZero() && engine != nil {
 		// Only zero-gas transactions may be service ones
@@ -76,6 +79,7 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 	evm.Reset(txContext, ibs)
 
 	result, err := ApplyMessage(evm, msg, gp, true /* refunds */, false /* gasBailout */)
+	log.Info(fmt.Sprintf("ApplyMessage result used: %v, failed:%v, err: %v, hash:%v", result.UsedGas, result.Failed(), err, tx.Hash()))
 	if err != nil {
 		return nil, nil, err
 	}

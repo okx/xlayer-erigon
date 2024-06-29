@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spf13/cobra"
@@ -156,6 +157,7 @@ func initSeparatedLogging(
 	mux := log.MultiHandler(logger.GetHandler(), log.LvlFilterHandler(dirLevel, userLog))
 	log.Root().SetHandler(mux)
 	logger.Info("logging to file system", "log dir", dirPath, "file prefix", filePrefix, "log level", dirLevel, "json", dirJson)
+	time.Sleep(10 * time.Second)
 }
 
 func tryGetLogLevel(s string) (log.Lvl, error) {

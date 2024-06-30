@@ -46,6 +46,8 @@ import (
 	"os"
 	"path"
 
+	"time"
+
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
 	"github.com/ledgerwatch/erigon/common/paths"
@@ -60,7 +62,6 @@ import (
 	"github.com/ledgerwatch/erigon/p2p/netutil"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"time"
 )
 
 // These are all the command line flags we support.
@@ -365,6 +366,16 @@ var (
 		Name:  "http.api",
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "eth,erigon,engine",
+	}
+	HTTPApiKeysFlag = cli.StringFlag{
+		Name:  "http.apikeys",
+		Usage: "API keys for the HTTP-RPC server, format: project1:apikey1:timeout1,project2:apikey2:timeout2",
+		Value: "",
+	}
+	MethodRateLimitFlag = cli.StringFlag{
+		Name:  "http.methodratelimit",
+		Usage: "Method rate limit in requests per second, format: method1|method2|method3:count:duration, eg. eth_call|eth_blockNumber:10:1",
+		Value: "",
 	}
 	L2ChainIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l2-chain-id",

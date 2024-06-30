@@ -174,7 +174,10 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 					wg.Done()
 					<-boundedConcurrency
 				}()
-
+				if !methodRateLimitAllow(calls[i].Method) {
+					answersWithNils[i] = errorMessage(fmt.Errorf("method rate limit exceeded"))
+					return
+				}
 				select {
 				case <-cp.ctx.Done():
 					return
@@ -215,6 +218,10 @@ func (h *handler) handleMsg(msg *jsonrpcMessage, stream *jsoniter.Stream) {
 		return
 	}
 	h.startCallProc(func(cp *callProc) {
+		if !methodRateLimitAllow(msg.Method) {
+			h.conn.writeJSON(cp.ctx, errorMessage(fmt.Errorf("rate limit exceeded")))
+			return
+		}
 		needWriteStream := false
 		if stream == nil {
 			stream = jsoniter.NewStream(jsoniter.ConfigDefault, nil, 4096)

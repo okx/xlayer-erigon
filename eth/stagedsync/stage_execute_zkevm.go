@@ -130,7 +130,7 @@ Loop:
 		writeChangeSets := nextStagesExpectData || blockNum > cfg.prune.History.PruneTo(to)
 		writeReceipts := nextStagesExpectData || blockNum > cfg.prune.Receipts.PruneTo(to)
 		writeCallTraces := nextStagesExpectData || blockNum > cfg.prune.CallTraces.PruneTo(to)
-		writeInnerTxs := cfg.zk.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
+		writeInnerTxs := cfg.zk.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to)) // XLayer operation
 
 		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
 		if err != nil {
@@ -438,6 +438,7 @@ func executeBlockZk(
 		}
 	}
 
+	// XLayer inner tx
 	if writeInnerTxs {
 		if err := hermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
 			return nil, err

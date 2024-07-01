@@ -147,8 +147,8 @@ const (
 	SenderDisallowedSendTx DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 
-	ReceiverDisallowedReceiveTx DiscardReason = 27 // receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 28 // the transaction is sent by a no whitelisted account
+	ReceiverDisallowedReceiveTx DiscardReason = 27 // XLayer receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 28 // XLayer the transaction is sent by a no whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -203,7 +203,7 @@ func (r DiscardReason) String() string {
 		return "unsupported transaction type"
 	case OverflowZkCounters:
 		return "overflow zk-counters"
-	case SenderDisallowedSendTx:
+	case SenderDisallowedSendTx: // XLayer operation
 		return "sender disallowed to send tx by ACL policy"
 	case ReceiverDisallowedReceiveTx:
 		return "blocked receiver"
@@ -309,7 +309,6 @@ type TxPool struct {
 	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
-	wbCfg                   WBConfig
 	chainID                 uint256.Int
 	lastSeenBlock           atomic.Uint64
 	started                 atomic.Bool
@@ -321,6 +320,8 @@ type TxPool struct {
 	isPostShanghai          atomic.Bool
 	allowFreeTransactions   bool
 	aclDB                   kv.RwDB
+
+	wbCfg WBConfig // XLayer config
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -729,7 +730,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return InsufficientFunds
 	}
 
-	// check if sender is blocked
+	//XLayer check if sender is blocked
 	if p.checkBlockedAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx

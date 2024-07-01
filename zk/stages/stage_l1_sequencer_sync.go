@@ -93,7 +93,7 @@ Loop:
 					}
 					// we only ever handle a single injected batch as a sequencer currently so we can just
 					// exit early here
-					log.Info("Injected batch found\n")
+					log.Info("Found injected batch , and break loop")
 					break Loop
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])

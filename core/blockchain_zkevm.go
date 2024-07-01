@@ -79,7 +79,7 @@ func ExecuteBlockEphemerallyZk(
 		includedTxs types.Transactions
 		receipts    types.Receipts
 
-		blockInnerTxs [][]*zktypes.InnerTx
+		blockInnerTxs [][]*zktypes.InnerTx // XLayer, inner tx
 	)
 
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)
@@ -165,6 +165,7 @@ func ExecuteBlockEphemerallyZk(
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
 			}
+			// XLayer, inner tx
 			if !vmConfig.NoInnerTxs {
 				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
@@ -249,7 +250,7 @@ func ExecuteBlockEphemerallyZk(
 			Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
 			GasUsed:     math.HexOrDecimal64(*usedGas),
 			Rejected:    rejectedTxs,
-			InnerTxs:    blockInnerTxs,
+			InnerTxs:    blockInnerTxs, // XLayer, inner tx
 		},
 		BlockInfoTree: l2InfoRoot,
 	}

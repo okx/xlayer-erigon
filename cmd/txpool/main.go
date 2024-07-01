@@ -161,6 +161,8 @@ func doTxpool(ctx context.Context) error {
 		sender := common.HexToAddress(senderHex)
 		cfg.TracedSenders[i] = string(sender[:])
 	}
+
+	// XLayer tx pool access
 	ethCfg := &ethconfig.Defaults
 	ethCfg.DeprecatedTxPool.EnableWhitelist = enableWhiteList
 	ethCfg.DeprecatedTxPool.WhiteList = make([]string, len(whiteList))

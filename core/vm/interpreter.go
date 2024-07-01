@@ -40,7 +40,7 @@ type Config struct {
 	ReadOnly      bool      // Do not perform any block finalisation
 	StatelessExec bool      // true is certain conditions (like state trie root hash matching) need to be relaxed for stateless EVM execution
 	RestoreState  bool      // Revert all changes made to the state (useful for constant system calls)
-	NoInnerTxs    bool      // Do not calculate inner txs
+	NoInnerTxs    bool      // XLayer, do not calculate inner txs
 
 	ExtraEips []int // Additional EIPS that are to be enabled
 }
@@ -54,7 +54,7 @@ func NewTraceVmConfig() Config {
 		SkipAnalysis:  false,
 		TraceJumpDest: false,
 		NoReceipts:    true, // used to skip receipts at end of exec
-		NoInnerTxs:    true,
+		NoInnerTxs:    true, // XLayer used to skip inner txs
 		ReadOnly:      false,
 		StatelessExec: true, // used to setCheckNonce to false
 		RestoreState:  false,

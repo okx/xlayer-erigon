@@ -1,5 +1,6 @@
 package apollo
 
+// TODO: Rethink the current namespace design to avoid hardcoding every namespace / apollo config
 const (
 	// L2GasPricer is the l2gaspricer namespace,the content of the namespace is the config for l2gaspricer with yaml format
 	L2GasPricer = "l2gaspricer.txt"

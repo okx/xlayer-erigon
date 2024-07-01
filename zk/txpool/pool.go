@@ -732,12 +732,14 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	// check if receiver is blocked
 	if !txn.Creation {
 		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
-		to := txnDec.GetTo()
-		if err == nil && to != nil {
+		if err == nil {
+			to := txnDec.GetTo()
 			if p.checkBlockedAddr(*to) {
 				log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
 				return ReceiverDisallowedReceiveTx
 			}
+		} else {
+			log.Error(fmt.Sprintf("DecodeTransaction error: %v, rlp=%s", err, hex.EncodeToString(txn.Rlp)))
 		}
 	}
 
@@ -1571,7 +1573,6 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 			log.Warn("[txpool] fromDB: parseTransaction", "err", err)
 			continue
 		}
-		txn.Rlp = nil // means that we don't need store it in db anymore
 
 		txn.SenderID, txn.Traced = p.senders.getOrCreateID(addr)
 		binary.BigEndian.Uint64(v)
@@ -1581,6 +1582,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		if reason := p.validateTx(txn, isLocalTx, cacheView, addr); reason != NotSet && reason != Success {
 			return nil
 		}
+		txn.Rlp = nil // means that we don't need store it in db anymore
 		txs.Resize(uint(i + 1))
 		txs.Txs[i] = txn
 		txs.IsLocal[i] = isLocalTx

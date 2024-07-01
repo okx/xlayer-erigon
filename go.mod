@@ -80,6 +80,7 @@ require (
 	github.com/prysmaticlabs/gohashtree v0.0.3-alpha
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
 	github.com/rs/cors v1.8.3
+	github.com/segmentio/kafka-go v0.4.47
 	github.com/shirou/gopsutil/v3 v3.23.2
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
@@ -226,6 +227,7 @@ require (
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/onsi/ginkgo/v2 v2.8.0 // indirect
 	github.com/opencontainers/runtime-spec v1.0.2 // indirect
+	github.com/pierrec/lz4/v4 v4.1.15 // indirect
 	github.com/pion/datachannel v1.5.2 // indirect
 	github.com/pion/dtls/v2 v2.2.4 // indirect
 	github.com/pion/ice/v2 v2.2.6 // indirect

@@ -16,12 +16,6 @@ func getApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 
-func (c *ApolloConfig) get() Config {
-	c.RLock()
-	defer c.RUnlock()
-	return c.conf
-}
-
 // Enable returns true if apollo is enabled
 func (c *ApolloConfig) Enable() bool {
 	if c == nil || !c.EnableApollo {

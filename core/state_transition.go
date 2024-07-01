@@ -24,6 +24,7 @@ import (
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/zk/txpool"
 
 	"github.com/ledgerwatch/erigon/common"
@@ -386,11 +387,12 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	)
 	//add InnerTx
 	innerTx := &zktypes.InnerTx{
-		Dept:     *big.NewInt(0),
-		From:     sender.Address().String(),
-		IsError:  false,
-		Gas:      st.gas + intrinsicGas,
-		ValueWei: st.value.ToBig().String(),
+		Dept:         *big.NewInt(0),
+		From:         sender.Address().String(),
+		IsError:      false,
+		Gas:          st.gas + intrinsicGas,
+		ValueWei:     st.value.ToBig().String(),
+		CallValueWei: hexutil.EncodeBig(st.value.ToBig()),
 	}
 	st.evm.AddInnerTx(innerTx)
 

@@ -3,6 +3,7 @@ package vm
 import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
+	"github.com/ledgerwatch/erigon/common/hexutil"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"math/big"
 	"strconv"
@@ -66,11 +67,12 @@ func beforeOp(
 	gas uint64,
 	value *big.Int) (*zktypes.InnerTx, int) {
 	innerTx := &zktypes.InnerTx{
-		CallType: callTyp,
-		From:     fromAddr.String(),
-		ValueWei: value.String(),
-		Gas:      gas,
-		IsError:  false,
+		CallType:     callTyp,
+		From:         fromAddr.String(),
+		ValueWei:     value.String(),
+		CallValueWei: hexutil.EncodeBig(value),
+		Gas:          gas,
+		IsError:      false,
 	}
 
 	if toAddr != nil {

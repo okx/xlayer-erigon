@@ -25,7 +25,7 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 	nc := &nodecfg.Config{}
 	client := NewClient(c, nc)
 
-	loaded := client.LoadTestConfig()
+	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
 	logTestNodeConfig(t, client.nodeCfg)

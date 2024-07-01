@@ -17,9 +17,7 @@ func (c *Client) loadSequencer(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Switch to loading only sequencer configs
-	c.ethCfg = ethCfg
-	c.nodeCfg = nodeCfg
+	// TODO: Add specific sequencer configs to load from apollo config
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
 }
 

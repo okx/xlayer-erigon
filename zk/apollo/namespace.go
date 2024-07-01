@@ -2,48 +2,12 @@ package apollo
 
 // TODO: Rethink the current namespace design to avoid hardcoding every namespace / apollo config
 const (
-	// L2GasPricer is the l2gaspricer namespace,the content of the namespace is the config for l2gaspricer with yaml format
-	L2GasPricer = "l2gaspricer.txt"
-	// L2GasPricerHalt is the l2gaspricer halt namespace,change the Halt to different value will halt l2gaspricer
-	L2GasPricerHalt = "l2gaspricer-halt"
-
-	// Sequencer is the sequencer namespace,the content of the namespace is the config for sequencer with yaml format
-	Sequencer = "sequencer.txt"
-	// SequencerHalt is the sequencer halt namespace,change the Halt to different value will halt sequencer
-	SequencerHalt = "sequencer-halt"
-
-	// JsonRPCRO is the json-rpc-ro namespace, the content of the namespace is the config for json-rpc-ro with yaml format
-	JsonRPCRO = "jsonrpc-ro.txt"
-	// JsonRPCROHalt is the json-rpc-ro halt namespace,change the Halt to different value will halt json-rpc-ro
-	JsonRPCROHalt = "jsonrpc-ro-halt"
-	// JsonRPCExplorer is the json-rpc-explorer namespace, the content of the namespace is the config for json-rpc-explorer with yaml format
-	JsonRPCExplorer = "jsonrpc-explorer.txt"
-	// JsonRPCExplorerHalt is the json-rpc-explorer halt namespace,change the Halt to different value will halt json-rpc-explorer
-	JsonRPCExplorerHalt = "jsonrpc-explorer-halt"
-	// JsonRPCSubgraph is the json-rpc-subgraph namespace, the content of the namespace is the config for json-rpc-subgraph with yaml format
-	JsonRPCSubgraph = "jsonrpc-subgraph.txt"
-	// JsonRPCSubgraphHalt is the json-rpc-subgraph halt namespace,change the Halt to different value will halt json-rpc-subgraph
-	JsonRPCSubgraphHalt = "jsonrpc-subgraph-halt"
-	// JsonRPCLight is the json-rpc-light namespace, the content of the namespace is the config for json-rpc-light with yaml format
-	JsonRPCLight = "jsonrpc-light.txt"
-	// JsonRPCLightHalt is the json-rpc-light halt namespace,change the Halt to different value will halt json-rpc-light
-	JsonRPCLightHalt = "jsonrpc-light-halt"
-	// JsonRPCBridge is the json-rpc-bridge namespace, the content of the namespace is the config for json-rpc-bridge with yaml format
-	JsonRPCBridge = "jsonrpc-bridge.txt"
-	// JsonRPCBridgeHalt is the json-rpc-bridge halt namespace,change the Halt to different value will halt json-rpc-bridge
-	JsonRPCBridgeHalt = "jsonrpc-bridge-halt"
-	// JsonRPCWO is the json-rpc-wo namespace, the content of the namespace is the config for json-rpc-wo with yaml format
-	JsonRPCWO = "jsonrpc-wo.txt"
-	// JsonRPCWOHalt is the json-rpc-wo halt namespace,change the Halt to different value will halt json-rpc-wo
-	JsonRPCWOHalt = "jsonrpc-wo-halt"
-	// JsonRPCUnlimited is the json-rpc-unlimited namespace, the content of the namespace is the config for json-rpc-unlimited with yaml format
-	JsonRPCUnlimited = "jsonrpc-unlimited.txt"
-	// JsonRPCUnlimitedHalt is the json-rpc-unlimited halt namespace,change the Halt to different value will halt json-rpc-unlimited
-	JsonRPCUnlimitedHalt = "jsonrpc-unlimited-halt"
-
-	// Pool is the pool namespace, the content of the namespace is the config for pool with yaml format
-	Pool = "pool.txt"
-
-	// Test is the test namespace, the content of the namespace is the config for testing with yaml format
-	Test = "test.txt"
+	// JsonRPC is the jsonrpc prefix namespace, the content of the prefix is the configuration for jsonrpc with yaml format
+	JsonRPC = "jsonrpc"
+	// Sequencer is the sequencer prefix namespace, the content of the prefix is the configuration for sequencer with yaml format
+	Sequencer = "sequencer"
+	// L2GasPricer is the l2gaspricer prefix namespace, the content of the prefix is the configuration for l2gaspricer with yaml format
+	L2GasPricer = "l2gaspricer"
+	// Halt is the halt suffix namespace. Change the halt to a different value will halt the respective service
+	Halt = "halt"
 )

@@ -20,9 +20,10 @@ import (
 // Client is the apollo client
 type Client struct {
 	*agollo.Client
-	ethCfg  *ethconfig.Config
-	nodeCfg *nodecfg.Config
-	flags   []cli.Flag
+	namespaceMap map[string]string
+	ethCfg       *ethconfig.Config
+	nodeCfg      *nodecfg.Config
+	flags        []cli.Flag
 }
 
 // NewClient creates a new apollo client
@@ -47,11 +48,23 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 		os.Exit(1)
 	}
 
+	nsMap := make(map[string]string)
+	namespaces := strings.Split(cfg.Zk.XLayer.Apollo.NamespaceName, ",")
+	for _, namespace := range namespaces {
+		prefix, err := getNamespacePrefix(namespace)
+		if err != nil {
+			log.Error(fmt.Sprintf("failed init apollo: %v", err))
+			os.Exit(1)
+		}
+		nsMap[prefix] = namespace
+	}
+
 	apc := &Client{
-		Client:  client,
-		ethCfg:  cfg,
-		nodeCfg: nodeCfg,
-		flags:   append(erigoncli.DefaultFlags, debug.Flags...),
+		Client:       client,
+		namespaceMap: nsMap,
+		ethCfg:       cfg,
+		nodeCfg:      nodeCfg,
+		flags:        append(erigoncli.DefaultFlags, debug.Flags...),
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})
 
@@ -63,20 +76,17 @@ func (c *Client) LoadConfig() (loaded bool) {
 	if c == nil {
 		return false
 	}
-	namespaces := strings.Split(c.ethCfg.Zk.XLayer.Apollo.NamespaceName, ",")
-	for _, namespace := range namespaces {
+	for prefix, namespace := range c.namespaceMap {
 		cache := c.GetConfigCache(namespace)
 		cache.Range(func(key, value interface{}) bool {
 			loaded = true
-			switch namespace {
-			case L2GasPricer:
-				c.loadL2GasPricer(value)
-			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
-				c.loadJsonRPC(value)
+			switch prefix {
 			case Sequencer:
 				c.loadSequencer(value)
-			case Pool:
-				c.loadPool(value)
+			case JsonRPC:
+				c.loadJsonRPC(value)
+			case L2GasPricer:
+				c.loadL2GasPricer(value)
 			}
 			return true
 		})
@@ -93,17 +103,29 @@ type CustomChangeListener struct {
 func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 	for key, value := range changeEvent.Changes {
 		if value.ChangeType == storage.MODIFIED {
-			switch changeEvent.Namespace {
-			case L2GasPricerHalt, SequencerHalt, JsonRPCROHalt, JsonRPCExplorerHalt, JsonRPCSubgraphHalt, JsonRPCLightHalt, JsonRPCBridgeHalt, JsonRPCWOHalt, JsonRPCUnlimitedHalt:
+			suffix, err := getNamespaceSuffix(changeEvent.Namespace)
+			if err != nil {
+				log.Warn(fmt.Sprintf("not processing change event: %v", err))
+				continue
+			}
+			switch suffix {
+			case Halt:
 				c.fireHalt(key, value)
-			case L2GasPricer:
-				c.fireL2GasPricer(key, value)
+				continue
+			}
+
+			prefix, err := getNamespacePrefix(changeEvent.Namespace)
+			if err != nil {
+				log.Warn(fmt.Sprintf("not processing change event: %v", err))
+				continue
+			}
+			switch prefix {
 			case Sequencer:
 				c.fireSequencer(key, value)
-			case JsonRPCRO, JsonRPCExplorer, JsonRPCSubgraph, JsonRPCLight, JsonRPCBridge, JsonRPCWO, JsonRPCUnlimited:
+			case JsonRPC:
 				c.fireJsonRPC(key, value)
-			case Pool:
-				c.firePool(key, value)
+			case L2GasPricer:
+				c.fireL2GasPricer(key, value)
 			}
 		}
 	}

@@ -61,7 +61,7 @@ func TestLoadConfig(t *testing.T) {
 	}
 	nc := &nodecfg.Config{}
 	client := NewClient(c, nc)
-	client.loadConfig(value)
+	client.loadJsonRPC(value)
 	require.NoError(t, err)
 	logTestNodeConfig(t, client.nodeCfg)
 	logTestEthConfig(t, client.ethCfg)

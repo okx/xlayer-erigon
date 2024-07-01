@@ -17,8 +17,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 		os.Exit(1)
 	}
 
-	// TODO: Switch to loading only JSON-RPC configs
-	c.ethCfg = ethCfg
+	// TODO: Add specific RPC configs to load from apollo config
 	c.nodeCfg.Http = nodeCfg.Http
 	log.Info(fmt.Sprintf("loaded json-rpc from apollo config: %+v", value.(string)))
 }

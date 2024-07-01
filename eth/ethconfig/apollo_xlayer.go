@@ -32,27 +32,19 @@ func (c *ApolloConfig) Enable() bool {
 	return c.EnableApollo
 }
 
-// UpdateRPCConfig updates the apollo RPC configuration
-func UpdateRPCConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add specific gasprice configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
 // UpdateSequencerConfig updates the apollo sequencer configuration
 func UpdateSequencerConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
-	// TODO: Add gasprice configs to update dynamically
+	// TODO: Add sequencer configs to update dynamically
 	getApolloConfig().Unlock()
 }
 
-// UpdatePoolConfig updates the apollo pool configuration
-func UpdatePoolConfig(apolloConfig Config) {
+// UpdateRPCConfig updates the apollo RPC configuration
+func UpdateRPCConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
-	// TODO: Add pool configs to update dynamically
+	// TODO: Add specific RPC configs to update dynamically
 	getApolloConfig().Unlock()
 }
 

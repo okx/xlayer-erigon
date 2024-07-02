@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestJsonRPCApolloClient(t *testing.T) {
+func TestApolloClient(t *testing.T) {
 	c := &ethconfig.Config{
 		Zk: &ethconfig.Zk{
 			XLayer: ethconfig.XLayerConfig{
@@ -25,7 +25,7 @@ func TestJsonRPCApolloClient(t *testing.T) {
 	nc := &nodecfg.Config{}
 	client := NewClient(c, nc)
 
-	// Test load jsonrpc config cache
+	// Test load config cache
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
@@ -33,11 +33,11 @@ func TestJsonRPCApolloClient(t *testing.T) {
 	logTestEthConfig(t, c)
 	initialHttpConf := nc.Http
 
-	// Fire jsonrpc config changes
+	// Fire config changes
 	time.Sleep(30 * time.Second)
 
 	afterHttpConf := nodecfg.GetApolloConfig().Http
-	require.NotEqual(t, initialHttpConf, afterHttpConf)
+	require.Equal(t, initialHttpConf, afterHttpConf)
 	t.Log("Logging apollo config")
 	apolloNodeCfg := nodecfg.GetApolloConfig()
 	apolloEthCfg := ethconfig.GetApolloConfig()
@@ -55,10 +55,14 @@ func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
 	t.Log("zkevm.nacos-namespace-id: ", ethCfg.Zk.XLayer.Nacos.NamespaceId)
 	t.Log("zkevm.nacos-application-name: ", ethCfg.Zk.XLayer.Nacos.ApplicationName)
 	t.Log("zkevm.nacos-external-listen-addr: ", ethCfg.Zk.XLayer.Nacos.ExternalListenAddr)
-	t.Log("zkevm.l1-rollup-id", ethCfg.Zk.L1RollupId)
-	t.Log("zkevm.l1-first-block", ethCfg.Zk.L1FirstBlock)
-	t.Log("zkevm.l1-block-range", ethCfg.Zk.L1BlockRange)
-	t.Log("zkevm.l1-query-delay", ethCfg.Zk.L1QueryDelay)
+	t.Log("zkevm.l1-rollup-id: ", ethCfg.Zk.L1RollupId)
+	t.Log("zkevm.l1-first-block: ", ethCfg.Zk.L1FirstBlock)
+	t.Log("zkevm.l1-block-range: ", ethCfg.Zk.L1BlockRange)
+	t.Log("zkevm.l1-query-delay: ", ethCfg.Zk.L1QueryDelay)
+	t.Log("zkevm.sequencer-initial-fork-id: ", ethCfg.Zk.SequencerInitialForkId)
+	t.Log("zkevm.sequencer-block-seal-time: ", ethCfg.Zk.SequencerBlockSealTime)
+	t.Log("zkevm.sequencer-batch-seal-time: ", ethCfg.Zk.SequencerBatchSealTime)
+	t.Log("zkevm.sequencer-non-empty-batch-seal-time: ", ethCfg.Zk.SequencerNonEmptyBatchSealTime)
 }
 
 func logTestNodeConfig(t *testing.T, nodeCfg *nodecfg.Config) {

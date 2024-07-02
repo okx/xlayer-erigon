@@ -2,7 +2,6 @@ package apollo
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/apolloconfig/agollo/v4"
@@ -10,6 +9,7 @@ import (
 	"github.com/apolloconfig/agollo/v4/storage"
 	"github.com/urfave/cli/v2"
 
+	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
@@ -44,8 +44,7 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 		return c, nil
 	})
 	if err != nil {
-		log.Error(fmt.Sprintf("failed init apollo: %v", err))
-		os.Exit(1)
+		utils.Fatalf("failed init apollo: %v", err)
 	}
 
 	nsMap := make(map[string]string)
@@ -53,8 +52,7 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	for _, namespace := range namespaces {
 		prefix, err := getNamespacePrefix(namespace)
 		if err != nil {
-			log.Error(fmt.Sprintf("failed init apollo: %v", err))
-			os.Exit(1)
+			utils.Fatalf("failed init apollo: %v", err)
 		}
 		nsMap[prefix] = namespace
 	}

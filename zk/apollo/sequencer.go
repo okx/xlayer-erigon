@@ -2,9 +2,9 @@ package apollo
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/apolloconfig/agollo/v4/storage"
+	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
@@ -13,8 +13,7 @@ import (
 func (c *Client) loadSequencer(value interface{}) {
 	nodeCfg, ethCfg, err := c.unmarshal(value)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		utils.Fatalf("failed to unmarshal config: %v", err)
 	}
 
 	// TODO: Add specific sequencer configs to load from apollo config

@@ -14,13 +14,14 @@ import (
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
+	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/erigon/turbo/node"
 	"github.com/ledgerwatch/log/v3"
 )
 
-func (c *Client) unmarshal(value interface{}) (*nodecfg.Config, *ethconfig.Config, error) {
+func (c *Client) unmarshal(value interface{}) (nodeCfg *nodecfg.Config, ethCfg *ethconfig.Config, err error) {
 	config := make(map[string]interface{})
-	err := yaml.Unmarshal([]byte(value.(string)), config)
+	err = yaml.Unmarshal([]byte(value.(string)), config)
 	if err != nil {
 		log.Error(fmt.Sprintf("failed to load config: %v error: %v", value, err))
 		return nil, nil, err
@@ -49,8 +50,22 @@ func (c *Client) unmarshal(value interface{}) (*nodecfg.Config, *ethconfig.Confi
 		}
 	}
 
-	nodeCfg := node.NewNodConfigUrfave(ctx)
-	ethCfg := node.NewEthConfigUrfave(ctx, nodeCfg)
+	// Apply flags to configs is fallible and thus we will need to handle failure
+	defer func() {
+		if r := recover(); r != nil {
+			nodeCfg = nil
+			ethCfg = nil
+			err = fmt.Errorf("failed to unmarshal node: %v", r)
+			log.Error(fmt.Sprintf("%v", err))
+		}
+	}()
+
+	// Set node config. Do not set data dir and node user identification
+	nodeCfg = &nodecfg.DefaultConfig
+	erigoncli.ApplyFlagsForNodeConfig(ctx, nodeCfg)
+
+	// Set eth backend config
+	ethCfg = node.NewEthConfigUrfave(ctx, nodeCfg)
 
 	return nodeCfg, ethCfg, nil
 }

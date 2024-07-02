@@ -27,15 +27,15 @@ type Client struct {
 }
 
 // NewClient creates a new apollo client
-func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
-	if cfg == nil || !cfg.Zk.XLayer.Apollo.Enable || cfg.Zk.XLayer.Apollo.IP == "" || cfg.Zk.XLayer.Apollo.AppID == "" || cfg.Zk.XLayer.Apollo.NamespaceName == "" {
-		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", cfg))
+func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
+	if ethCfg == nil || !ethCfg.Zk.XLayer.Apollo.Enable || ethCfg.Zk.XLayer.Apollo.IP == "" || ethCfg.Zk.XLayer.Apollo.AppID == "" || ethCfg.Zk.XLayer.Apollo.NamespaceName == "" {
+		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", ethCfg))
 		return nil
 	}
 	c := &config.AppConfig{
-		IP:             cfg.Zk.XLayer.Apollo.IP,
-		AppID:          cfg.Zk.XLayer.Apollo.AppID,
-		NamespaceName:  cfg.Zk.XLayer.Apollo.NamespaceName,
+		IP:             ethCfg.Zk.XLayer.Apollo.IP,
+		AppID:          ethCfg.Zk.XLayer.Apollo.AppID,
+		NamespaceName:  ethCfg.Zk.XLayer.Apollo.NamespaceName,
 		Cluster:        "default",
 		IsBackupConfig: false,
 	}
@@ -48,7 +48,7 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	}
 
 	nsMap := make(map[string]string)
-	namespaces := strings.Split(cfg.Zk.XLayer.Apollo.NamespaceName, ",")
+	namespaces := strings.Split(ethCfg.Zk.XLayer.Apollo.NamespaceName, ",")
 	for _, namespace := range namespaces {
 		prefix, err := getNamespacePrefix(namespace)
 		if err != nil {
@@ -60,7 +60,7 @@ func NewClient(cfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	apc := &Client{
 		Client:       client,
 		namespaceMap: nsMap,
-		ethCfg:       cfg,
+		ethCfg:       ethCfg,
 		nodeCfg:      nodeCfg,
 		flags:        append(erigoncli.DefaultFlags, debug.Flags...),
 	}

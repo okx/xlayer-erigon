@@ -1,6 +1,5 @@
 package apollo
 
-// TODO: Rethink the current namespace design to avoid hardcoding every namespace / apollo config
 const (
 	// JsonRPC is the jsonrpc prefix namespace, the content of the prefix is the configuration for jsonrpc with yaml format
 	JsonRPC = "jsonrpc"

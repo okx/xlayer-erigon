@@ -45,3 +45,16 @@ db.read.concurrency: 20000
 txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
+
+gpo.type: "follower"
+gpo.default-price: 1000000000
+gpo.update-period: "10s"
+gpo.factor: 0.01
+gpo.kafka-url: "0.0.0.0"
+gpo.topic: "explorer"
+gpo.group-id: "web3"
+gpo.default-l1-coin-price: 2000
+gpo.default-l2-coin-price: 50
+gpo.gas-price-usdt: 0.000000476190476
+gpo.enable-follower-adjust: true
+gpo.congestion-threshold: 0

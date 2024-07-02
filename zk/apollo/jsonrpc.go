@@ -80,5 +80,8 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 }
 
 func loadEthJsonRPCConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
+	// Load ZK config
+	loadZkConfig(ctx, ethCfg)
+
 	// Load jsonrpc config
 }

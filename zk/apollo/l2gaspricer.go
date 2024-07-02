@@ -55,5 +55,8 @@ func loadNodeL2GasPricerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 }
 
 func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
+	// Load ZK config
+	loadZkConfig(ctx, ethCfg)
+
 	// Load l2gaspricer config
 }

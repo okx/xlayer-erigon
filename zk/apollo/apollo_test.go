@@ -25,13 +25,12 @@ func TestJsonRPCApolloClient(t *testing.T) {
 	nc := &nodecfg.Config{}
 	client := NewClient(c, nc)
 
+	// Test load jsonrpc config cache
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
 	logTestNodeConfig(t, nc)
-	t.Log("Logging apollo config")
-	apolloCfg := nodecfg.GetApolloConfig()
-	logTestNodeConfig(t, &apolloCfg)
+	logTestEthConfig(t, c)
 	initialHttpConf := nc.Http
 
 	// Fire jsonrpc config changes
@@ -39,10 +38,11 @@ func TestJsonRPCApolloClient(t *testing.T) {
 
 	afterHttpConf := nodecfg.GetApolloConfig().Http
 	require.NotEqual(t, initialHttpConf, afterHttpConf)
-	logTestNodeConfig(t, nc)
 	t.Log("Logging apollo config")
-	apolloCfg = nodecfg.GetApolloConfig()
-	logTestNodeConfig(t, &apolloCfg)
+	apolloNodeCfg := nodecfg.GetApolloConfig()
+	apolloEthCfg := ethconfig.GetApolloConfig()
+	logTestNodeConfig(t, &apolloNodeCfg)
+	logTestEthConfig(t, &apolloEthCfg)
 }
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {

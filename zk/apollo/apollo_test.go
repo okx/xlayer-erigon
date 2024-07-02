@@ -35,10 +35,10 @@ func TestJsonRPCApolloClient(t *testing.T) {
 	initialHttpConf := nc.Http
 
 	// Fire jsonrpc config changes
-	time.Sleep(60 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	afterHttpConf := nodecfg.GetApolloConfig().Http
-	require.Equal(t, initialHttpConf, afterHttpConf)
+	require.NotEqual(t, initialHttpConf, afterHttpConf)
 	logTestNodeConfig(t, nc)
 	t.Log("Logging apollo config")
 	apolloCfg = nodecfg.GetApolloConfig()

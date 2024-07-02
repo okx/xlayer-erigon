@@ -8,23 +8,26 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/urfave/cli/v2"
 )
 
 func (c *Client) loadL2GasPricer(value interface{}) {
-	_, _, err := c.unmarshal(value)
+	ctx, err := c.getConfigContext(value)
 	if err != nil {
-		utils.Fatalf("load l2gaspricer from apollo config failed, unmarshal err: %v", err)
+		utils.Fatalf("load l2gaspricer from apollo config failed, err: %v", err)
 	}
 
-	// TODO: Add specific l2gaspricer configs to load from apollo config
+	// Load l2gaspricer config changes
+	loadNodeL2GasPricerConfig(ctx, c.nodeCfg)
+	loadEthL2GasPricerConfig(ctx, c.ethCfg)
 	log.Info(fmt.Sprintf("loaded l2gaspricer from apollo config: %+v", value.(string)))
 }
 
 // fireL2GasPricer fires the l2gaspricer config change
 func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
+	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
-		log.Error(fmt.Sprintf("fire l2gaspricer from apollo config failed, unmarshal err: %v", err))
+		log.Error(fmt.Sprintf("fire l2gaspricer from apollo config failed, err: %v", err))
 		return
 	}
 
@@ -34,6 +37,23 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	log.Info(fmt.Sprintf("apollo node old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo node config changed: %+v", value.NewValue.(string)))
 
-	nodecfg.UpdateL2GasPricerConfig(*nodeCfg)
-	ethconfig.UpdateL2GasPricerConfig(*ethCfg)
+	// Update l2gaspricer node config changes
+	nodecfg.UnsafeGetApolloConfig().Lock()
+	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
+	loadNodeL2GasPricerConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
+	nodecfg.UnsafeGetApolloConfig().Unlock()
+
+	// Update l2gaspricer eth config changes
+	ethconfig.UnsafeGetApolloConfig().Lock()
+	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
+	loadEthL2GasPricerConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
+	ethconfig.UnsafeGetApolloConfig().Unlock()
+}
+
+func loadNodeL2GasPricerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
+	// Load l2gaspricer config
+}
+
+func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
+	// Load l2gaspricer config
 }

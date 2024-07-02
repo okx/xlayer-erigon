@@ -8,23 +8,26 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/urfave/cli/v2"
 )
 
 func (c *Client) loadSequencer(value interface{}) {
-	_, _, err := c.unmarshal(value)
+	ctx, err := c.getConfigContext(value)
 	if err != nil {
-		utils.Fatalf("load sequencer from apollo config failed, unmarshal err: %v", err)
+		utils.Fatalf("load sequencer from apollo config failed, err: %v", err)
 	}
 
-	// TODO: Add specific sequencer configs to load from apollo config
+	// Load sequencer config changes
+	loadNodeSequencerConfig(ctx, c.nodeCfg)
+	loadEthSequencerConfig(ctx, c.ethCfg)
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
 }
 
 // fireSequencer fires the sequencer config change
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
+	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
-		log.Error(fmt.Sprintf("fire sequencer from apollo config failed, unmarshal err: %v", err))
+		log.Error(fmt.Sprintf("fire sequencer from apollo config failed, err: %v", err))
 		return
 	}
 
@@ -34,6 +37,23 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 	log.Info(fmt.Sprintf("apollo node old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo node config changed: %+v", value.NewValue.(string)))
 
-	nodecfg.UpdateSequencerConfig(*nodeCfg)
-	ethconfig.UpdateSequencerConfig(*ethCfg)
+	// Update sequencer node config changes
+	nodecfg.UnsafeGetApolloConfig().Lock()
+	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
+	loadNodeSequencerConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
+	nodecfg.UnsafeGetApolloConfig().Unlock()
+
+	// Update sequencer eth config changes
+	ethconfig.UnsafeGetApolloConfig().Lock()
+	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
+	loadEthSequencerConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
+	ethconfig.UnsafeGetApolloConfig().Unlock()
+}
+
+func loadNodeSequencerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
+	// Load sequencer config
+}
+
+func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
+	// Load sequencer config
 }

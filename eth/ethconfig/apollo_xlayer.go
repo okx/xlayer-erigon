@@ -5,14 +5,23 @@ import "sync"
 // ApolloConfig is the apollo eth backend dynamic config
 type ApolloConfig struct {
 	EnableApollo bool
-	conf         Config
+	Conf         Config
 	sync.RWMutex
 }
 
 var apolloConfig = &ApolloConfig{}
 
-// getApolloConfig returns the singleton instance
-func getApolloConfig() *ApolloConfig {
+// GetApolloConfig returns a copy of the singleton instance apollo config
+func GetApolloConfig() Config {
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().Conf
+}
+
+// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance without
+// locking the sync mutex
+// For read operations and most use cases, GetApolloConfig should be used instead
+func UnsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 
@@ -24,34 +33,4 @@ func (c *ApolloConfig) Enable() bool {
 	c.RLock()
 	defer c.RUnlock()
 	return c.EnableApollo
-}
-
-// UpdateSequencerConfig updates the apollo sequencer configuration
-func UpdateSequencerConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add sequencer configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-// UpdateRPCConfig updates the apollo RPC configuration
-func UpdateRPCConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add specific RPC configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-// UpdateL2GasPricerConfig updates the apollo l2gaspricer configuration
-func UpdateL2GasPricerConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add l2gaspricer configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-func GetApolloConfig() Config {
-	getApolloConfig().RLock()
-	defer getApolloConfig().RUnlock()
-	return getApolloConfig().conf
 }

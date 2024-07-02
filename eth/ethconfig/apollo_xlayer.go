@@ -49,3 +49,9 @@ func UpdateL2GasPricerConfig(apolloConfig Config) {
 	// TODO: Add l2gaspricer configs to update dynamically
 	getApolloConfig().Unlock()
 }
+
+func GetApolloConfig() Config {
+	getApolloConfig().RLock()
+	defer getApolloConfig().RUnlock()
+	return getApolloConfig().conf
+}

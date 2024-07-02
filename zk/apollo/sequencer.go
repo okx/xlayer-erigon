@@ -11,9 +11,9 @@ import (
 )
 
 func (c *Client) loadSequencer(value interface{}) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	_, _, err := c.unmarshal(value)
 	if err != nil {
-		utils.Fatalf("failed to unmarshal config: %v", err)
+		utils.Fatalf("load sequencer from apollo config failed, unmarshal err: %v", err)
 	}
 
 	// TODO: Add specific sequencer configs to load from apollo config
@@ -24,7 +24,7 @@ func (c *Client) loadSequencer(value interface{}) {
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
+		log.Error(fmt.Sprintf("fire sequencer from apollo config failed, unmarshal err: %v", err))
 		return
 	}
 

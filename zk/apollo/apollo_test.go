@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApolloClient_LoadConfig(t *testing.T) {
+func TestJsonRPCApolloClient(t *testing.T) {
 	c := &ethconfig.Config{
 		Zk: &ethconfig.Zk{
 			XLayer: ethconfig.XLayerConfig{
 				Apollo: ethconfig.ApolloClientConfig{
-					IP:            "http://52.40.214.137:26657",
-					AppID:         "x1-devnet",
-					NamespaceName: "test.txt",
+					IP:            "http://127.0.0.1:18080",
+					AppID:         "SampleApp",
+					NamespaceName: "jsonrpc-tester.txt",
 					Enable:        true,
 				},
 			},
@@ -28,11 +28,21 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
-	time.Sleep(20 * time.Second)
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
+	logTestNodeConfig(t, nc)
+	t.Log("Logging apollo config")
+	apolloCfg := nodecfg.GetApolloConfig()
+	logTestNodeConfig(t, &apolloCfg)
+	initialHttpConf := nc.Http
+
+	// Fire jsonrpc config changes
+	time.Sleep(60 * time.Second)
+
+	afterHttpConf := nodecfg.GetApolloConfig().Http
+	require.Equal(t, initialHttpConf, afterHttpConf)
+	logTestNodeConfig(t, nc)
+	t.Log("Logging apollo config")
+	apolloCfg = nodecfg.GetApolloConfig()
+	logTestNodeConfig(t, &apolloCfg)
 }
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {

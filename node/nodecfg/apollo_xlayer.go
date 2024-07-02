@@ -39,6 +39,7 @@ func UpdateRPCConfig(apolloConfig Config) {
 	getApolloConfig().Lock()
 	getApolloConfig().EnableApollo = true
 	// TODO: Add specific RPC configs to update dynamically
+	getApolloConfig().conf.Http = apolloConfig.Http
 	getApolloConfig().Unlock()
 }
 
@@ -48,4 +49,10 @@ func UpdateL2GasPricerConfig(apolloConfig Config) {
 	getApolloConfig().EnableApollo = true
 	// TODO: Add l2gaspricer configs to update dynamically
 	getApolloConfig().Unlock()
+}
+
+func GetApolloConfig() Config {
+	getApolloConfig().RLock()
+	defer getApolloConfig().RUnlock()
+	return getApolloConfig().conf
 }

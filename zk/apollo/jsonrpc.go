@@ -11,21 +11,21 @@ import (
 )
 
 func (c *Client) loadJsonRPC(value interface{}) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	nodeCfg, _, err := c.unmarshal(value)
 	if err != nil {
-		utils.Fatalf("failed to unmarshal config: %v", err)
+		utils.Fatalf("load jsonrpc from apollo config failed, unmarshal err: %v", err)
 	}
 
 	// TODO: Add specific RPC configs to load from apollo config
 	c.nodeCfg.Http = nodeCfg.Http
-	log.Info(fmt.Sprintf("loaded json-rpc from apollo config: %+v", value.(string)))
+	log.Info(fmt.Sprintf("loaded jsonrpc from apollo config: %+v", value.(string)))
 }
 
 // fireJsonRPC fires the json-rpc config change
 func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
+		log.Error(fmt.Sprintf("fire jsonrpc from apollo config failed, unmarshal err: %v", err))
 		return
 	}
 

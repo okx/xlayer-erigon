@@ -55,8 +55,7 @@ func (c *Client) unmarshal(value interface{}) (nodeCfg *nodecfg.Config, ethCfg *
 		if r := recover(); r != nil {
 			nodeCfg = nil
 			ethCfg = nil
-			err = fmt.Errorf("failed to unmarshal node: %v", r)
-			log.Error(fmt.Sprintf("%v", err))
+			err = fmt.Errorf("%v", r)
 		}
 	}()
 

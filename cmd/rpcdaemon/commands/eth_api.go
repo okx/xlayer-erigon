@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk"
 	"math/big"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -335,7 +335,7 @@ type APIImpl struct {
 	ethBackend                 rpchelper.ApiBackend
 	txPool                     txpool.TxpoolClient
 	mining                     txpool.MiningClient
-	gasCache                   *GasPriceCache
+	gasCache                   *zk.GasPriceCache
 	db                         kv.RoDB
 	GasCap                     uint64
 	ReturnDataLimit            int
@@ -364,7 +364,6 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		ethBackend:                 eth,
 		txPool:                     txPool,
 		mining:                     mining,
-		gasCache:                   NewGasPriceCache(),
 		GasCap:                     gascap,
 		ReturnDataLimit:            returnDataLimit,
 		ZkRpcUrl:                   ethCfg.L2RpcUrl,
@@ -379,10 +378,6 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		L2GasPircer:                gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
 		EnableInnerTx:              ethCfg.EnableInnerTx,
 	}
-
-	// set default gas price
-	apii.gasCache.SetLatest(common.Hash{}, apii.L2GasPircer.GetConfig().Default)
-	go apii.runL2GasPriceSuggester()
 
 	return apii
 }
@@ -520,34 +515,4 @@ func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) (hexutilit
 	var buf bytes.Buffer
 	err := txs[index].MarshalBinary(&buf)
 	return buf.Bytes(), err
-}
-
-type GasPriceCache struct {
-	latestPrice *big.Int
-	latestHash  common.Hash
-	mtx         sync.Mutex
-}
-
-func NewGasPriceCache() *GasPriceCache {
-	return &GasPriceCache{
-		latestPrice: big.NewInt(0),
-		latestHash:  common.Hash{},
-	}
-}
-
-func (c *GasPriceCache) GetLatest() (common.Hash, *big.Int) {
-	var hash common.Hash
-	var price *big.Int
-	c.mtx.Lock()
-	hash = c.latestHash
-	price = c.latestPrice
-	c.mtx.Unlock()
-	return hash, price
-}
-
-func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {
-	c.mtx.Lock()
-	c.latestPrice = price
-	c.latestHash = hash
-	c.mtx.Unlock()
 }

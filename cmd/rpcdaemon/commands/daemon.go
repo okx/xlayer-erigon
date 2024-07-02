@@ -5,6 +5,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
 	libstate "github.com/gateway-fm/cdk-erigon-lib/state"
+	"github.com/ledgerwatch/erigon/zk"
 
 	"github.com/ledgerwatch/erigon/cmd/rpcdaemon/cli/httpcfg"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -20,7 +21,7 @@ import (
 func APIList(db kv.RoDB, borDb kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient,
 	filters *rpchelper.Filters, stateCache kvcache.Cache,
 	blockReader services.FullBlockReader, agg *libstate.AggregatorV3, cfg httpcfg.HttpCfg, engine consensus.EngineReader,
-	ethCfg *ethconfig.Config, l1Syncer *syncer.L1Syncer,
+	ethCfg *ethconfig.Config, l1Syncer *syncer.L1Syncer, gpCache *zk.GasPriceCache,
 ) (list []rpc.API) {
 
 	// non-sequencer nodes should forward on requests to the sequencer
@@ -32,7 +33,7 @@ func APIList(db kv.RoDB, borDb kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.
 	base := NewBaseApi(filters, stateCache, blockReader, agg, cfg.WithDatadir, cfg.EvmCallTimeout, engine, cfg.Dirs)
 	base.SetL2RpcUrl(ethCfg.L2RpcUrl)
 	base.SetGasless(ethCfg.Gasless)
-	ethImpl := NewEthAPI(base, db, eth, txPool, mining, cfg.Gascap, cfg.ReturnDataLimit, ethCfg)
+	ethImpl := NewEthAPIXLayer(gpCache, base, db, eth, txPool, mining, cfg.Gascap, cfg.ReturnDataLimit, ethCfg)
 	erigonImpl := NewErigonAPI(base, db, eth)
 	txpoolImpl := NewTxPoolAPI(base, db, txPool, rpcUrl)
 	netImpl := NewNetAPIImpl(eth)

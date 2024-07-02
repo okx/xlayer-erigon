@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ledgerwatch/erigon/rlp"
+	"github.com/ledgerwatch/erigon/zk"
 	"math"
 	"math/big"
 	"runtime"
@@ -316,6 +317,8 @@ type TxPool struct {
 	shanghaiTime            *big.Int
 	isPostShanghai          atomic.Bool
 	allowFreeTransactions   bool
+
+	gpCache *zk.GasPriceCache
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and

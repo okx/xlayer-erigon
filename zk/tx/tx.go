@@ -320,7 +320,7 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 		removeLeadingZeroesFromBytes(nonceBytes),
 		removeLeadingZeroesFromBytes(gasPriceBytes),
 		removeLeadingZeroesFromBytes(gas),
-		removeLeadingZeroesFromBytes(to),
+		to, // don't remove leading 0s from addr
 		removeLeadingZeroesFromBytes(valueBytes),
 		removeLeadingZeroesFromBytes(tx.GetData()),
 	}
@@ -334,6 +334,10 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	encoded, err := rlp.EncodeToBytes(toEncode)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
+		log.Debug("break me!")
 	}
 
 	// reverse the eip-155 changes for the V value for transport
@@ -351,6 +355,11 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	if forkId >= uint16(constants.ForkID5Dragonfruit) {
 		ep := hermez_db.Uint8ToBytes(efficiencyPercentage)
 		encoded = append(encoded, ep...)
+	}
+
+	// break if encoded contains 937c4
+	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
+		log.Debug("break me!")
 	}
 
 	return encoded, nil

@@ -18,8 +18,8 @@ func GetApolloConfig() Config {
 	return UnsafeGetApolloConfig().Conf
 }
 
-// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance without
-// locking the sync mutex
+// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton
+// instance without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead
 func UnsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig

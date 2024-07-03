@@ -9,14 +9,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestApolloClient_LoadConfig(t *testing.T) {
+func TestApolloClient(t *testing.T) {
 	c := &ethconfig.Config{
 		Zk: &ethconfig.Zk{
 			XLayer: ethconfig.XLayerConfig{
 				Apollo: ethconfig.ApolloClientConfig{
-					IP:            "http://52.40.214.137:26657",
-					AppID:         "x1-devnet",
-					NamespaceName: "test.txt",
+					IP:            "http://127.0.0.1:18080",
+					AppID:         "SampleApp",
+					NamespaceName: "jsonrpc-tester.txt",
 					Enable:        true,
 				},
 			},
@@ -25,14 +25,24 @@ func TestApolloClient_LoadConfig(t *testing.T) {
 	nc := &nodecfg.Config{}
 	client := NewClient(c, nc)
 
-	loaded := client.LoadTestConfig()
+	// Test load config cache
+	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
-	time.Sleep(20 * time.Second)
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
+	logTestNodeConfig(t, nc)
+	logTestEthConfig(t, c)
+	initialHttpConf := nc.Http
+
+	// Fire config changes
+	time.Sleep(30 * time.Second)
+
+	afterHttpConf := nodecfg.GetApolloConfig().Http
+	require.Equal(t, initialHttpConf, afterHttpConf)
+	t.Log("Logging apollo config")
+	apolloNodeCfg := nodecfg.GetApolloConfig()
+	apolloEthCfg := ethconfig.GetApolloConfig()
+	logTestNodeConfig(t, &apolloNodeCfg)
+	logTestEthConfig(t, &apolloEthCfg)
 }
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
@@ -45,10 +55,14 @@ func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
 	t.Log("zkevm.nacos-namespace-id: ", ethCfg.Zk.XLayer.Nacos.NamespaceId)
 	t.Log("zkevm.nacos-application-name: ", ethCfg.Zk.XLayer.Nacos.ApplicationName)
 	t.Log("zkevm.nacos-external-listen-addr: ", ethCfg.Zk.XLayer.Nacos.ExternalListenAddr)
-	t.Log("zkevm.l1-rollup-id", ethCfg.Zk.L1RollupId)
-	t.Log("zkevm.l1-first-block", ethCfg.Zk.L1FirstBlock)
-	t.Log("zkevm.l1-block-range", ethCfg.Zk.L1BlockRange)
-	t.Log("zkevm.l1-query-delay", ethCfg.Zk.L1QueryDelay)
+	t.Log("zkevm.l1-rollup-id: ", ethCfg.Zk.L1RollupId)
+	t.Log("zkevm.l1-first-block: ", ethCfg.Zk.L1FirstBlock)
+	t.Log("zkevm.l1-block-range: ", ethCfg.Zk.L1BlockRange)
+	t.Log("zkevm.l1-query-delay: ", ethCfg.Zk.L1QueryDelay)
+	t.Log("zkevm.sequencer-initial-fork-id: ", ethCfg.Zk.SequencerInitialForkId)
+	t.Log("zkevm.sequencer-block-seal-time: ", ethCfg.Zk.SequencerBlockSealTime)
+	t.Log("zkevm.sequencer-batch-seal-time: ", ethCfg.Zk.SequencerBatchSealTime)
+	t.Log("zkevm.sequencer-non-empty-batch-seal-time: ", ethCfg.Zk.SequencerNonEmptyBatchSealTime)
 }
 
 func logTestNodeConfig(t *testing.T, nodeCfg *nodecfg.Config) {

@@ -27,6 +27,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common"
+	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/params"
 )
@@ -809,7 +810,8 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
 	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
 	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
-	innerTx.ValueWei = scope.Contract.value.String()
+	innerTx.ValueWei = scope.Contract.value.ToBig().String()
+	innerTx.CallValueWei = hexutil.EncodeBig(scope.Contract.value.ToBig())
 	afterOp(interpreter, DELEGATECALL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 	if err != nil {
 		temp.Clear()

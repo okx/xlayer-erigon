@@ -2,41 +2,70 @@ package apollo
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/apolloconfig/agollo/v4/storage"
+	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/urfave/cli/v2"
 )
 
 func (c *Client) loadSequencer(value interface{}) {
-	nodeCfg, ethCfg, err := c.unmarshal(value)
+	ctx, err := c.getConfigContext(value)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
-		os.Exit(1)
+		utils.Fatalf("load sequencer from apollo config failed, err: %v", err)
 	}
 
-	// TODO: Switch to loading only sequencer configs
-	c.ethCfg = ethCfg
-	c.nodeCfg = nodeCfg
+	// Load sequencer config changes
+	loadNodeSequencerConfig(ctx, c.nodeCfg)
+	loadEthSequencerConfig(ctx, c.ethCfg)
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
 }
 
 // fireSequencer fires the sequencer config change
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
-	nodeCfg, ethCfg, err := c.unmarshal(value.NewValue)
+	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
-		log.Error(fmt.Sprintf("failed to unmarshal config: %v", err))
+		log.Error(fmt.Sprintf("fire sequencer from apollo config failed, err: %v", err))
 		return
 	}
 
-	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))
-	log.Info(fmt.Sprintf("apollo eth backend config changed: %+v", value.NewValue.(string)))
+	log.Info(fmt.Sprintf("apollo sequencer old config : %+v", value.OldValue.(string)))
+	log.Info(fmt.Sprintf("apollo sequencer config changed: %+v", value.NewValue.(string)))
 
-	log.Info(fmt.Sprintf("apollo node old config : %+v", value.OldValue.(string)))
-	log.Info(fmt.Sprintf("apollo node config changed: %+v", value.NewValue.(string)))
+	// Update sequencer node config changes
+	nodecfg.UnsafeGetApolloConfig().Lock()
+	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
+	loadNodeSequencerConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
+	nodecfg.UnsafeGetApolloConfig().Unlock()
 
-	nodecfg.UpdateSequencerConfig(*nodeCfg)
-	ethconfig.UpdateSequencerConfig(*ethCfg)
+	// Update sequencer eth config changes
+	ethconfig.UnsafeGetApolloConfig().Lock()
+	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
+	loadEthSequencerConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
+	ethconfig.UnsafeGetApolloConfig().Unlock()
+}
+
+func loadNodeSequencerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
+	// Load sequencer config
+}
+
+func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
+	// Load ZK config
+	loadZkConfig(ctx, ethCfg)
+
+	// Load sequencer config
+	if ctx.IsSet(utils.SequencerInitialForkId.Name) {
+		ethCfg.Zk.SequencerInitialForkId = ctx.Uint64(utils.SequencerInitialForkId.Name)
+	}
+	if ctx.IsSet(utils.SequencerBlockSealTime.Name) {
+		ethCfg.Zk.SequencerBlockSealTime = ctx.Duration(utils.SequencerBlockSealTime.Name)
+	}
+	if ctx.IsSet(utils.SequencerBatchSealTime.Name) {
+		ethCfg.Zk.SequencerBatchSealTime = ctx.Duration(utils.SequencerBatchSealTime.Name)
+	}
+	if ctx.IsSet(utils.SequencerNonEmptyBatchSealTime.Name) {
+		ethCfg.Zk.SequencerNonEmptyBatchSealTime = ctx.Duration(utils.SequencerNonEmptyBatchSealTime.Name)
+	}
 }

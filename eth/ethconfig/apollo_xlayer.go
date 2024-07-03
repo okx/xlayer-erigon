@@ -8,21 +8,24 @@ import (
 // ApolloConfig is the apollo eth backend dynamic config
 type ApolloConfig struct {
 	EnableApollo bool
-	conf         Config
+	Conf         Config
 	sync.RWMutex
 }
 
 var apolloConfig = &ApolloConfig{}
 
-// getApolloConfig returns the singleton instance
-func getApolloConfig() *ApolloConfig {
-	return apolloConfig
+// GetApolloConfig returns a copy of the singleton instance apollo config
+func GetApolloConfig() Config {
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().Conf
 }
 
-func (c *ApolloConfig) get() Config {
-	c.RLock()
-	defer c.RUnlock()
-	return c.conf
+// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton
+// instance without locking the sync mutex
+// For read operations and most use cases, GetApolloConfig should be used instead
+func UnsafeGetApolloConfig() *ApolloConfig {
+	return apolloConfig
 }
 
 // Enable returns true if apollo is enabled
@@ -33,38 +36,6 @@ func (c *ApolloConfig) Enable() bool {
 	c.RLock()
 	defer c.RUnlock()
 	return c.EnableApollo
-}
-
-// UpdateRPCConfig updates the apollo RPC configuration
-func UpdateRPCConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add specific gasprice configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-// UpdateSequencerConfig updates the apollo sequencer configuration
-func UpdateSequencerConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add gasprice configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-// UpdatePoolConfig updates the apollo pool configuration
-func UpdatePoolConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add pool configs to update dynamically
-	getApolloConfig().Unlock()
-}
-
-// UpdateL2GasPricerConfig updates the apollo l2gaspricer configuration
-func UpdateL2GasPricerConfig(apolloConfig Config) {
-	getApolloConfig().Lock()
-	getApolloConfig().EnableApollo = true
-	// TODO: Add l2gaspricer configs to update dynamically
-	getApolloConfig().Unlock()
 }
 
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {

@@ -31,11 +31,8 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 		return
 	}
 
-	log.Info(fmt.Sprintf("apollo eth backend old config : %+v", value.OldValue.(string)))
-	log.Info(fmt.Sprintf("apollo eth backend config changed: %+v", value.NewValue.(string)))
-
-	log.Info(fmt.Sprintf("apollo node old config : %+v", value.OldValue.(string)))
-	log.Info(fmt.Sprintf("apollo node config changed: %+v", value.NewValue.(string)))
+	log.Info(fmt.Sprintf("apollo l2gaspricer old config : %+v", value.OldValue.(string)))
+	log.Info(fmt.Sprintf("apollo l2gaspricer config changed: %+v", value.NewValue.(string)))
 
 	// Update l2gaspricer node config changes
 	nodecfg.UnsafeGetApolloConfig().Lock()

@@ -44,14 +44,10 @@ func (c *ApolloConfig) Enable() bool {
 }
 
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
-	var ret time.Duration
-	if getApolloConfig().Enable() {
-		getApolloConfig().RLock()
-		defer getApolloConfig().RUnlock()
-		ret = getApolloConfig().conf.Zk.XLayer.SequencerFullBatchSleepDuration
+	conf, err := GetApolloConfig()
+	if err != nil {
+		return localDuration
 	} else {
-		ret = localDuration
+		return conf.Zk.XLayer.SequencerFullBatchSleepDuration
 	}
-
-	return ret
 }

@@ -24,6 +24,7 @@ import (
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 
 	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/utils"
 
@@ -41,7 +42,6 @@ import (
 	ethapi2 "github.com/ledgerwatch/erigon/turbo/adapter/ethapi"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/services"
-	"github.com/ledgerwatch/erigon/zk"
 )
 
 // EthAPI is a collection of functions that are exposed in the

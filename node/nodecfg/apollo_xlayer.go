@@ -1,6 +1,9 @@
 package nodecfg
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // ApolloConfig is the apollo eth backend dynamic config
 type ApolloConfig struct {
@@ -12,10 +15,14 @@ type ApolloConfig struct {
 var apolloConfig = &ApolloConfig{}
 
 // GetApolloConfig returns a copy of the singleton instance apollo config
-func GetApolloConfig() Config {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	return UnsafeGetApolloConfig().Conf
+func GetApolloConfig() (Config, error) {
+	if UnsafeGetApolloConfig().Enable() {
+		UnsafeGetApolloConfig().RLock()
+		defer UnsafeGetApolloConfig().RUnlock()
+		return UnsafeGetApolloConfig().Conf, nil
+	} else {
+		return Config{}, fmt.Errorf("apollo config disabled")
+	}
 }
 
 // UnsafeGetApolloConfig is an unsafe function that returns directly the singleton

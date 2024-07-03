@@ -36,11 +36,14 @@ func TestApolloClient(t *testing.T) {
 	// Fire config changes
 	time.Sleep(30 * time.Second)
 
-	afterHttpConf := nodecfg.GetApolloConfig().Http
+	apolloNodeCfg, err := nodecfg.GetApolloConfig()
+	require.NoError(t, err)
+	apolloEthCfg, err := ethconfig.GetApolloConfig()
+	require.NoError(t, err)
+	afterHttpConf := apolloNodeCfg.Http
 	require.Equal(t, initialHttpConf, afterHttpConf)
 	t.Log("Logging apollo config")
-	apolloNodeCfg := nodecfg.GetApolloConfig()
-	apolloEthCfg := ethconfig.GetApolloConfig()
+
 	logTestNodeConfig(t, &apolloNodeCfg)
 	logTestEthConfig(t, &apolloEthCfg)
 }

@@ -369,7 +369,7 @@ var (
 	}
 	HTTPApiKeysFlag = cli.StringFlag{
 		Name:  "http.apikeys",
-		Usage: "API keys for the HTTP-RPC server, format: project1:apikey1:timeout1,project2:apikey2:timeout2",
+		Usage: "API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: project1:apikey1:timeout1,project2:apikey2:timeout2:method1|method2|method3:count:duration",
 		Value: "",
 	}
 	MethodRateLimitFlag = cli.StringFlag{

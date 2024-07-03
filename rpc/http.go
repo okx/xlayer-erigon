@@ -27,6 +27,7 @@ import (
 	"mime"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -246,6 +247,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if origin := r.Header.Get("Origin"); origin != "" {
 		ctx = context.WithValue(ctx, "Origin", origin)
 	}
+	ctx = context.WithValue(ctx, "apikey", strings.TrimPrefix(path.Base(r.URL.Path), "/"))
 
 	w.Header().Set("content-type", contentType)
 	codec := newHTTPServerConn(r, w)

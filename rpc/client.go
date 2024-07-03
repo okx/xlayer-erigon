@@ -78,6 +78,7 @@ type Client struct {
 	isHTTP          bool
 	services        *serviceRegistry
 	methodAllowList AllowList
+	apiKey          string
 
 	idCounter uint32
 
@@ -112,7 +113,7 @@ type clientConn struct {
 
 func (c *Client) newClientConn(conn ServerCodec) *clientConn {
 	ctx := context.WithValue(context.Background(), clientContextKey{}, c)
-	handler := newHandler(ctx, conn, c.idgen, c.services, c.methodAllowList, 50, false /* traceRequests */)
+	handler := newHandler(ctx, conn, c.idgen, c.services, c.methodAllowList, 50, false /* traceRequests */, c.apiKey)
 	return &clientConn{conn, handler}
 }
 
@@ -196,17 +197,18 @@ func newClient(initctx context.Context, connect reconnectFunc) (*Client, error) 
 	if err != nil {
 		return nil, err
 	}
-	c := initClient(conn, randomIDGenerator(), new(serviceRegistry))
+	c := initClient(conn, randomIDGenerator(), new(serviceRegistry), "")
 	c.reconnectFunc = connect
 	return c, nil
 }
 
-func initClient(conn ServerCodec, idgen func() ID, services *serviceRegistry) *Client {
+func initClient(conn ServerCodec, idgen func() ID, services *serviceRegistry, apikey string) *Client {
 	_, isHTTP := conn.(*httpConn)
 	c := &Client{
 		idgen:       idgen,
 		isHTTP:      isHTTP,
 		services:    services,
+		apiKey:      apikey,
 		writeConn:   conn,
 		close:       make(chan struct{}),
 		closing:     make(chan struct{}),

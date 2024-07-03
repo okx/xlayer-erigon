@@ -547,7 +547,7 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	if err != nil {
 		return err
 	}
-	apiHandler = apiAuthHandler(cfg.HttpApiKeys, apiHandler)
+	apiHandler = rpc.ApiAuthHandler(cfg.HttpApiKeys, apiHandler)
 
 	listener, httpAddr, err := node.StartHTTPEndpoint(httpEndpoint, cfg.HTTPTimeouts, apiHandler)
 	if err != nil {

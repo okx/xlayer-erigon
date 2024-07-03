@@ -1,4 +1,4 @@
-package cli
+package rpc
 
 import (
 	"crypto/md5"
@@ -21,6 +21,8 @@ type ApiKeyItem struct {
 	Key string `mapstructure:"Key"`
 	// Timeout defines the timeout
 	Timeout string `mapstructure:"Timeout"`
+	// Methods defines the methods
+	RateLimitConfig string
 }
 
 type apiAllow struct {
@@ -43,13 +45,17 @@ func InitApiAuth(apikeysconfig string) {
 	keyItems := strings.Split(apikeysconfig, ",")
 	var keys []ApiKeyItem
 	for _, item := range keyItems {
-		parties := strings.Split(item, ":")
-		if len(parties) != 3 {
+		//project1:apikey1:timeout1:method1|method2|method3:count:duration
+		parties := strings.SplitN(item, ":", 4)
+		if len(parties) < 3 {
 			log.Warn("invalid key item: %s", item)
 			continue
 		}
-		keys = append(keys, ApiKeyItem{Project: parties[0], Key: parties[1], Timeout: parties[2]})
-
+		apiKeyItem := ApiKeyItem{Project: parties[0], Key: parties[1], Timeout: parties[2]}
+		if len(parties) == 4 {
+			apiKeyItem.RateLimitConfig = parties[3]
+		}
+		keys = append(keys, apiKeyItem)
 	}
 	setApiAuth(keys)
 }
@@ -58,6 +64,7 @@ func InitApiAuth(apikeysconfig string) {
 func setApiAuth(kis []ApiKeyItem) {
 	al.enable = len(kis) > 0
 	var tmp = make(map[string]keyItem)
+	var rateLimitConfig = make(map[string]string)
 	for _, k := range kis {
 		k.Key = strings.ToLower(k.Key)
 		parse, err := time.Parse("2006-01-02", k.Timeout)
@@ -70,8 +77,12 @@ func setApiAuth(kis []ApiKeyItem) {
 			continue
 		}
 		tmp[k.Key] = keyItem{project: k.Project, timeout: parse}
+		if k.RateLimitConfig != "" {
+			rateLimitConfig[k.Key] = k.RateLimitConfig
+		}
 	}
 	al.allowKeys = tmp
+	initApikeyRateLimit(rateLimitConfig)
 }
 
 func check(key string) error {
@@ -104,7 +115,7 @@ func apiAuthHandlerFunc(cfg string, handlerFunc http.HandlerFunc) http.HandlerFu
 	}
 }
 
-func apiAuthHandler(cfg string, next http.Handler) http.Handler {
+func ApiAuthHandler(cfg string, next http.Handler) http.Handler {
 	return apiAuthHandlerFunc(cfg, next.ServeHTTP)
 }
 

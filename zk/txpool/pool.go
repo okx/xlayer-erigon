@@ -1283,6 +1283,8 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 			pending.Add(tx)
 		} else if !baseFee.IsFull() && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) < 0 {
 			baseFee.Add(queued.PopBest())
+		} else {
+			break
 		}
 	}
 

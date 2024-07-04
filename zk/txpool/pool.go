@@ -419,6 +419,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	pendingBaseFee, baseFeeChanged := p.setBaseFee(baseFee)
 	// Update pendingBase for all pool queues and slices
 	if baseFeeChanged {
+		p.pending.sorted = false // `pending.best` need to be resort if base fee changed
 		p.pending.best.pendingBaseFee = pendingBaseFee
 		p.pending.worst.pendingBaseFee = pendingBaseFee
 		p.baseFee.best.pendingBastFee = pendingBaseFee
@@ -1017,7 +1018,6 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 	}
 
 	promote(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
-	pending.EnforceBestInvariants()
 
 	return announcements, discardReasons, nil
 }
@@ -2043,6 +2043,8 @@ type PendingPool struct {
 	worst *WorstQueue
 	limit int
 	t     SubPoolType
+
+	sorted bool // means `PendingPool.best` is sorted or not
 }
 
 func NewPendingSubPool(t SubPoolType, limit int) *PendingPool {
@@ -2079,7 +2081,10 @@ func (p *PendingPool) EnforceWorstInvariants() {
 	heap.Init(p.worst)
 }
 func (p *PendingPool) EnforceBestInvariants() {
-	sort.Sort(p.best)
+	if !p.sorted {
+		sort.Sort(p.best)
+		p.sorted = true
+	}
 }
 
 func (p *PendingPool) Best() *metaTx { //nolint
@@ -2096,6 +2101,9 @@ func (p *PendingPool) Worst() *metaTx { //nolint
 }
 func (p *PendingPool) PopWorst() *metaTx { //nolint
 	i := heap.Pop(p.worst).(*metaTx)
+	if i.bestIndex != p.Len()-1 { // which should never happen
+		p.sorted = false
+	}
 	if i.bestIndex >= 0 {
 		p.best.UnsafeRemove(i)
 	}
@@ -2112,6 +2120,9 @@ func (p *PendingPool) Remove(i *metaTx) {
 	if i.worstIndex >= 0 {
 		heap.Remove(p.worst, i.worstIndex)
 	}
+	if i.bestIndex != p.Len()-1 {
+		p.sorted = false
+	}
 	if i.bestIndex >= 0 {
 		p.best.UnsafeRemove(i)
 	}
@@ -2124,6 +2135,7 @@ func (p *PendingPool) Add(i *metaTx) {
 	}
 	i.currentSubPool = p.t
 	heap.Push(p.worst, i)
+	p.sorted = false
 	p.best.UnsafeAdd(i)
 }
 func (p *PendingPool) DebugPrint(prefix string) {

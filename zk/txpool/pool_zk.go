@@ -158,6 +158,8 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
+
+	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))

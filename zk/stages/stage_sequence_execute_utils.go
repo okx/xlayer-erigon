@@ -44,7 +44,7 @@ const (
 
 	transactionGasLimit = 30000000
 
-	yieldSize = 100 // arbitrary number defining how many transactions to yield from the pool at once
+	yieldSize = 1000 // arbitrary number defining how many transactions to yield from the pool at once
 )
 
 var (

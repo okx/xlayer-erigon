@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zk"
 	"io/fs"
 	"math/big"
 	"net"
@@ -121,6 +120,8 @@ import (
 	txpool2 "github.com/ledgerwatch/erigon/zk/txpool"
 	"github.com/ledgerwatch/erigon/zk/witness"
 	"github.com/ledgerwatch/erigon/zkevm/etherman"
+
+	"github.com/ledgerwatch/erigon/zk"
 )
 
 // Config contains the configuration options of the ETH protocol.

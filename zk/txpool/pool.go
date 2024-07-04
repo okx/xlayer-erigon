@@ -1119,6 +1119,10 @@ func (p *TxPool) addLocked(mt *metaTx, announcements *types.Announcements) Disca
 		}
 
 		p.discardLocked(found, ReplacedByHigherTip)
+	} else if p.queued.IsFull() {
+		// always accept a tx if it would replace an old tx
+		// otherwise it is denied when queued pool is full
+		return QueuedPoolOverflow
 	}
 
 	p.byHash[string(mt.Tx.IDHash[:])] = mt
@@ -1233,8 +1237,8 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		}
 	}
 
-	// Promote best transactions from base fee pool to pending pool while they qualify
-	for best := baseFee.Best(); baseFee.Len() > 0 && best.subPool >= BaseFeePoolBits && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0; best = baseFee.Best() {
+	// Promote best transactions from base fee pool to pending pool while they qualify and pending pool is not full
+	for best := baseFee.Best(); baseFee.Len() > 0 && !pending.IsFull() && best.subPool >= BaseFeePoolBits && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0; best = baseFee.Best() {
 		tx := baseFee.PopBest()
 		announcements.Append(tx.Tx.Type, tx.Tx.Size, tx.Tx.IDHash[:])
 		pending.Add(tx)
@@ -1249,13 +1253,14 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		}
 	}
 
-	// Promote best transactions from the queued pool to either pending or base fee pool, while they qualify
+	// Promote best transactions from the queued pool to either pending or base fee pool, while they qualify.
+	// But just leave them in the queued pool if both pending pool and base fee pool are full.
 	for best := queued.Best(); queued.Len() > 0 && best.subPool >= BaseFeePoolBits; best = queued.Best() {
-		if best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0 {
+		if !pending.IsFull() && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0 {
 			tx := queued.PopBest()
 			announcements.Append(tx.Tx.Type, tx.Tx.Size, tx.Tx.IDHash[:])
 			pending.Add(tx)
-		} else {
+		} else if !baseFee.IsFull() && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) < 0 {
 			baseFee.Add(queued.PopBest())
 		}
 	}
@@ -1265,20 +1270,8 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		discard(queued.PopWorst(), FeeTooLow)
 	}
 
-	// Discard worst transactions from pending pool until it is within capacity limit
-	for pending.Len() > pending.limit {
-		discard(pending.PopWorst(), PendingPoolOverflow)
-	}
-
-	// Discard worst transactions from pending sub pool until it is within capacity limits
-	for baseFee.Len() > baseFee.limit {
-		discard(baseFee.PopWorst(), BaseFeePoolOverflow)
-	}
-
-	// Discard worst transactions from the queued sub pool until it is within its capacity limits
-	for _ = queued.Worst(); queued.Len() > queued.limit; _ = queued.Worst() {
-		discard(queued.PopWorst(), QueuedPoolOverflow)
-	}
+	// Never drop any pending transaction even though it exceeds the capacity.
+	// It is safe because we don't accept any more transactions if the queued sub pool is full.
 }
 
 // MainLoop - does:
@@ -2092,6 +2085,8 @@ func (p *PendingPool) Updated(mt *metaTx) {
 }
 func (p *PendingPool) Len() int { return len(p.best.ms) }
 
+func (p *PendingPool) IsFull() bool { return p.Len() >= p.limit }
+
 func (p *PendingPool) Remove(i *metaTx) {
 	if i.worstIndex >= 0 {
 		heap.Remove(p.worst, i.worstIndex)
@@ -2156,7 +2151,8 @@ func (p *SubPool) PopWorst() *metaTx { //nolint
 	heap.Remove(p.best, i.bestIndex)
 	return i
 }
-func (p *SubPool) Len() int { return p.best.Len() }
+func (p *SubPool) IsFull() bool { return p.Len() >= p.limit }
+func (p *SubPool) Len() int     { return p.best.Len() }
 func (p *SubPool) Add(i *metaTx) {
 	if i.Tx.Traced {
 		log.Info(fmt.Sprintf("TX TRACING: moved to subpool %s, IdHash=%x, sender=%d", p.t, i.Tx.IDHash, i.Tx.SenderID))

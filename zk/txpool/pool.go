@@ -369,6 +369,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		shanghaiTime:            shanghaiTime,
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
+		gpCache:                 zk.NewGasPriceCache(),
 		wbCfg: WBConfig{
 			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
 			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,

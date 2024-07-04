@@ -364,6 +364,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		ethBackend:                 eth,
 		txPool:                     txPool,
 		mining:                     mining,
+		gasCache:                   zk.NewGasPriceCache(),
 		GasCap:                     gascap,
 		ReturnDataLimit:            returnDataLimit,
 		ZkRpcUrl:                   ethCfg.L2RpcUrl,

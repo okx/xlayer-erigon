@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk"
 	"os"
 	"path/filepath"
 	"time"
@@ -177,7 +178,7 @@ func doTxpool(ctx context.Context) error {
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)
 	txPoolDB, txPool, fetch, send, txpoolGrpcServer, err := txpooluitl.AllComponents(ctx, cfg, ethCfg,
-		kvcache.New(cacheConfig), newTxs, coreDB, sentryClients, kvClient, nil)
+		kvcache.New(cacheConfig), newTxs, coreDB, sentryClients, kvClient, zk.NewGasPriceCache())
 	if err != nil {
 		return err
 	}

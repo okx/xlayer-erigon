@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/ledgerwatch/erigon/zk"
 	"os"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -34,7 +35,7 @@ func main() {
 
 		// TODO: Replace with correct consensus Engine
 		engine := ethash.NewFaker()
-		apiList := commands.APIList(db, borDb, backend, txPool, mining, ff, stateCache, blockReader, agg, *cfg, engine, &ethConfig, nil, nil)
+		apiList := commands.APIList(db, borDb, backend, txPool, mining, ff, stateCache, blockReader, agg, *cfg, engine, &ethConfig, nil, zk.NewGasPriceCache())
 		if err := cli.StartRpcServer(ctx, *cfg, apiList, nil); err != nil {
 			log.Error(err.Error())
 			return nil

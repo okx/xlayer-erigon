@@ -318,6 +318,7 @@ type TxPool struct {
 	isPostShanghai          atomic.Bool
 	allowFreeTransactions   bool
 
+	// gpCache only work in sequencer node, without rpc node
 	gpCache *zk.GasPriceCache
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is

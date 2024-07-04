@@ -214,18 +214,17 @@ func (r DiscardReason) String() string {
 
 // metaTx holds transaction and some metadata
 type metaTx struct {
-	Tx                                *types.TxSlot
-	minFeeCap                         uint256.Int
-	nonceDistance                     uint64 // how far their nonces are from the state's nonce for the sender
-	cumulativeBalanceDistance         uint64 // how far their cumulativeRequiredBalance are from the state's balance for the sender
-	minTip                            uint64
-	bestIndex                         int
-	worstIndex                        int
-	timestamp                         uint64 // when it was added to pool
-	subPool                           SubPoolMarker
-	currentSubPool                    SubPoolType
-	alreadyYielded                    bool
-	overflowZkCountersDuringExecution bool
+	Tx                        *types.TxSlot
+	minFeeCap                 uint256.Int
+	nonceDistance             uint64 // how far their nonces are from the state's nonce for the sender
+	cumulativeBalanceDistance uint64 // how far their cumulativeRequiredBalance are from the state's balance for the sender
+	minTip                    uint64
+	bestIndex                 int
+	worstIndex                int
+	timestamp                 uint64 // when it was added to pool
+	subPool                   SubPoolMarker
+	currentSubPool            SubPoolType
+	alreadyYielded            bool
 }
 
 func newMetaTx(slot *types.TxSlot, isLocal bool, timestmap uint64) *metaTx {
@@ -302,7 +301,8 @@ type TxPool struct {
 	isLocalLRU              *simplelru.LRU[string, struct{}] // tx_hash => is_local : to restore isLocal flag of unwinded transactions
 	newPendingTxs           chan types.Announcements         // notifications about new txs in Pending sub-pool
 	all                     *BySenderAndNonce                // senderID => (sorted map of tx nonce => *metaTx)
-	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
+	overflowZkCounters      []*metaTx
+	deletedTxs              []*metaTx // list of discarded txs since last db commit
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
 	wbCfg                   WBConfig
@@ -457,14 +457,14 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 
 	announcements, err := addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
 		pendingBaseFee, stateChanges.BlockGasLimit,
-		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked)
+		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked)
 	if err != nil {
 		return err
 	}
+	p.overflowZkCounters = p.overflowZkCounters[:0]
 	p.pending.EnforceWorstInvariants()
 	p.baseFee.EnforceInvariants()
 	p.queued.EnforceInvariants()
-	promoteZk(p.pending, p.baseFee, p.queued, pendingBaseFee, p.discardLocked, &announcements)
 	p.pending.EnforceBestInvariants()
 	p.promoted.Reset()
 	p.promoted.AppendOther(announcements)
@@ -521,7 +521,7 @@ func (p *TxPool) processRemoteTxs(ctx context.Context) error {
 	}
 
 	announcements, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
+		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, true)
 	if err != nil {
 		return err
 	}
@@ -909,7 +909,7 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 	}
 
 	announcements, addReasons, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
+		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, true)
 	if err == nil {
 		for i, reason := range addReasons {
 			if reason != NotSet {
@@ -956,7 +956,8 @@ func (p *TxPool) cache() kvcache.Cache {
 func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 	newTxs types.TxSlots, pendingBaseFee, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters []*metaTx,
+	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
 		for _, txn := range newTxs.Txs {
@@ -998,6 +999,14 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
+	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
+	// We must delete them and re-tag the related transactions before transaction sort
+	for _, tx := range overflowZkCounters {
+		pending.Remove(tx)
+		discard(tx, OverflowZkCounters)
+		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
+	}
+
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
 		if err != nil {
@@ -1007,7 +1016,7 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
-	promoteZk(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
+	promote(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
 	pending.EnforceBestInvariants()
 
 	return announcements, discardReasons, nil
@@ -1015,7 +1024,8 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
 	senders *sendersBatch, newTxs types.TxSlots, pendingBaseFee uint64, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters []*metaTx,
+	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
 		for _, txn := range newTxs.Txs {
@@ -1046,6 +1056,7 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 		}
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
+
 	// add senders changed in state to `sendersWithChangedState` list
 	for _, changesList := range stateChanges.ChangeBatch {
 		for _, change := range changesList.Changes {
@@ -1064,6 +1075,14 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 		}
 	}
 
+	// We must delete them first and then re-tag the related transactions
+	// The new tags will be used to sort transactions
+	for _, tx := range overflowZkCounters {
+		pending.Remove(tx)
+		discard(tx, OverflowZkCounters)
+		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
+	}
+
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
 		if err != nil {
@@ -1072,6 +1091,8 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 		onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
+
+	promote(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
 
 	return announcements, nil
 }
@@ -1596,7 +1617,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		return err
 	}
 	if _, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, txs,
-		pendingBaseFee, math.MaxUint64 /* blockGasLimit */, p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, false); err != nil {
+		pendingBaseFee, math.MaxUint64 /* blockGasLimit */, p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, false); err != nil {
 		return err
 	}
 	p.pendingBaseFee.Store(pendingBaseFee)

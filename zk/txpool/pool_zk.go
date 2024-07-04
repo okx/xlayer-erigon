@@ -244,21 +244,8 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			mt.overflowZkCountersDuringExecution = true
+			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
 	}
-}
-
-// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
-func promoteZk(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint64, discard func(*metaTx, DiscardReason), announcements *types.Announcements) {
-	for i := 0; i < len(pending.best.ms); i++ {
-		mt := pending.best.ms[i]
-		if mt.overflowZkCountersDuringExecution {
-			pending.Remove(mt)
-			discard(mt, OverflowZkCounters)
-		}
-	}
-
-	promote(pending, baseFee, queued, pendingBaseFee, discard, announcements)
 }

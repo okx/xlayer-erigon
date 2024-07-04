@@ -11,7 +11,7 @@ zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 zkevm.address-zkevm: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
 zkevm.address-admin: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-zkevm.address-rollup: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
+zkevm.address-rollup: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
 zkevm.address-ger-manager: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
 
 zkevm.l1-rollup-id: 1

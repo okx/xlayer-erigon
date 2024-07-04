@@ -149,7 +149,7 @@ services:
 
   erigon-mock-l1-network:
     container_name: erigon-mock-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
+    image: 0xpolygon/cdk-validium-contracts:forkId8
     ports:
       - 8545:8545
       - 8546:8546

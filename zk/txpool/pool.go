@@ -378,6 +378,10 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 	}, nil
 }
 
+func (p *TxPool) GetGpCache() *zk.GasPriceCache {
+	return p.gpCache
+}
+
 func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChangeBatch, unwindTxs, minedTxs types.TxSlots, tx kv.Tx) error {
 	defer newBlockTimer.UpdateDuration(time.Now())
 	//t := time.Now()

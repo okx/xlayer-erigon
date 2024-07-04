@@ -2,14 +2,6 @@ package txpool
 
 import (
 	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
-	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
-	"github.com/gateway-fm/cdk-erigon-lib/types"
-	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/zk"
-	"math/big"
 )
 
 // WBConfig white and block config
@@ -40,12 +32,4 @@ func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 		}
 	}
 	return false
-}
-
-func XlayerNew(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, ethCfg *ethconfig.Config, cache kvcache.Cache, chainID uint256.Int, shanghaiTime *big.Int, londonBlock *big.Int, gpCache *zk.GasPriceCache) (*TxPool, error) {
-	pool, err := New(newTxs, coreDB, cfg, ethCfg, cache, chainID, shanghaiTime, londonBlock)
-	if pool != nil {
-		pool.gpCache = gpCache
-	}
-	return pool, err
 }

@@ -1,8 +1,6 @@
 package txpool
 
-import (
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-)
+import "github.com/gateway-fm/cdk-erigon-lib/common"
 
 // WBConfig white and block config
 type WBConfig struct {

@@ -19,12 +19,12 @@ package txpooluitl
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zk"
 	"time"
 
 	"github.com/c2h5oh/datasize"
 	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
 	"github.com/holiman/uint256"
+
 	"github.com/ledgerwatch/log/v3"
 	mdbx2 "github.com/torquem-ch/mdbx-go/mdbx"
 
@@ -35,6 +35,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
 	"github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/txpool"
 )
 

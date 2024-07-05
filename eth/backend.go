@@ -749,7 +749,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		// entering ZK territory!
 		cfg := backend.config
 
-		// For Xlayer
+		// For X Layer
 		if len(cfg.XLayer.Nacos.URLs) > 0 {
 			nacos.StartNacosClient(cfg.XLayer.Nacos.URLs, cfg.XLayer.Nacos.NamespaceId, cfg.XLayer.Nacos.ApplicationName, cfg.XLayer.Nacos.ExternalListenAddr)
 		}

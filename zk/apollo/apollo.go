@@ -54,6 +54,11 @@ func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 		if err != nil {
 			utils.Fatalf("failed init apollo: %v", err)
 		}
+
+		_, found := nsMap[prefix]
+		if found {
+			utils.Fatalf("failed init apollo: duplicate apollo namespace prefix being set")
+		}
 		nsMap[prefix] = namespace
 	}
 

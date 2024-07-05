@@ -2,6 +2,7 @@ package ethconfig
 
 import "time"
 
+// XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
 	Apollo        ApolloClientConfig
 	Nacos         NacosConfig
@@ -10,6 +11,8 @@ type XLayerConfig struct {
 	// Sequencer
 	SequencerFullBatchSleepDuration time.Duration
 }
+
+var DefaultXLayerConfig = &XLayerConfig{}
 
 // NacosConfig is the config for nacos
 type NacosConfig struct {

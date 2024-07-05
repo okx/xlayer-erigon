@@ -71,6 +71,7 @@ func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, 
 		gasResult = getAvgPrice(rgp, gasResult)
 	}
 
+	// For X Layer
 	lasthash, _ := api.gasCache.GetLatest()
 	api.gasCache.SetLatest(lasthash, gasResult)
 

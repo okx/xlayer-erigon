@@ -9,10 +9,10 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -38,7 +38,7 @@ func TestGetLogs(t *testing.T) {
 	agg := m.HistoryV3Components()
 	baseApi := NewBaseApi(nil, kvcache.New(kvcache.DefaultCoherentConfig), br, agg, false, rpccfg.DefaultEvmCallTimeout, m.Engine, m.Dirs)
 	{
-		ethApi := NewEthAPI(baseApi, m.DB, nil, nil, nil, 5000000, 100_000, ethconfig.DefaultZkConfig)
+		ethApi, _ := NewEthAPI(baseApi, m.DB, nil, nil, nil, 5000000, 100_000, ethconfig.DefaultZkConfig)
 
 		logs, err := ethApi.GetLogs(context.Background(), filters.FilterCriteria{FromBlock: big.NewInt(0), ToBlock: big.NewInt(10)})
 		assert.NoError(err)

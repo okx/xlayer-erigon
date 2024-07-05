@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ledgerwatch/erigon/rlp"
-	"github.com/ledgerwatch/erigon/zk"
 	"math"
 	"math/big"
 	"runtime"
@@ -318,8 +317,9 @@ type TxPool struct {
 	isPostShanghai          atomic.Bool
 	allowFreeTransactions   bool
 
-	// gpCache only work in sequencer node, without rpc node
-	gpCache *zk.GasPriceCache
+	// For X Layer
+	// gpCache will only work in sequencer node, without rpc node
+	gpCache GPCache
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -369,17 +369,12 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		shanghaiTime:            shanghaiTime,
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
-		gpCache:                 zk.NewGasPriceCache(),
 		wbCfg: WBConfig{
 			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
 			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
 			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
 		},
 	}, nil
-}
-
-func (p *TxPool) GetGpCache() *zk.GasPriceCache {
-	return p.gpCache
 }
 
 func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChangeBatch, unwindTxs, minedTxs types.TxSlots, tx kv.Tx) error {

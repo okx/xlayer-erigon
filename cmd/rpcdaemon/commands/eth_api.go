@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,7 +25,6 @@ import (
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 
 	"github.com/ledgerwatch/erigon/chain"
-	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/utils"
 
@@ -335,7 +335,7 @@ type APIImpl struct {
 	ethBackend                 rpchelper.ApiBackend
 	txPool                     txpool.TxpoolClient
 	mining                     txpool.MiningClient
-	gasCache                   *zk.GasPriceCache
+	gasCache                   *GasPriceCache
 	db                         kv.RoDB
 	GasCap                     uint64
 	ReturnDataLimit            int
@@ -353,7 +353,7 @@ type APIImpl struct {
 }
 
 // NewEthAPI returns APIImpl instance
-func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient, gascap uint64, returnDataLimit int, ethCfg *ethconfig.Config) *APIImpl {
+func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient, gascap uint64, returnDataLimit int, ethCfg *ethconfig.Config) (*APIImpl, *GasPriceCache) {
 	if gascap == 0 {
 		gascap = uint64(math.MaxUint64 / 2)
 	}
@@ -364,7 +364,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		ethBackend:                 eth,
 		txPool:                     txPool,
 		mining:                     mining,
-		gasCache:                   zk.NewGasPriceCache(),
+		gasCache:                   NewGasPriceCache(),
 		GasCap:                     gascap,
 		ReturnDataLimit:            returnDataLimit,
 		ZkRpcUrl:                   ethCfg.L2RpcUrl,
@@ -380,7 +380,10 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		EnableInnerTx:              ethCfg.EnableInnerTx,
 	}
 
-	return apii
+	// For X Layer
+	apii.runL2GasPricerForXLayer()
+
+	return apii, apii.gasCache
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction
@@ -516,4 +519,34 @@ func newRPCRawTransactionFromBlockIndex(b *types.Block, index uint64) (hexutilit
 	var buf bytes.Buffer
 	err := txs[index].MarshalBinary(&buf)
 	return buf.Bytes(), err
+}
+
+type GasPriceCache struct {
+	latestPrice *big.Int
+	latestHash  common.Hash
+	mtx         sync.Mutex
+}
+
+func NewGasPriceCache() *GasPriceCache {
+	return &GasPriceCache{
+		latestPrice: big.NewInt(0),
+		latestHash:  common.Hash{},
+	}
+}
+
+func (c *GasPriceCache) GetLatest() (common.Hash, *big.Int) {
+	var hash common.Hash
+	var price *big.Int
+	c.mtx.Lock()
+	hash = c.latestHash
+	price = c.latestPrice
+	c.mtx.Unlock()
+	return hash, price
+}
+
+func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {
+	c.mtx.Lock()
+	c.latestPrice = price
+	c.latestHash = hash
+	c.mtx.Unlock()
 }

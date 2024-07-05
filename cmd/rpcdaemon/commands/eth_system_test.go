@@ -9,9 +9,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/rpc/rpccfg"
 
@@ -48,7 +48,7 @@ func TestGasPrice(t *testing.T) {
 			defer m.DB.Close()
 			stateCache := kvcache.New(kvcache.DefaultCoherentConfig)
 			base := NewBaseApi(nil, stateCache, snapshotsync.NewBlockReaderWithSnapshots(m.BlockSnapshots, m.TransactionsV3), nil, false, rpccfg.DefaultEvmCallTimeout, m.Engine, m.Dirs)
-			eth := NewEthAPI(base, m.DB, nil, nil, nil, 5000000, 100_000, ethconfig.DefaultZkConfig)
+			eth, _ := NewEthAPI(base, m.DB, nil, nil, nil, 5000000, 100_000, ethconfig.DefaultZkConfig)
 
 			ctx := context.Background()
 			result, err := eth.GasPrice(ctx)

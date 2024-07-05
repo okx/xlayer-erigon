@@ -3,6 +3,7 @@ package commands
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/ledgerwatch/erigon/rpc"
@@ -13,6 +14,15 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumberStr st
 	batchNumber, err := strconv.ParseUint(batchNumberStr, 10, 64)
 	if err != nil {
 		return 0, err
+	}
+
+	lastBatchNo, err := api.BatchNumber(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	if batchNumber > uint64(lastBatchNo) {
+		return 0, errors.New(fmt.Sprintf("couldn't get batch number %d's seal time, error: unexpected batch. got %d, last batch should be %d", batchNumber, batchNumber, lastBatchNo))
 	}
 
 	tx, err := api.db.BeginRo(ctx)

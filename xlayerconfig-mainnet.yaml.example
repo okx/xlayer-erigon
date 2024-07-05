@@ -35,16 +35,3 @@ externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0
 http.port: 8545
-http.timeouts.read: "60s"
-http.timeouts.write: "60s"
-rpc.batch.concurrency: 2
-rpc.batch.limit: 20
-ws: true
-ws.addr: 0.0.0.0
-ws.port: 8133
-ws.api: "eth"
-
-zkevm.sequencer-initial-fork-id: 8
-zkevm.sequencer-block-seal-time: "6s"
-zkevm.sequencer-batch-seal-time: "12s"
-zkevm.sequencer-non-empty-batch-seal-time: "3s"

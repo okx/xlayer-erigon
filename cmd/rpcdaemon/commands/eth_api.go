@@ -380,7 +380,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		L1GasPrice:                 L1GasPrice{},
 		// For X Layer
 		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
-		EnableInnerTx: ethCfg.EnableInnerTx,
+		EnableInnerTx: ethCfg.XLayer.EnableInnerTx,
 	}
 
 	// For X Layer. Set default gas price

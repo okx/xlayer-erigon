@@ -2,6 +2,7 @@ package gaspricecfg
 
 import "time"
 
+// XLayerConfig is the X Layer gas price config
 type XLayerConfig struct {
 	Type         string        `toml:",omitempty"`
 	UpdatePeriod time.Duration `toml:",omitempty"`

@@ -5,13 +5,22 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ledgerwatch/erigon/rpc"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 )
 
 func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumberStr string) (types.ArgUint64, error) {
-	batchNumber, err := strconv.ParseUint(batchNumberStr, 10, 64)
+	var base int
+	if strings.HasPrefix(batchNumberStr, "0x") || strings.HasPrefix(batchNumberStr, "0X") {
+		base = 16
+		batchNumberStr = batchNumberStr[2:]
+	} else {
+		base = 10
+	}
+	
+	batchNumber, err := strconv.ParseUint(batchNumberStr, base, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -37,7 +46,7 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumberStr st
 	}
 
 	if len(blocks) == 0 {
-		return 0, errors.New("batch not found")
+		return 0, errors.New("batch is empty")
 	}
 
 	lastBlock, err := api.GetFullBlockByNumber(ctx, rpc.BlockNumber(blocks[0]), false)

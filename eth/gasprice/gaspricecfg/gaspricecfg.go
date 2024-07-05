@@ -21,6 +21,6 @@ type Config struct {
 	MaxPrice         *big.Int `toml:",omitempty"`
 	IgnorePrice      *big.Int `toml:",omitempty"`
 
-	// XLayer config
+	// For X Layer
 	XLayer XLayerConfig
 }

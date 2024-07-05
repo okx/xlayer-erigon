@@ -55,6 +55,8 @@ var FullNodeGPO = gaspricecfg.Config{
 	MaxBlockHistory:  0,
 	MaxPrice:         gaspricecfg.DefaultMaxPrice,
 	IgnorePrice:      gaspricecfg.DefaultIgnorePrice,
+	// For X Layer
+	XLayer: gaspricecfg.DefaultXLayerConfig,
 }
 
 // LightClientGPO contains default gasprice oracle settings for light client.

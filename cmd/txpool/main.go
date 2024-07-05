@@ -56,6 +56,7 @@ var (
 
 	commitEvery time.Duration
 
+	// For X Layer
 	enableWhiteList bool
 	whiteList       []string
 	blockList       []string
@@ -161,6 +162,8 @@ func doTxpool(ctx context.Context) error {
 		sender := common.HexToAddress(senderHex)
 		cfg.TracedSenders[i] = string(sender[:])
 	}
+
+	// For X Layer
 	ethCfg := &ethconfig.Defaults
 	ethCfg.DeprecatedTxPool.EnableWhitelist = enableWhiteList
 	ethCfg.DeprecatedTxPool.WhiteList = make([]string, len(whiteList))

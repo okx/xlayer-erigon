@@ -59,11 +59,14 @@ type Zk struct {
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
 
-	// For Xlayer
-	XLayer XLayerConfig
+	// For X Layer
+	XLayer *XLayerConfig
 }
 
-var DefaultZkConfig = &Zk{}
+var DefaultZkConfig = &Zk{
+	// For X Layer
+	XLayer: DefaultXLayerConfig,
+}
 
 func (c *Zk) ShouldCountersBeUnlimited(l1Recovery bool) bool {
 	return l1Recovery || (c.DisableVirtualCounters && !c.ExecutorStrictMode && len(c.ExecutorUrls) != 0)

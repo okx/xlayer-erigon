@@ -31,8 +31,8 @@ func newFollowerGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *
 		ctx:       ctx,
 		lastRawGP: new(big.Int).SetUint64(1),
 	}
-	if cfg.EnableFollowerAdjustByL2L1Price {
-		gps.kafkaPrc = newKafkaProcessor(cfg, ctx)
+	if cfg.XLayer.EnableFollowerAdjustByL2L1Price {
+		gps.kafkaPrc = newKafkaProcessor(cfg.XLayer, ctx)
 	}
 
 	return gps
@@ -48,11 +48,11 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	}
 
 	// Apply factor to calculate l2 gasPrice
-	factor := big.NewFloat(0).SetFloat64(f.cfg.Factor)
+	factor := big.NewFloat(0).SetFloat64(f.cfg.XLayer.Factor)
 	res := new(big.Float).Mul(factor, big.NewFloat(0).SetInt(l1GasPrice))
 
 	// convert the eth gas price to okb gas price
-	if f.cfg.EnableFollowerAdjustByL2L1Price {
+	if f.cfg.XLayer.EnableFollowerAdjustByL2L1Price {
 		l1CoinPrice, l2CoinPrice := f.kafkaPrc.GetL1L2CoinPrice()
 		if l1CoinPrice < minCoinPrice || l2CoinPrice < minCoinPrice {
 			log.Warn("the L1 or L2 native coin price too small...")

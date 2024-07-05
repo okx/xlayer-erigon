@@ -7,6 +7,8 @@ type XLayerConfig struct {
 	EnableInnerTx bool
 }
 
+var DefaultXLayerConfig = &XLayerConfig{}
+
 // NacosConfig is the config for nacos
 type NacosConfig struct {
 	URLs               string

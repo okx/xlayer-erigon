@@ -50,7 +50,7 @@ func TestApolloClient(t *testing.T) {
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
 	t.Log("---------- Logging eth backend config ----------")
-	t.Log("zkevm.apollo-enable: ", ethCfg.Zk.XLayer.Apollo.Enable)
+	t.Log("zkevm.apollo-enabled: ", ethCfg.Zk.XLayer.Apollo.Enable)
 	t.Log("zkevm.apollo-ip-addr: ", ethCfg.Zk.XLayer.Apollo.IP)
 	t.Log("zkevm.apollo-app-id: ", ethCfg.Zk.XLayer.Apollo.AppID)
 	t.Log("zkevm.apollo-namespace-name: ", ethCfg.Zk.XLayer.Apollo.NamespaceName)

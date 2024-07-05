@@ -1,5 +1,6 @@
 package ethconfig
 
+// XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
 	Apollo        ApolloClientConfig
 	Nacos         NacosConfig

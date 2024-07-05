@@ -623,7 +623,7 @@ var (
 	}
 	// XLayer apollo
 	ApolloEnableFlag = cli.BoolFlag{
-		Name:  "zkevm.apollo-enable",
+		Name:  "zkevm.apollo-enabled",
 		Usage: "Apollo enable flag.",
 	}
 	ApolloIPAddr = cli.StringFlag{

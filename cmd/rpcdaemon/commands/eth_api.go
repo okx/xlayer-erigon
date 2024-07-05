@@ -353,7 +353,7 @@ type APIImpl struct {
 }
 
 // NewEthAPI returns APIImpl instance
-func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient, gascap uint64, returnDataLimit int, ethCfg *ethconfig.Config) (*APIImpl, *GasPriceCache) {
+func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient, gascap uint64, returnDataLimit int, ethCfg *ethconfig.Config) *APIImpl {
 	if gascap == 0 {
 		gascap = uint64(math.MaxUint64 / 2)
 	}
@@ -383,7 +383,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	// For X Layer
 	apii.runL2GasPricerForXLayer()
 
-	return apii, apii.gasCache
+	return apii
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction

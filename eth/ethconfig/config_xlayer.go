@@ -8,7 +8,7 @@ type XLayerConfig struct {
 	Nacos         NacosConfig
 	EnableInnerTx bool
 	// Sequencer
-	SequencerFullBatchSleepDuration time.Duration
+	SequencerBatchSleepDuration time.Duration
 }
 
 var DefaultXLayerConfig = &XLayerConfig{}

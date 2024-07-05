@@ -48,6 +48,6 @@ func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	if err != nil {
 		return localDuration
 	} else {
-		return conf.Zk.XLayer.SequencerFullBatchSleepDuration
+		return conf.Zk.XLayer.SequencerBatchSleepDuration
 	}
 }

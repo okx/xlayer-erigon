@@ -14,7 +14,7 @@ func ApplyFlagsForXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 			ApplicationName:    ctx.String(utils.NacosApplicationNameFlag.Name),
 			ExternalListenAddr: ctx.String(utils.NacosExternalListenAddrFlag.Name),
 		},
-		EnableInnerTx:                   ctx.Bool(utils.AllowInternalTransactions.Name),
-		SequencerFullBatchSleepDuration: ctx.Duration(utils.SequencerFullBatchSleepDuration.Name),
+		EnableInnerTx:               ctx.Bool(utils.AllowInternalTransactions.Name),
+		SequencerBatchSleepDuration: ctx.Duration(utils.SequencerBatchSleepDuration.Name),
 	}
 }

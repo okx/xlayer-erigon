@@ -21,16 +21,6 @@ zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 250
 zkevm.datastream-version: 2
 
-zkevm.apollo-enabled: false
-zkevm.apollo-ip-addr: ""
-zkevm.apollo-app-id: ""
-zkevm.apollo-namespace-name: ""
-
-zkevm.nacos-urls: ""
-zkevm.nacos-namespace-id: ""
-zkevm.nacos-application-name: ""
-zkevm.nacos-external-listen-addr: ""
-
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0

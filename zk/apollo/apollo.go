@@ -20,7 +20,7 @@ import (
 // Client is the apollo client
 type Client struct {
 	*agollo.Client
-	namespaceMap map[string][]string
+	namespaceMap map[string]string
 	ethCfg       *ethconfig.Config
 	nodeCfg      *nodecfg.Config
 	flags        []cli.Flag
@@ -47,14 +47,19 @@ func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 		utils.Fatalf("failed init apollo: %v", err)
 	}
 
-	nsMap := make(map[string][]string)
+	nsMap := make(map[string]string)
 	namespaces := strings.Split(ethCfg.Zk.XLayer.Apollo.NamespaceName, ",")
 	for _, namespace := range namespaces {
 		prefix, err := getNamespacePrefix(namespace)
 		if err != nil {
 			utils.Fatalf("failed init apollo: %v", err)
 		}
-		nsMap[prefix] = append(nsMap[prefix], namespace)
+
+		_, found := nsMap[prefix]
+		if found {
+			utils.Fatalf("failed init apollo: duplicate apollo namespace prefix being set")
+		}
+		nsMap[prefix] = namespace
 	}
 
 	apc := &Client{
@@ -74,22 +79,20 @@ func (c *Client) LoadConfig() (loaded bool) {
 	if c == nil {
 		return false
 	}
-	for prefix, namespaces := range c.namespaceMap {
-		for _, namespace := range namespaces {
-			cache := c.GetConfigCache(namespace)
-			cache.Range(func(key, value interface{}) bool {
-				loaded = true
-				switch prefix {
-				case Sequencer:
-					c.loadSequencer(value)
-				case JsonRPC:
-					c.loadJsonRPC(value)
-				case L2GasPricer:
-					c.loadL2GasPricer(value)
-				}
-				return true
-			})
-		}
+	for prefix, namespace := range c.namespaceMap {
+		cache := c.GetConfigCache(namespace)
+		cache.Range(func(key, value interface{}) bool {
+			loaded = true
+			switch prefix {
+			case Sequencer:
+				c.loadSequencer(value)
+			case JsonRPC:
+				c.loadJsonRPC(value)
+			case L2GasPricer:
+				c.loadL2GasPricer(value)
+			}
+			return true
+		})
 	}
 	return
 }

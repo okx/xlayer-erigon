@@ -212,7 +212,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.SequencerBlockSealTime,
 	&utils.SequencerBatchSealTime,
 	&utils.SequencerNonEmptyBatchSealTime,
-	&utils.SequencerFullBatchSleepDuration,
 	&utils.ExecutorUrls,
 	&utils.ExecutorStrictMode,
 	&utils.ExecutorRequestTimeout,
@@ -251,4 +250,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolEnableWhitelistFlag,
 	&utils.TxPoolWhiteList,
 	&utils.TxPoolBlockedList,
+	&utils.SequencerFullBatchSleepDuration,
 }

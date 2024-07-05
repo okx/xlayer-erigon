@@ -65,6 +65,11 @@ var (
 		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
 	}
+	SequencerFullBatchSleepDuration = cli.DurationFlag{
+		Name:  "zkevm.sequencer-full-batch-sleep-duration",
+		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
+		Value: 0 * time.Second,
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.XLayerConfig) {

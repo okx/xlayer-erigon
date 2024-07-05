@@ -468,11 +468,6 @@ var (
 		Usage: "Batch seal time. Defaults to 3s",
 		Value: "3s",
 	}
-	SequencerFullBatchSleepDuration = cli.DurationFlag{
-		Name:  "zkevm.sequencer-full-batch-sleep-duration",
-		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
-		Value: 0 * time.Second,
-	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",
 		Usage: "A comma separated list of grpc addresses that host executors",

@@ -995,6 +995,11 @@ func (api *ZkEvmAPIImpl) GetLatestGlobalExitRoot(ctx context.Context) (common.Ha
 
 func getLastBlockInBatchNumber(tx kv.Tx, batchNumber uint64) (uint64, error) {
 	reader := hermez_db.NewHermezDbReader(tx)
+
+	if batchNumber == 0 {
+		return 0, nil
+	}
+
 	blocks, err := reader.GetL2BlockNosByBatch(batchNumber)
 	if err != nil {
 		return 0, err

@@ -33,6 +33,7 @@ var (
 		Usage: "Nacos external listen addr.",
 		Value: "",
 	}
+	// Pool
 	TxPoolEnableWhitelistFlag = cli.BoolFlag{
 		Name:  "txpool.enable.whitelist",
 		Usage: "Enable or disable tx sender white list",
@@ -47,6 +48,108 @@ var (
 		Name:  "txpool.blockedlist",
 		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
+	}
+	// Gas Price
+	GpoDefaultGasPriceFlag = cli.Int64Flag{
+		Name:  "gpo.default-price",
+		Usage: "Default gas price will be recommended by gpo",
+		Value: ethconfig.Defaults.GPO.Default.Int64(),
+	}
+
+	GpoTypeFlag = cli.StringFlag{
+		Name:  "gpo.type",
+		Usage: "raw gas price strategy type: default, follower, fixed",
+		Value: "default",
+	}
+
+	GpoUpdatePeriodFlag = cli.StringFlag{
+		Name:  "gpo.update-period",
+		Usage: "raw gas price update period",
+		Value: "10s",
+	}
+
+	GpoFactorFlag = cli.Float64Flag{
+		Name:  "gpo.factor",
+		Usage: "raw gas price facotr",
+		Value: 0.15,
+	}
+
+	GpoKafkaURLFlag = cli.StringFlag{
+		Name:  "gpo.kafka-url",
+		Usage: "raw gas price kafka url",
+		Value: "",
+	}
+
+	GpoTopicFlag = cli.StringFlag{
+		Name:  "gpo.topic",
+		Usage: "raw gas price topic",
+		Value: "",
+	}
+
+	GpoGroupIDFlag = cli.StringFlag{
+		Name:  "gpo.group-id",
+		Usage: "raw gas price group id",
+		Value: "",
+	}
+
+	GpoUsernameFlag = cli.StringFlag{
+		Name:  "gpo.username",
+		Usage: "raw gas price username",
+		Value: "",
+	}
+
+	GpoPasswordFlag = cli.StringFlag{
+		Name:  "gpo.password",
+		Usage: "raw gas price password",
+		Value: "",
+	}
+
+	GpoRootCAPathFlag = cli.StringFlag{
+		Name:  "gpo.root-ca-path",
+		Usage: "raw gas price root ca path",
+		Value: "",
+	}
+
+	GpoL1CoinIdFlag = cli.IntFlag{
+		Name:  "gpo.l1-coin-id",
+		Usage: "raw gas price l1 coin id",
+		Value: 0,
+	}
+
+	GpoL2CoinIdFlag = cli.IntFlag{
+		Name:  "gpo.l2-coin-id",
+		Usage: "raw gas price l2 coin id",
+		Value: 0,
+	}
+
+	GpoDefaultL1CoinPriceFlag = cli.Float64Flag{
+		Name:  "gpo.default-l1-coin-price",
+		Usage: "raw gas price default l1 coin price",
+		Value: 0,
+	}
+
+	GpoDefaultL2CoinPriceFlag = cli.Float64Flag{
+		Name:  "gpo.default-l2-coin-price",
+		Usage: "raw gas price default l2 coin price",
+		Value: 0,
+	}
+
+	GpoGasPriceUsdtFlag = cli.Float64Flag{
+		Name:  "gpo.gas-price-usdt",
+		Usage: "raw gas price usdt",
+		Value: 0,
+	}
+
+	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
+		Name:  "gpo.enable-follower-adjust",
+		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
+		Value: true,
+	}
+
+	GpoCongestionThresholdFlag = cli.IntFlag{
+		Name:  "gpo.congestion-threshold",
+		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
+		Value: 0,
 	}
 )
 

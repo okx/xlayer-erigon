@@ -28,6 +28,8 @@ import (
 	"github.com/ledgerwatch/erigon/chain"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 
+	"errors"
+
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
 	"github.com/ledgerwatch/erigon/consensus/misc"
@@ -36,6 +38,11 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 )
+
+type EphemeralExecResultZk struct {
+	*EphemeralExecResult
+	BlockInfoTree *common.Hash `json:"blockInfoTree,omitempty"`
+}
 
 // ExecuteBlockEphemerally runs a block from provided stateReader and
 // writes the result to the provided stateWriter
@@ -51,7 +58,7 @@ func ExecuteBlockEphemerallyZk(
 	getTracer func(txIndex int, txHash common.Hash) (vm.EVMLogger, error),
 	roHermezDb state.ReadOnlyHermezDb,
 	prevBlockRoot *common.Hash,
-) (*EphemeralExecResult, error) {
+) (*EphemeralExecResultZk, error) {
 
 	defer BlockExecutionTimer.UpdateDuration(time.Now())
 	block.Uncles()
@@ -72,7 +79,7 @@ func ExecuteBlockEphemerallyZk(
 		includedTxs types.Transactions
 		receipts    types.Receipts
 
-		blockInnerTxs [][]*zktypes.InnerTx
+		blockInnerTxs [][]*zktypes.InnerTx // XLayer, inner tx
 	)
 
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)
@@ -112,9 +119,9 @@ func ExecuteBlockEphemerallyZk(
 			vmConfig.Tracer = nil
 		}
 
-		//TODO: remove this after bug is fixed
+		//[hack]TODO: remove this after bug is fixed
 		localReceipt := *receipt
-		if execResult.Err == vm.ErrUnsupportedPrecompile {
+		if !chainConfig.IsForkID8Elderberry(blockNum) && errors.Is(execResult.Err, vm.ErrUnsupportedPrecompile) {
 			localReceipt.Status = 1
 		}
 
@@ -158,6 +165,7 @@ func ExecuteBlockEphemerallyZk(
 			if !vmConfig.NoReceipts {
 				receipts = append(receipts, receipt)
 			}
+			// XLayer, inner tx
 			if !vmConfig.NoInnerTxs {
 				blockInnerTxs = append(blockInnerTxs, innerTxs)
 			}
@@ -232,16 +240,19 @@ func ExecuteBlockEphemerallyZk(
 		}
 	}
 	blockLogs := ibs.Logs()
-	execRs := &EphemeralExecResult{
-		TxRoot:      types.DeriveSha(includedTxs),
-		ReceiptRoot: receiptSha,
-		Bloom:       bloom,
-		LogsHash:    rlpHash(blockLogs),
-		Receipts:    receipts,
-		Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
-		GasUsed:     math.HexOrDecimal64(*usedGas),
-		Rejected:    rejectedTxs,
-		InnerTxs:    blockInnerTxs,
+	execRs := &EphemeralExecResultZk{
+		EphemeralExecResult: &EphemeralExecResult{
+			TxRoot:      types.DeriveSha(includedTxs),
+			ReceiptRoot: receiptSha,
+			Bloom:       bloom,
+			LogsHash:    rlpHash(blockLogs),
+			Receipts:    receipts,
+			Difficulty:  (*math.HexOrDecimal256)(header.Difficulty),
+			GasUsed:     math.HexOrDecimal64(*usedGas),
+			Rejected:    rejectedTxs,
+			InnerTxs:    blockInnerTxs, // XLayer, inner tx
+		},
+		BlockInfoTree: l2InfoRoot,
 	}
 
 	return execRs, nil

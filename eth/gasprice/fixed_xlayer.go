@@ -23,7 +23,7 @@ func newFixedGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *Fix
 	gps := &FixedGasPrice{
 		cfg:     cfg,
 		ctx:     ctx,
-		ratePrc: newKafkaProcessor(cfg, ctx),
+		ratePrc: newKafkaProcessor(cfg.XLayer, ctx),
 	}
 	return gps
 }
@@ -37,7 +37,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 		log.Warn("the L2 native coin price too small...")
 		return
 	}
-	res := new(big.Float).Mul(big.NewFloat(0).SetFloat64(f.cfg.GasPriceUsdt/l2CoinPrice), big.NewFloat(0).SetFloat64(OKBWei))
+	res := new(big.Float).Mul(big.NewFloat(0).SetFloat64(f.cfg.XLayer.GasPriceUsdt/l2CoinPrice), big.NewFloat(0).SetFloat64(OKBWei))
 	// Store l2 gasPrice calculated
 	result := new(big.Int)
 	res.Int(result)

@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/0xPolygonHermez/zkevm-data-streamer v0.1.19
+	github.com/0xPolygonHermez/zkevm-data-streamer v0.2.2
 	github.com/99designs/gqlgen v0.17.29
 	github.com/Giulio2002/bls v0.0.0-20230217173148-c87a29266b6c
 	github.com/RoaringBitmap/roaring v1.2.3
@@ -21,6 +21,7 @@ require (
 	github.com/anacrolix/sync v0.4.0
 	github.com/anacrolix/torrent v1.48.1-0.20230219022425-e8971ea0f1bf
 	github.com/benesch/cgosymbolizer v0.0.0-20190515212042-bec6fe6e597b
+	github.com/boltdb/bolt v1.3.1
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/consensys/gnark-crypto v0.12.1
@@ -47,6 +48,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb
 	github.com/google/btree v1.1.2
+	github.com/google/go-cmp v0.6.0
 	github.com/google/gofuzz v1.2.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
@@ -72,7 +74,6 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/pion/stun v0.4.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.15.1
 	github.com/protolambda/eth2-shuffle v1.1.0
 	github.com/protolambda/ztyp v0.2.2
@@ -163,7 +164,6 @@ require (
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -245,6 +245,7 @@ require (
 	github.com/pion/turn/v2 v2.0.8 // indirect
 	github.com/pion/udp v0.1.4 // indirect
 	github.com/pion/webrtc/v3 v3.1.42 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.4.0 // indirect

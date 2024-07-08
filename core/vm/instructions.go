@@ -776,8 +776,9 @@ func opCallCode(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([
 	}
 
 	innerTx, newIndex := beforeOp(interpreter, CALLCODE_TYP, scope.Contract.Address(), &toAddr, &toAddr, args, gas, value.ToBig())
-	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, &value)
+	ret, returnGas, err := interpreter.evm.CallCode_zkEvm(scope.Contract, toAddr, args, gas, &value, int(retSize.Uint64()))
 	afterOp(interpreter, CALLCODE_TYP, gas-returnGas, newIndex, innerTx, nil, err)
+
 	if err != nil {
 		temp.Clear()
 	} else {
@@ -808,7 +809,7 @@ func opDelegateCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
 	innerTx, newIndex := beforeOp(interpreter, DELEGATECALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
-	ret, returnGas, err := interpreter.evm.DelegateCall(scope.Contract, toAddr, args, gas)
+	ret, returnGas, err := interpreter.evm.DelegateCall_zkEvm(scope.Contract, toAddr, args, gas, int(retSize.Uint64()))
 	innerTx.TraceAddress = scope.Contract.CallerAddress.String()
 	innerTx.ValueWei = scope.Contract.value.ToBig().String()
 	innerTx.CallValueWei = hexutil.EncodeBig(scope.Contract.value.ToBig())
@@ -843,8 +844,9 @@ func opStaticCall(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	args := scope.Memory.GetPtr(int64(inOffset.Uint64()), int64(inSize.Uint64()))
 
 	innerTx, newIndex := beforeOp(interpreter, STATICCAL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, big.NewInt(0))
-	ret, returnGas, err := interpreter.evm.StaticCall(scope.Contract, toAddr, args, gas)
+	ret, returnGas, err := interpreter.evm.StaticCall_zkEvm(scope.Contract, toAddr, args, gas, int(retSize.Uint64()))
 	afterOp(interpreter, STATICCAL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
+
 	if err != nil {
 		temp.Clear()
 	} else {

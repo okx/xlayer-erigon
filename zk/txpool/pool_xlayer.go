@@ -3,7 +3,7 @@ package txpool
 import (
 	"math/big"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 )
 
 // WBConfig white and block config
@@ -17,24 +17,24 @@ type WBConfig struct {
 }
 
 type GPCache interface {
-	GetLatest() (libcommon.Hash, *big.Int)
-	SetLatest(hash libcommon.Hash, price *big.Int)
+	GetLatest() (common.Hash, *big.Int)
+	SetLatest(hash common.Hash, price *big.Int)
 }
 
-func (p *TxPool) checkBlockedAddr(addr libcommon.Address) bool {
+func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
 	// check from config
 	for _, e := range p.wbCfg.BlockedList {
-		if libcommon.HexToAddress(e) == addr {
+		if common.HexToAddress(e) == addr {
 			return true
 		}
 	}
 	return false
 }
 
-func (p *TxPool) checkWhiteAddr(addr libcommon.Address) bool {
+func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	// check from config
 	for _, e := range p.wbCfg.WhiteList {
-		if libcommon.HexToAddress(e) == addr {
+		if common.HexToAddress(e) == addr {
 			return true
 		}
 	}

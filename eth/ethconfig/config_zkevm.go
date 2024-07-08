@@ -62,19 +62,18 @@ type Zk struct {
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	// For Xlayer
-	NacosURLs               string
-	NacosNamespaceId        string
-	NacosApplicationName    string
-	NacosExternalListenAddr string
-
 	PoolManagerUrl         string
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
-	EnableInnerTx          bool // XLayer
+
+	// For X Layer
+	XLayer *XLayerConfig
 }
 
-var DefaultZkConfig = &Zk{}
+var DefaultZkConfig = &Zk{
+	// For X Layer
+	XLayer: DefaultXLayerConfig,
+}
 
 func (c *Zk) ShouldCountersBeUnlimited(l1Recovery bool) bool {
 	return l1Recovery || (c.DisableVirtualCounters && !c.ExecutorStrictMode && len(c.ExecutorUrls) != 0)

@@ -323,6 +323,10 @@ type TxPool struct {
 
 	wbCfg WBConfig // XLayer config
 
+	// For X Layer
+	// gpCache will only work in sequencer node, without rpc node
+	gpCache GPCache
+
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
 	// vice versa

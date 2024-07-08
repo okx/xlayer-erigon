@@ -82,7 +82,7 @@ type L1L2PriceRecord struct {
 
 // KafkaProcessor kafka processor
 type KafkaProcessor struct {
-	cfg       gaspricecfg.Config
+	cfg       gaspricecfg.XLayerConfig
 	kreader   *kafka.Reader
 	ctx       context.Context
 	rwLock    sync.RWMutex
@@ -93,7 +93,7 @@ type KafkaProcessor struct {
 	tmpPrices L1L2PriceRecord
 }
 
-func newKafkaProcessor(cfg gaspricecfg.Config, ctx context.Context) *KafkaProcessor {
+func newKafkaProcessor(cfg gaspricecfg.XLayerConfig, ctx context.Context) *KafkaProcessor {
 	rp := &KafkaProcessor{
 		cfg:      cfg,
 		kreader:  getKafkaReader(cfg),
@@ -114,7 +114,7 @@ func newKafkaProcessor(cfg gaspricecfg.Config, ctx context.Context) *KafkaProces
 	return rp
 }
 
-func getKafkaReader(cfg gaspricecfg.Config) *kafka.Reader {
+func getKafkaReader(cfg gaspricecfg.XLayerConfig) *kafka.Reader {
 	brokers := strings.Split(cfg.KafkaURL, ",")
 
 	var dialer *kafka.Dialer

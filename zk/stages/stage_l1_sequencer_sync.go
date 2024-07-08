@@ -182,7 +182,7 @@ func HandleL1InfoTreeUpdate(
 }
 
 const (
-	injectedBatchLogTrailingBytes        = 24
+	injectedBatchLogTrailingBytes        = 23
 	injectedBatchLogTransactionStartByte = 128
 	injectedBatchLastGerStartByte        = 31
 	injectedBatchLastGerEndByte          = 64
@@ -208,8 +208,9 @@ func HandleInitialSequenceBatches(
 	// the log appears to have some trailing 24 bytes of all 0s in it.  Not sure why but we can't handle the
 	// TX without trimming these off
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
-
+	log.Info("Found injected batch", "l.Data", l.Data)
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
+	log.Info("Found injected batch", "txData", txData)
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,

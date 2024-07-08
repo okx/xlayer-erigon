@@ -49,11 +49,11 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-seqsender run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequence-sender"
+      - "/app/zkevm-seqsender run --cfg /app/config.toml --network custom --custom-network-file /app/genesis.json"
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.2-RC33
+    image: zkevm-aggregator
     ports:
       - 50081:50081
     volumes:
@@ -176,8 +176,8 @@ services:
       - "full"
       - "--rpc.allow-unprotected-txs"
 
-  erigon-data-availability:
-    container_name: erigon-data-availability
+  xlayer-data-availability:
+    container_name: xlayer-data-availability
     image: okexchain/xlayer-data-availability:origin_release_v0.3.1_20240411102017_f84bdab
     ports:
       - 8444:8444
@@ -189,8 +189,8 @@ services:
       - "-c"
       - "/app/xlayer-data-availability run --cfg /app/config.toml"
 
-  erigon-data-availability-db:
-    container_name: erigon-data-availability-db
+  xlayer-data-availability-db:
+    container_name: xlayer-data-availability-db
     image: postgres:15
     ports:
       - 5438:5432

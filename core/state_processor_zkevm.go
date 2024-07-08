@@ -123,6 +123,7 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 		}
 	}
 
+	// XLayer, inner tx
 	var innerTxs []*zktypes.InnerTx
 	if !evm.Config().NoInnerTxs {
 		innerTxs = afterApplyTransaction(evm, result.Failed())
@@ -179,14 +180,4 @@ func ApplyTransaction_zkevm(
 		return nil, nil, nil, err
 	}
 	return ApplyMessageWithTxContext(msg, txContext, gp, ibs, stateWriter, header.Number, tx, usedGas, evm)
-}
-
-func afterApplyTransaction(env vm.VMInterface, failed bool) []*zktypes.InnerTx {
-	innerTxs := env.GetInnerTxMeta().InnerTxs
-	if failed {
-		for _, innerTx := range innerTxs {
-			innerTx.IsError = true
-		}
-	}
-	return innerTxs
 }

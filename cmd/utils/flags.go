@@ -19,12 +19,16 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -41,12 +45,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
-
-	"encoding/json"
-	"os"
-	"path"
-
-	"time"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
@@ -433,6 +431,11 @@ var (
 		Usage:    "Ethereum L1 delay between queries for verifications and sequences - in milliseconds",
 		Value:    6000,
 	}
+	L1HighestBlockTypeFlag = cli.StringFlag{
+		Name:  "zkevm.l1-highest-block-type",
+		Usage: "The type of the highest block in the L1 chain. latest, safe, or finalized",
+		Value: "finalized",
+	}
 	L1MaticContractAddressFlag = cli.StringFlag{
 		Name:  "zkevm.l1-matic-contract-address",
 		Usage: "Ethereum L1 Matic contract address",
@@ -447,6 +450,16 @@ var (
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
 		Value: 10000,
+	}
+	IncrementTreeAlways = cli.BoolFlag{
+		Name:  "zkevm.increment-tree-always",
+		Usage: "Increment the state tree, never rebuild",
+		Value: false,
+	}
+	SmtRegenerateInMemory = cli.BoolFlag{
+		Name:  "zkevm.smt-regenerate-in-memory",
+		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
+		Value: false,
 	}
 	SequencerInitialForkId = cli.Uint64Flag{
 		Name:  "zkevm.sequencer-initial-fork-id",
@@ -482,6 +495,11 @@ var (
 		Name:  "zkevm.executor-request-timeout",
 		Usage: "The timeout for the executor request",
 		Value: 60 * time.Second,
+	}
+	DatastreamNewBlockTimeout = cli.DurationFlag{
+		Name:  "zkevm.datastream-new-block-timeout",
+		Usage: "The timeout for the executor request",
+		Value: 500 * time.Millisecond,
 	}
 	ExecutorMaxConcurrentRequests = cli.IntFlag{
 		Name:  "zkevm.executor-max-concurrent-requests",
@@ -581,6 +599,11 @@ var (
 	ExecutorPayloadOutput = cli.StringFlag{
 		Name:  "zkevm.executor-payload-output",
 		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
+		Value: "",
+	}
+	DAUrl = cli.StringFlag{
+		Name:  "zkevm.da-url",
+		Usage: "The URL of the data availability service",
 		Value: "",
 	}
 	AllowInternalTransactions = cli.BoolFlag{
@@ -1818,17 +1841,18 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	// Override any default configs for hard coded networks.
 	chain := ctx.String(ChainFlag.Name)
 	if strings.HasPrefix(chain, "dynamic") {
+		configFilePath := ctx.String(ConfigFlag.Name)
+		if configFilePath == "" {
+			Fatalf("Config file is required for dynamic chain")
+		}
+
+		// Be sure to set this first
+		params.DynamicChainConfigPath = filepath.Dir(configFilePath)
+		filename := path.Join(params.DynamicChainConfigPath, chain+"-conf.json")
+
 		genesis := core.GenesisBlockByChainName(chain)
 
 		dConf := DynamicConfig{}
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-
-		basePath := path.Join(homeDir, "dynamic-configs")
-		filename := path.Join(basePath, chain+"-conf.json")
 
 		if _, err := os.Stat(filename); err == nil {
 			dConfBytes, err := os.ReadFile(filename)

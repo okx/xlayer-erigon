@@ -128,6 +128,7 @@ COMMANDS += evm
 COMMANDS += lightclient
 COMMANDS += sentinel
 COMMANDS += erigon-el
+COMMANDS += acl
 
 # build each command using %.cmd rule
 $(COMMANDS): %: %.cmd
@@ -148,10 +149,10 @@ db-tools:
 
 ## test:                              run unit tests with a 100s timeout
 test:
-	$(GOTEST) --timeout 100s
+	$(GOTEST) --timeout 200s
 
 test3:
-	$(GOTEST) --timeout 100s -tags $(BUILD_TAGS),erigon3
+	$(GOTEST) --timeout 200s -tags $(BUILD_TAGS),erigon3
 
 ## test-integration:                  run integration tests with a 30m timeout
 test-integration:
@@ -305,6 +306,7 @@ automated-tests:
 .PHONY: protobuf
 protobuf:
 	protoc -I=zk/legacy_executor_verifier/proto --go_out=zk/legacy_executor_verifier/proto zk/legacy_executor_verifier/proto/process_batch.proto
+	protoc -I=zk/datastream/proto --go_out=zk/datastream/proto zk/datastream/proto/datastream.proto
 
 ## help:                              print commands help
 help	:	Makefile

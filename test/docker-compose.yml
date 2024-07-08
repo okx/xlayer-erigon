@@ -13,9 +13,6 @@ services:
       - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-state-db:
     container_name: erigon-state-db
@@ -53,7 +50,7 @@ services:
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: zjg555543/zkevm-aggregator:29206d2
+    image: hermeznetwork/zkevm-aggregator:v0.0.2-RC35
     ports:
       - 50081:50081
     volumes:
@@ -98,9 +95,6 @@ services:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-approve:
     container_name: erigon-approve

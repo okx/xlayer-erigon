@@ -12,6 +12,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/constants"
 	"github.com/ledgerwatch/erigon/zk/contracts"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/types"
@@ -88,7 +89,7 @@ Loop:
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
 				case contracts.InitialSequenceBatchesTopic:
-					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
+					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header, cfg.zkCfg.SequencerInitialForkId); err != nil {
 						return err
 					}
 					// we only ever handle a single injected batch as a sequencer currently so we can just
@@ -182,7 +183,8 @@ func HandleL1InfoTreeUpdate(
 }
 
 const (
-	injectedBatchLogTrailingBytes        = 23
+	injectedBatchLogTrailingBytes        = 24
+	injectedBatchLogTrailingBytesForkID9 = 23
 	injectedBatchLogTransactionStartByte = 128
 	injectedBatchLastGerStartByte        = 31
 	injectedBatchLastGerEndByte          = 64
@@ -195,9 +197,9 @@ func HandleInitialSequenceBatches(
 	db *hermez_db.HermezDb,
 	l ethTypes.Log,
 	header *ethTypes.Header,
+	squencerInitialForkId uint64,
 ) error {
 	var err error
-
 	if header == nil {
 		header, err = syncer.GetHeader(l.BlockNumber)
 		if err != nil {
@@ -208,9 +210,12 @@ func HandleInitialSequenceBatches(
 	// the log appears to have some trailing 24 bytes of all 0s in it.  Not sure why but we can't handle the
 	// TX without trimming these off
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
-	log.Info("Found injected batch", "l.Data", l.Data)
+	if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
+		trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
+		log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
+	}
+
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
-	log.Info("Found injected batch", "txData", txData)
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,

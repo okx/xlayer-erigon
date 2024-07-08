@@ -48,9 +48,6 @@ func GetL1GasPrice(l1RpcUrl string) (*big.Int, error) {
 	if res.Error != nil {
 		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
 	}
-	if res.Error != nil {
-		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
-	}
 
 	var resultString string
 	if err := json.Unmarshal(res.Result, &resultString); err != nil {

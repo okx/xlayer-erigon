@@ -10,7 +10,7 @@ ProofStatePollingInterval = "5s"
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
-ForkId = 8
+ForkId = 9
 WitnessURL = "http://erigon-seq:8545"
 LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 	[Aggregator.DB]

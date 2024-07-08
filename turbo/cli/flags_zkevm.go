@@ -120,18 +120,16 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DebugLimit:                             ctx.Uint64(utils.DebugLimit.Name),
 		DebugStep:                              ctx.Uint64(utils.DebugStep.Name),
 		DebugStepAfter:                         ctx.Uint64(utils.DebugStepAfter.Name),
-		NacosURLs:                              ctx.String(utils.NacosURLsFlag.Name),
-		NacosNamespaceId:                       ctx.String(utils.NacosNamespaceIdFlag.Name),
-		NacosApplicationName:                   ctx.String(utils.NacosApplicationNameFlag.Name),
-		NacosExternalListenAddr:                ctx.String(utils.NacosExternalListenAddrFlag.Name),
 		PoolManagerUrl:                         ctx.String(utils.PoolManagerUrl.Name),
 		DisableVirtualCounters:                 ctx.Bool(utils.DisableVirtualCounters.Name),
 		ExecutorPayloadOutput:                  ctx.String(utils.ExecutorPayloadOutput.Name),
 		DAUrl:                                  ctx.String(utils.DAUrl.Name),
 		DataStreamHost:                         ctx.String(utils.DataStreamHost.Name),
 		DataStreamPort:                         ctx.Uint(utils.DataStreamPort.Name),
-		EnableInnerTx:                          ctx.Bool(utils.AllowInternalTransactions.Name),
 	}
+
+	// For X Layer
+	ApplyFlagsForXLayerConfig(ctx, cfg)
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.L2ChainId)
 	if !sequencer.IsSequencer() {

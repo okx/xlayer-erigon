@@ -56,10 +56,11 @@ var (
 
 	commitEvery time.Duration
 
+	// For X Layer
+	enableWhiteList bool
+	whiteList       []string
+	blockList       []string
 	freeClaimGasAddr []string
-	enableWhiteList  bool
-	whiteList        []string
-	blockList        []string
 )
 
 func init() {
@@ -163,6 +164,8 @@ func doTxpool(ctx context.Context) error {
 		sender := common.HexToAddress(senderHex)
 		cfg.TracedSenders[i] = string(sender[:])
 	}
+
+	// For X Layer tx pool access
 	ethCfg := &ethconfig.Defaults
 	ethCfg.DeprecatedTxPool.EnableWhitelist = enableWhiteList
 	ethCfg.DeprecatedTxPool.WhiteList = make([]string, len(whiteList))

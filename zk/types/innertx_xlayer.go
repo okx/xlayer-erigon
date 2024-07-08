@@ -22,5 +22,6 @@ type InnerTx struct {
 	GasUsed       uint64  `json:"gas_used"`
 	Value         string  `json:"value"`
 	ValueWei      string  `json:"value_wei"`
+	CallValueWei  string  `json:"call_value_wei"`
 	Error         string  `json:"error"`
 }

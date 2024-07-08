@@ -35,7 +35,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 	price, err := api.getGPFromTrustedNode()
 	if err != nil {
 		log.Error("eth_gasPrice error: ", err)
-		return (*hexutil.Big)(api.L2GasPircer.GetConfig().Default), nil
+		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
 	}
 
 	return (*hexutil.Big)(price), nil
@@ -62,7 +62,7 @@ func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, 
 		gasResult.Add(tipcap, head.BaseFee)
 	}
 
-	rgp := api.L2GasPircer.GetLastRawGP()
+	rgp := api.L2GasPricer.GetLastRawGP()
 	if gasResult.Cmp(rgp) < 0 {
 		gasResult = new(big.Int).Set(rgp)
 	}
@@ -91,7 +91,7 @@ func (api *APIImpl) isCongested(ctx context.Context) bool {
 		return false
 	}
 
-	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPircer.GetConfig().CongestionThreshold
+	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPricer.GetConfig().XLayer.CongestionThreshold
 
 	return !isLatestBlockEmpty && isPendingTxCongested
 }
@@ -129,16 +129,16 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {
-	cfg := api.L2GasPircer.GetConfig()
-	ctx := api.L2GasPircer.GetCtx()
+	cfg := api.L2GasPricer.GetConfig()
+	ctx := api.L2GasPricer.GetCtx()
 
 	//todo: apollo
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
 	if err == nil {
-		api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+		api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 	}
-	updateTimer := time.NewTimer(cfg.UpdatePeriod)
+	updateTimer := time.NewTimer(cfg.XLayer.UpdatePeriod)
 	for {
 		select {
 		case <-ctx.Done():
@@ -147,9 +147,9 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 		case <-updateTimer.C:
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
-				api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 			}
-			updateTimer.Reset(cfg.UpdatePeriod)
+			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
 		}
 	}
 }

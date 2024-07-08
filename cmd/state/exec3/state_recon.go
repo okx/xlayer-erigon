@@ -329,6 +329,7 @@ func (rw *ReconWorker) runTxTask(txTask *exec22.TxTask) error {
 		rw.engine.Initialize(rw.chainConfig, rw.chain, txTask.Header, ibs, txTask.Txs, txTask.Uncles, syscall)
 	} else {
 		gp := new(core.GasPool).AddGas(txTask.Tx.GetGas())
+		// XLayer, no inner tx
 		vmConfig := vm.Config{NoReceipts: true, NoInnerTxs: true, SkipAnalysis: txTask.SkipAnalysis}
 		ibs.Prepare(txTask.Tx.Hash(), txTask.BlockHash, txTask.TxIndex)
 		msg := txTask.TxAsMessage

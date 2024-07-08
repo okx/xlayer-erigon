@@ -11,7 +11,6 @@ import (
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/params"
-	"github.com/ledgerwatch/log/v3"
 )
 
 func opCallDataLoad_zkevmIncompatible(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
@@ -183,7 +182,7 @@ func makeLog_zkevm(size int, logIndexPerTx bool) executionFunc {
 		}
 		blockNo := interpreter.VM.evm.Context().BlockNumber
 
-		// APPLY BUG ONLY ABOVE FORKID9
+		// [hack] APPLY BUG ONLY ABOVE FORKID9
 		if forkBlock == 0 || blockNo < forkBlock {
 			// [zkEvm] fill 0 at the end
 			dataLen := len(d)
@@ -201,43 +200,11 @@ func makeLog_zkevm(size int, logIndexPerTx bool) executionFunc {
 			  \  /
 			   \/
 			*/
+			var err error
 
-			dataHex := hex.EncodeToString(d)
-
-			bugPossible := false
-
-			// if the first part of datahex < 16 (mSize < 32), remove leading zero
-			if len(dataHex) > 0 && dataHex[0] == '0' && dataHex[1] != '0' && mSize.Uint64() < 32 {
-				bugPossible = true
-				log.Warn("Possible bug detected in log data", "block", blockNo, "data", dataHex, "size", mSize.Uint64())
-			}
-
-			if bugPossible {
-				dataHex = dataHex[1:]
-
-				// pad the hex out
-				dataHex = appendZerosHex(dataHex, 64)
-
-				msInt := mSize.Uint64()
-
-				// conditional padding to match C++ bug
-				if int(msInt*2) > len(dataHex) {
-					dataHex = prependZerosHex(dataHex, int(msInt*2))
-				}
-
-				if len(dataHex) > int(msInt*2) {
-					dataHex = dataHex[:msInt*2]
-				}
-
-				d, _ = hex.DecodeString(dataHex)
-			} else {
-				// erigon behaviour
-				// [zkEvm] fill 0 at the end
-				dataLen := len(d)
-				lenMod32 := dataLen & 31
-				if lenMod32 != 0 {
-					d = append(d, make([]byte, 32-lenMod32)...)
-				}
+			d, err = applyHexPadBug(d, int(mSize.Uint64()), blockNo)
+			if err != nil {
+				return nil, err
 			}
 			/*
 			  \  /
@@ -268,18 +235,84 @@ func makeLog_zkevm(size int, logIndexPerTx bool) executionFunc {
 	}
 }
 
-func prependZerosHex(s string, length int) string {
-	for len(s) < length {
-		s = "0" + s
+func applyHexPadBug(d []byte, msInt int, blockNo uint64) ([]byte, error) {
+	fullMs := msInt
+
+	var dLastWord []byte
+	if len(d) <= 32 {
+		dLastWord = append(d, make([]byte, 32-len(d))...)
+		d = []byte{}
+	} else {
+		dLastWord, msInt = getLastWordBytes(d, fullMs)
+		d = d[:len(d)-len(dLastWord)]
 	}
-	return s
+
+	dataHex := hex.EncodeToString(dLastWord)
+
+	dataHex = appendZeros(dataHex, 64)
+
+	for len(dataHex) > 0 && dataHex[0] == '0' {
+		dataHex = dataHex[1:]
+	}
+
+	if len(dataHex) < msInt*2 {
+		dataHex = prependZeros(dataHex, msInt*2)
+	}
+	outputStr := takeFirstN(dataHex, msInt*2)
+
+	op, err := hex.DecodeString(outputStr)
+	if err != nil {
+		return nil, err
+	}
+	d = append(d, op...)
+
+	d = d[:fullMs]
+
+	return d, nil
 }
 
-func appendZerosHex(s string, length int) string {
-	for len(s) < length {
-		s = s + "0"
+func min(a, b uint64) uint64 {
+	if a < b {
+		return a
 	}
-	return s
+	return b
+}
+
+func getLastWordBytes(data []byte, originalMsInt int) ([]byte, int) {
+	wordLength := 32
+	dataLength := len(data)
+
+	remainderLength := dataLength % wordLength
+	if remainderLength == 0 {
+		return data[dataLength-wordLength:], 32
+	}
+
+	toRemove := dataLength / wordLength
+
+	msInt := originalMsInt - (toRemove * wordLength)
+
+	return data[dataLength-remainderLength:], msInt
+}
+
+func prependZeros(data string, size int) string {
+	for len(data) < size {
+		data = "0" + data
+	}
+	return data
+}
+
+func takeFirstN(data string, n int) string {
+	if len(data) < n {
+		return data
+	}
+	return data[:n]
+}
+
+func appendZeros(dataHex string, targetLength int) string {
+	for len(dataHex) < targetLength {
+		dataHex += "0"
+	}
+	return dataHex
 }
 
 func opCreate_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
@@ -385,7 +418,7 @@ func opCall_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) 
 	}
 
 	innerTx, newIndex := beforeOp(interpreter, CALL_TYP, scope.Contract.Address(), &toAddr, nil, args, gas, value.ToBig())
-	ret, returnGas, err := interpreter.evm.Call(scope.Contract, toAddr, args, gas, &value, false /* bailout */, 0)
+	ret, returnGas, err := interpreter.evm.Call_zkEvm(scope.Contract, toAddr, args, gas, &value, false /* bailout */, 0, int(retSize.Uint64()))
 	afterOp(interpreter, CALL_TYP, gas-returnGas, newIndex, innerTx, nil, err)
 
 	if err != nil {
@@ -422,8 +455,9 @@ func opCallCode_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeConte
 	}
 
 	innerTx, newIndex := beforeOp(interpreter, CALLCODE_TYP, scope.Contract.Address(), &toAddr, &toAddr, args, gas, value.ToBig())
-	ret, returnGas, err := interpreter.evm.CallCode(scope.Contract, toAddr, args, gas, &value)
+	ret, returnGas, err := interpreter.evm.CallCode_zkEvm(scope.Contract, toAddr, args, gas, &value, int(retSize.Uint64()))
 	afterOp(interpreter, CALLCODE_TYP, gas-returnGas, newIndex, innerTx, nil, err)
+
 	if err != nil {
 		temp.Clear()
 	} else {

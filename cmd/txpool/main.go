@@ -61,7 +61,7 @@ var (
 	whiteList        []string
 	blockList        []string
 	freeClaimGasAddr []string
-	gasPriceMultiple float64
+	gasPriceMultiple uint64
 )
 
 func init() {

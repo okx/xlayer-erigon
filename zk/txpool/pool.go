@@ -301,7 +301,7 @@ type TxPool struct {
 	isLocalLRU              *simplelru.LRU[string, struct{}] // tx_hash => is_local : to restore isLocal flag of unwinded transactions
 	newPendingTxs           chan types.Announcements         // notifications about new txs in Pending sub-pool
 	all                     *BySenderAndNonce                // senderID => (sorted map of tx nonce => *metaTx)
-	overflowZkCounters      []*metaTx
+	overflowZkCounters      map[*metaTx]struct{}
 	deletedTxs              []*metaTx // list of discarded txs since last db commit
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
@@ -349,6 +349,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		isLocalLRU:              localsHistory,
 		discardReasonsLRU:       discardHistory,
 		all:                     byNonce,
+		overflowZkCounters:      make(map[*metaTx]struct{}),
 		recentlyConnectedPeers:  &recentlyConnectedPeers{},
 		pending:                 NewPendingSubPool(PendingSubPool, cfg.PendingSubPoolLimit),
 		baseFee:                 NewSubPool(BaseFeeSubPool, cfg.BaseFeeSubPoolLimit),
@@ -462,7 +463,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	if err != nil {
 		return err
 	}
-	p.overflowZkCounters = p.overflowZkCounters[:0]
+
 	p.pending.EnforceWorstInvariants()
 	p.baseFee.EnforceInvariants()
 	p.queued.EnforceInvariants()
@@ -957,7 +958,7 @@ func (p *TxPool) cache() kvcache.Cache {
 func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 	newTxs types.TxSlots, pendingBaseFee, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters []*metaTx,
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters map[*metaTx]struct{},
 	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
@@ -1002,10 +1003,11 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 
 	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
-	for _, tx := range overflowZkCounters {
+	for tx := range overflowZkCounters {
 		pending.Remove(tx)
 		discard(tx, OverflowZkCounters)
 		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
+		delete(overflowZkCounters, tx) // clear overflowZkCounters
 	}
 
 	for senderID := range sendersWithChangedState {
@@ -1024,7 +1026,7 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
 	senders *sendersBatch, newTxs types.TxSlots, pendingBaseFee uint64, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters []*metaTx,
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters map[*metaTx]struct{},
 	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
@@ -1077,10 +1079,11 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 
 	// We must delete them first and then re-tag the related transactions
 	// The new tags will be used to sort transactions
-	for _, tx := range overflowZkCounters {
+	for tx := range overflowZkCounters {
 		pending.Remove(tx)
 		discard(tx, OverflowZkCounters)
 		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
+		delete(overflowZkCounters, tx) // clear overflowZkCounters
 	}
 
 	for senderID := range sendersWithChangedState {
@@ -1140,10 +1143,10 @@ func (p *TxPool) addLocked(mt *metaTx, announcements *types.Announcements) Disca
 		}
 
 		p.discardLocked(found, ReplacedByHigherTip)
-	} else if p.queued.IsFull() {
+	} else if p.pending.IsFull() {
 		// always accept a tx if it would replace an old tx
-		// otherwise it is denied when queued pool is full
-		return QueuedPoolOverflow
+		// otherwise it is denied when pending pool is full
+		return PendingPoolOverflow
 	}
 
 	p.byHash[string(mt.Tx.IDHash[:])] = mt
@@ -1258,8 +1261,8 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		}
 	}
 
-	// Promote best transactions from base fee pool to pending pool while they qualify and pending pool is not full
-	for best := baseFee.Best(); baseFee.Len() > 0 && !pending.IsFull() && best.subPool >= BaseFeePoolBits && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0; best = baseFee.Best() {
+	// Promote best transactions from base fee pool to pending pool while they qualify
+	for best := baseFee.Best(); baseFee.Len() > 0 && best.subPool >= BaseFeePoolBits && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0; best = baseFee.Best() {
 		tx := baseFee.PopBest()
 		announcements.Append(tx.Tx.Type, tx.Tx.Size, tx.Tx.IDHash[:])
 		pending.Add(tx)
@@ -1277,14 +1280,12 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 	// Promote best transactions from the queued pool to either pending or base fee pool, while they qualify.
 	// But just leave them in the queued pool if both pending pool and base fee pool are full.
 	for best := queued.Best(); queued.Len() > 0 && best.subPool >= BaseFeePoolBits; best = queued.Best() {
-		if !pending.IsFull() && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0 {
+		if best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0 {
 			tx := queued.PopBest()
 			announcements.Append(tx.Tx.Type, tx.Tx.Size, tx.Tx.IDHash[:])
 			pending.Add(tx)
-		} else if !baseFee.IsFull() && best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) < 0 {
-			baseFee.Add(queued.PopBest())
 		} else {
-			break
+			baseFee.Add(queued.PopBest())
 		}
 	}
 
@@ -1293,8 +1294,18 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		discard(queued.PopWorst(), FeeTooLow)
 	}
 
-	// Never drop any pending transaction even though it exceeds the capacity.
-	// It is safe because we don't accept any more transactions if the queued sub pool is full.
+	// Never drop any pending transaction in pending pool
+	// It is safe because we don't accept any more transactions if tx pool is full.
+
+	// Discard worst transactions from the baseFee sub pool until it is within capacity limits
+	for baseFee.Len() > baseFee.limit {
+		discard(baseFee.PopWorst(), BaseFeePoolOverflow)
+	}
+
+	// Discard worst transactions from the queued sub pool until it is within its capacity limits
+	for queued.Len() > queued.limit {
+		discard(queued.PopWorst(), QueuedPoolOverflow)
+	}
 }
 
 // MainLoop - does:
@@ -1587,7 +1598,6 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 			log.Warn("[txpool] fromDB: parseTransaction", "err", err)
 			continue
 		}
-		txn.Rlp = nil // means that we don't need store it in db anymore
 
 		txn.SenderID, txn.Traced = p.senders.getOrCreateID(addr)
 		binary.BigEndian.Uint64(v)
@@ -1597,6 +1607,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		if reason := p.validateTx(txn, isLocalTx, cacheView, addr); reason != NotSet && reason != Success {
 			return nil
 		}
+		txn.Rlp = nil // means that we don't need store it in db anymore
 		txs.Resize(uint(i + 1))
 		txs.Txs[i] = txn
 		txs.IsLocal[i] = isLocalTx
@@ -2086,6 +2097,9 @@ func (p *PendingPool) EnforceBestInvariants() {
 	if !p.sorted {
 		sort.Sort(p.best)
 		p.sorted = true
+	} else if !sort.IsSorted(p.best) {
+		sort.Sort(p.best)
+		log.Error("EnforceBestInvariants, unsorted best")
 	}
 }
 
@@ -2114,8 +2128,7 @@ func (p *PendingPool) PopWorst() *metaTx { //nolint
 func (p *PendingPool) Updated(mt *metaTx) {
 	heap.Fix(p.worst, mt.worstIndex)
 }
-func (p *PendingPool) Len() int { return len(p.best.ms) }
-
+func (p *PendingPool) Len() int     { return len(p.best.ms) }
 func (p *PendingPool) IsFull() bool { return p.Len() >= p.limit }
 
 func (p *PendingPool) Remove(i *metaTx) {
@@ -2186,8 +2199,7 @@ func (p *SubPool) PopWorst() *metaTx { //nolint
 	heap.Remove(p.best, i.bestIndex)
 	return i
 }
-func (p *SubPool) IsFull() bool { return p.Len() >= p.limit }
-func (p *SubPool) Len() int     { return p.best.Len() }
+func (p *SubPool) Len() int { return p.best.Len() }
 func (p *SubPool) Add(i *metaTx) {
 	if i.Tx.Traced {
 		log.Info(fmt.Sprintf("TX TRACING: moved to subpool %s, IdHash=%x, sender=%d", p.t, i.Tx.IDHash, i.Tx.SenderID))

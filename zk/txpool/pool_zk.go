@@ -246,7 +246,7 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			p.overflowZkCounters = append(p.overflowZkCounters, mt)
+			p.overflowZkCounters[mt] = struct{}{}
 			break
 		}
 	}

@@ -31,3 +31,7 @@ func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	}
 	return false
 }
+
+func (p *TxPool) isFull() bool {
+	return p.pending.Len()+p.baseFee.Len()+p.queued.Len() >= p.pending.limit+p.baseFee.limit+p.queued.limit
+}

@@ -49,6 +49,11 @@ var (
 		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
 	}
+	TxPoolFreeClaimGasFlag = cli.StringFlag{
+		Name:  "txpool.freeclaimgas",
+		Usage: "support free gas for claim addrs",
+		Value: "",
+	}
 	// Gas Price
 	GpoDefaultGasPriceFlag = cli.Int64Flag{
 		Name:  "gpo.default-price",

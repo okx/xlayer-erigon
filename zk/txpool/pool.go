@@ -1310,8 +1310,7 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		}
 	}
 
-	// Promote best transactions from the queued pool to either pending or base fee pool, while they qualify.
-	// But just leave them in the queued pool if both pending pool and base fee pool are full.
+	// Promote best transactions from the queued pool to either pending or base fee pool, while they qualify
 	for best := queued.Best(); queued.Len() > 0 && best.subPool >= BaseFeePoolBits; best = queued.Best() {
 		if best.minFeeCap.Cmp(uint256.NewInt(pendingBaseFee)) >= 0 {
 			tx := queued.PopBest()
@@ -1327,10 +1326,12 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		discard(queued.PopWorst(), FeeTooLow)
 	}
 
-	// Never drop any pending transaction in pending pool
-	// It is safe because we don't accept any more transactions if tx pool is full.
+	// Discard worst transactions from pending pool until it is within capacity limit
+	for pending.Len() > pending.limit {
+		discard(pending.PopWorst(), PendingPoolOverflow)
+	}
 
-	// Discard worst transactions from the baseFee sub pool until it is within capacity limits
+	// Discard worst transactions from pending sub pool until it is within capacity limits
 	for baseFee.Len() > baseFee.limit {
 		discard(baseFee.PopWorst(), BaseFeePoolOverflow)
 	}

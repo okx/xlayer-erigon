@@ -21,7 +21,7 @@ func APIList(db kv.RoDB, borDb kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.
 	filters *rpchelper.Filters, stateCache kvcache.Cache,
 	blockReader services.FullBlockReader, agg *libstate.AggregatorV3, cfg httpcfg.HttpCfg, engine consensus.EngineReader,
 	ethCfg *ethconfig.Config, l1Syncer *syncer.L1Syncer,
-) (list []rpc.API) {
+) (list []rpc.API, gpCache *GasPriceCache) {
 
 	// non-sequencer nodes should forward on requests to the sequencer
 	rpcUrl := ""
@@ -152,7 +152,7 @@ func APIList(db kv.RoDB, borDb kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.
 		}
 	}
 
-	return list
+	return list, ethImpl.GetGPCache()
 }
 
 func AuthAPIList(db kv.RoDB, eth rpchelper.ApiBackend, txPool txpool.TxpoolClient, mining txpool.MiningClient,

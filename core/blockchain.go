@@ -74,7 +74,7 @@ type EphemeralExecResult struct {
 	GasUsed          math.HexOrDecimal64   `json:"gasUsed"`
 	StateSyncReceipt *types.Receipt        `json:"-"`
 
-	InnerTxs [][]*zktypes.InnerTx `json:"innerTxs"`
+	InnerTxs [][]*zktypes.InnerTx `json:"innerTxs"` // XLayer, inner tx
 }
 
 // ExecuteBlockEphemerally runs a block from provided stateReader and

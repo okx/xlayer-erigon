@@ -84,7 +84,7 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 		value := result.String()[:3] + fmt.Sprintf(aux, 0)
 		truncateValue, ok = new(big.Int).SetString(value, 10)
 		if !ok {
-			log.Error("error converting: ", truncateValue)
+			log.Error(fmt.Sprintf("error converting: %s", value))
 		}
 	} else {
 		truncateValue = result

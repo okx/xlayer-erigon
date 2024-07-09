@@ -29,7 +29,7 @@ type Client struct {
 // NewClient creates a new apollo client
 func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	if ethCfg == nil || !ethCfg.Zk.XLayer.Apollo.Enable || ethCfg.Zk.XLayer.Apollo.IP == "" || ethCfg.Zk.XLayer.Apollo.AppID == "" || ethCfg.Zk.XLayer.Apollo.NamespaceName == "" {
-		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", ethCfg))
+		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", ethCfg.Zk.XLayer.Apollo))
 		return nil
 	}
 	c := &config.AppConfig{

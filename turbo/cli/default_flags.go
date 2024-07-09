@@ -250,4 +250,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolEnableWhitelistFlag,
 	&utils.TxPoolWhiteList,
 	&utils.TxPoolBlockedList,
+	&utils.SequencerBatchSleepDuration,
 }

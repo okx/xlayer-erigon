@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	// XLayer apollo
+	// X Layer apollo
 	ApolloEnableFlag = cli.BoolFlag{
 		Name:  "zkevm.apollo-enabled",
 		Usage: "Apollo enable flag.",
@@ -151,6 +151,11 @@ var (
 		Name:  "gpo.congestion-threshold",
 		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
 		Value: 0,
+	}
+	SequencerBatchSleepDuration = cli.DurationFlag{
+		Name:  "zkevm.sequencer-batch-sleep-duration",
+		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
+		Value: 0 * time.Second,
 	}
 )
 

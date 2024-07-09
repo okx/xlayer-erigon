@@ -3,6 +3,7 @@ package ethconfig
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // ApolloConfig is the apollo eth backend dynamic config
@@ -40,4 +41,13 @@ func (c *ApolloConfig) Enable() bool {
 	c.RLock()
 	defer c.RUnlock()
 	return c.EnableApollo
+}
+
+func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
+	conf, err := GetApolloConfig()
+	if err != nil {
+		return localDuration
+	} else {
+		return conf.Zk.XLayer.SequencerBatchSleepDuration
+	}
 }

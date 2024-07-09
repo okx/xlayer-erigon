@@ -2138,9 +2138,6 @@ func (p *PendingPool) EnforceBestInvariants() {
 	if !p.sorted {
 		sort.Sort(p.best)
 		p.sorted = true
-	} else if !sort.IsSorted(p.best) {
-		sort.Sort(p.best)
-		log.Error("EnforceBestInvariants, unsorted best")
 	}
 }
 
@@ -2158,9 +2155,6 @@ func (p *PendingPool) Worst() *metaTx { //nolint
 }
 func (p *PendingPool) PopWorst() *metaTx { //nolint
 	i := heap.Pop(p.worst).(*metaTx)
-	if i.bestIndex != p.Len()-1 { // which should never happen
-		p.sorted = false
-	}
 	if i.bestIndex >= 0 {
 		p.best.UnsafeRemove(i)
 	}

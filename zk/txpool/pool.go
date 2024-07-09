@@ -305,8 +305,8 @@ type TxPool struct {
 	isLocalLRU              *simplelru.LRU[string, struct{}] // tx_hash => is_local : to restore isLocal flag of unwinded transactions
 	newPendingTxs           chan types.Announcements         // notifications about new txs in Pending sub-pool
 	all                     *BySenderAndNonce                // senderID => (sorted map of tx nonce => *metaTx)
-	overflowZkCounters      map[*metaTx]struct{}
-	deletedTxs              []*metaTx // list of discarded txs since last db commit
+	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
+	overflowZkCounters      []*metaTx
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
 	chainID                 uint256.Int
@@ -359,7 +359,6 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		isLocalLRU:              localsHistory,
 		discardReasonsLRU:       discardHistory,
 		all:                     byNonce,
-		overflowZkCounters:      make(map[*metaTx]struct{}),
 		recentlyConnectedPeers:  &recentlyConnectedPeers{},
 		pending:                 NewPendingSubPool(PendingSubPool, cfg.PendingSubPoolLimit),
 		baseFee:                 NewSubPool(BaseFeeSubPool, cfg.BaseFeeSubPoolLimit),
@@ -468,9 +467,9 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 
 	//log.Debug("[txpool] new block", "unwinded", len(unwindTxs.txs), "mined", len(minedTxs.txs), "baseFee", baseFee, "blockHeight", blockHeight)
 
-	announcements, err := addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
+	announcements, err := p.addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
 		pendingBaseFee, stateChanges.BlockGasLimit,
-		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked)
+		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked)
 	if err != nil {
 		return err
 	}
@@ -533,8 +532,8 @@ func (p *TxPool) processRemoteTxs(ctx context.Context) error {
 		return err
 	}
 
-	announcements, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, true)
+	announcements, _, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
+		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
 	if err != nil {
 		return err
 	}
@@ -943,8 +942,8 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 		return nil, err
 	}
 
-	announcements, addReasons, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, true)
+	announcements, addReasons, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
+		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
 	if err == nil {
 		for i, reason := range addReasons {
 			if reason != NotSet {
@@ -988,11 +987,10 @@ func (p *TxPool) cache() kvcache.Cache {
 	return p._stateCache
 }
 
-func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
+func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 	newTxs types.TxSlots, pendingBaseFee, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters map[*metaTx]struct{},
-	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason), collect bool) (types.Announcements, []DiscardReason, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
 		for _, txn := range newTxs.Txs {
@@ -1036,19 +1034,20 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 
 	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
-	for tx := range overflowZkCounters {
+	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)
 		discard(tx, OverflowZkCounters)
 		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
-		delete(overflowZkCounters, tx) // clear overflowZkCounters
 	}
+
+	p.overflowZkCounters = p.overflowZkCounters[:0] // clear overflowZkCounters
 
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
 		if err != nil {
 			return announcements, discardReasons, err
 		}
-		onSenderStateChange(senderID, nonce, balance, byNonce,
+		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
@@ -1056,11 +1055,10 @@ func addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *sendersBatch,
 
 	return announcements, discardReasons, nil
 }
-func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
+func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
 	senders *sendersBatch, newTxs types.TxSlots, pendingBaseFee uint64, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, overflowZkCounters map[*metaTx]struct{},
-	add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
 		for _, txn := range newTxs.Txs {
@@ -1112,19 +1110,19 @@ func addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges
 
 	// We must delete them first and then re-tag the related transactions
 	// The new tags will be used to sort transactions
-	for tx := range overflowZkCounters {
+	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)
 		discard(tx, OverflowZkCounters)
 		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
-		delete(overflowZkCounters, tx) // clear overflowZkCounters
 	}
+	p.overflowZkCounters = p.overflowZkCounters[:0] // clear overflowZkCounters
 
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
 		if err != nil {
 			return announcements, err
 		}
-		onSenderStateChange(senderID, nonce, balance, byNonce,
+		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
@@ -1670,8 +1668,8 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 	if err != nil {
 		return err
 	}
-	if _, _, err := addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, txs,
-		pendingBaseFee, math.MaxUint64 /* blockGasLimit */, p.pending, p.baseFee, p.queued, p.all, p.byHash, p.overflowZkCounters, p.addLocked, p.discardLocked, false); err != nil {
+	if _, _, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, txs,
+		pendingBaseFee, math.MaxUint64 /* blockGasLimit */, p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, false); err != nil {
 		return err
 	}
 	p.pendingBaseFee.Store(pendingBaseFee)

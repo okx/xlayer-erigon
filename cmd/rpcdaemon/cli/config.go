@@ -540,7 +540,6 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 
 	graphQLHandler := graphql.CreateHandler(defaultAPIList)
 
-	// TODO: ws handler serves the http endpoint and the configured ws endpoints are never used.
 	apiHandler, err := createHandler(cfg, defaultAPIList, httpHandler, wsHandler, graphQLHandler, nil)
 	if err != nil {
 		return err

@@ -49,9 +49,6 @@ http.timeouts.write: "60s"
 rpc.batch.concurrency: 2
 rpc.batch.limit: 20
 ws: true
-ws.addr: 0.0.0.0
-ws.port: 8133
-ws.api: "eth"
 
 zkevm.apollo-enabled: false
 zkevm.apollo-ip-addr: ""

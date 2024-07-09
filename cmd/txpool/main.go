@@ -163,7 +163,7 @@ func doTxpool(ctx context.Context) error {
 		cfg.TracedSenders[i] = string(sender[:])
 	}
 
-	// For X Layer
+	// For X Layer tx pool access
 	ethCfg := &ethconfig.Defaults
 	ethCfg.DeprecatedTxPool.EnableWhitelist = enableWhiteList
 	ethCfg.DeprecatedTxPool.WhiteList = make([]string, len(whiteList))

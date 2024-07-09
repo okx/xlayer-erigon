@@ -62,6 +62,16 @@ zkevm.nacos-namespace-id: ""
 zkevm.nacos-application-name: ""
 zkevm.nacos-external-listen-addr: ""
 
+zkevm.apollo-enabled: false
+zkevm.apollo-ip-addr: ""
+zkevm.apollo-app-id: ""
+zkevm.apollo-namespace-name: ""
+
+zkevm.nacos-urls: ""
+zkevm.nacos-namespace-id: ""
+zkevm.nacos-application-name: ""
+zkevm.nacos-external-listen-addr: ""
+
 db.read.concurrency: 20000
 txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000

@@ -230,7 +230,6 @@ type metaTx struct {
 	currentSubPool                    SubPoolType
 	alreadyYielded                    bool
 	overflowZkCountersDuringExecution bool
-	isClaimTx                         bool
 }
 
 func newMetaTx(slot *types.TxSlot, isLocal bool, timestmap uint64) *metaTx {
@@ -377,9 +376,9 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
 		flushMtx:                &sync.Mutex{},
 		wbCfg: WBConfig{ // XLayer config
-			EnableWhitelist: ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:       ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:     ethCfg.DeprecatedTxPool.BlockedList,
+			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
 			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
 		},
 		aclDB: aclDB,
@@ -1038,8 +1037,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		if err != nil {
 			return announcements, discardReasons, err
 		}
-		isFreeClaimAddr := p.isFreeClaimAddr(senderID)
-		onSenderStateChange(isFreeClaimAddr, senderID, nonce, balance, byNonce,
+		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
@@ -1105,8 +1103,7 @@ func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, 
 		if err != nil {
 			return announcements, err
 		}
-		isFreeClaimAddr := p.isFreeClaimAddr(senderID)
-		onSenderStateChange(isFreeClaimAddr, senderID, nonce, balance, byNonce,
+		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 

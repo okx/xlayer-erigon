@@ -19,12 +19,16 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -41,12 +45,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
-
-	"encoding/json"
-	"os"
-	"path"
-
-	"time"
 
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
@@ -203,21 +201,6 @@ var (
 		Name:  "txpool.commit.every",
 		Usage: "How often transactions should be committed to the storage",
 		Value: txpoolcfg.DefaultConfig.CommitEvery,
-	}
-	TxPoolEnableWhitelistFlag = cli.BoolFlag{
-		Name:  "txpool.enable.whitelist",
-		Usage: "Enable or disable tx sender white list",
-		Value: false,
-	}
-	TxPoolWhiteList = cli.StringFlag{
-		Name:  "txpool.whitelist",
-		Usage: "Comma separated list of addresses, who can send transactions",
-		Value: "",
-	}
-	TxPoolBlockedList = cli.StringFlag{
-		Name:  "txpool.blockedlist",
-		Usage: "Comma separated list of addresses, who can't send and receive transactions",
-		Value: "",
 	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
@@ -448,6 +431,11 @@ var (
 		Usage:    "Ethereum L1 delay between queries for verifications and sequences - in milliseconds",
 		Value:    6000,
 	}
+	L1HighestBlockTypeFlag = cli.StringFlag{
+		Name:  "zkevm.l1-highest-block-type",
+		Usage: "The type of the highest block in the L1 chain. latest, safe, or finalized",
+		Value: "finalized",
+	}
 	L1MaticContractAddressFlag = cli.StringFlag{
 		Name:  "zkevm.l1-matic-contract-address",
 		Usage: "Ethereum L1 Matic contract address",
@@ -462,6 +450,16 @@ var (
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
 		Value: 10000,
+	}
+	IncrementTreeAlways = cli.BoolFlag{
+		Name:  "zkevm.increment-tree-always",
+		Usage: "Increment the state tree, never rebuild",
+		Value: false,
+	}
+	SmtRegenerateInMemory = cli.BoolFlag{
+		Name:  "zkevm.smt-regenerate-in-memory",
+		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
+		Value: false,
 	}
 	SequencerInitialForkId = cli.Uint64Flag{
 		Name:  "zkevm.sequencer-initial-fork-id",
@@ -497,6 +495,11 @@ var (
 		Name:  "zkevm.executor-request-timeout",
 		Usage: "The timeout for the executor request",
 		Value: 60 * time.Second,
+	}
+	DatastreamNewBlockTimeout = cli.DurationFlag{
+		Name:  "zkevm.datastream-new-block-timeout",
+		Usage: "The timeout for the executor request",
+		Value: 500 * time.Millisecond,
 	}
 	ExecutorMaxConcurrentRequests = cli.IntFlag{
 		Name:  "zkevm.executor-max-concurrent-requests",
@@ -598,6 +601,11 @@ var (
 		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
 		Value: "",
 	}
+	DAUrl = cli.StringFlag{
+		Name:  "zkevm.da-url",
+		Usage: "The URL of the data availability service",
+		Value: "",
+	}
 	AllowInternalTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-internal-transactions",
 		Usage: "Allow the sequencer to proceed internal transactions",
@@ -620,27 +628,6 @@ var (
 	DebugStepAfter = cli.UintFlag{
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
-	}
-	// XLayer nacos
-	NacosURLsFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-urls",
-		Usage: "Nacos urls.",
-		Value: "",
-	}
-	NacosNamespaceIdFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-namespace-id",
-		Usage: "Nacos namespace Id.",
-		Value: "",
-	}
-	NacosApplicationNameFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-application-name",
-		Usage: "Nacos application name",
-		Value: "",
-	}
-	NacosExternalListenAddrFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-external-listen-addr",
-		Usage: "Nacos external listen addr.",
-		Value: "",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",
@@ -886,108 +873,6 @@ var (
 		Name:  "gpo.max-price",
 		Usage: "Maximum gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.MaxPrice.Int64(),
-	}
-
-	GpoDefaultGasPriceFlag = cli.Int64Flag{
-		Name:  "gpo.default-price",
-		Usage: "Default gas price will be recommended by gpo",
-		Value: ethconfig.Defaults.GPO.Default.Int64(),
-	}
-
-	GpoTypeFlag = cli.StringFlag{
-		Name:  "gpo.type",
-		Usage: "raw gas price strategy type: default, follower, fixed",
-		Value: "default",
-	}
-
-	GpoUpdatePeriodFlag = cli.StringFlag{
-		Name:  "gpo.update-period",
-		Usage: "raw gas price update period",
-		Value: "10s",
-	}
-
-	GpoFactorFlag = cli.Float64Flag{
-		Name:  "gpo.factor",
-		Usage: "raw gas price facotr",
-		Value: 0.15,
-	}
-
-	GpoKafkaURLFlag = cli.StringFlag{
-		Name:  "gpo.kafka-url",
-		Usage: "raw gas price kafka url",
-		Value: "",
-	}
-
-	GpoTopicFlag = cli.StringFlag{
-		Name:  "gpo.topic",
-		Usage: "raw gas price topic",
-		Value: "",
-	}
-
-	GpoGroupIDFlag = cli.StringFlag{
-		Name:  "gpo.group-id",
-		Usage: "raw gas price group id",
-		Value: "",
-	}
-
-	GpoUsernameFlag = cli.StringFlag{
-		Name:  "gpo.username",
-		Usage: "raw gas price username",
-		Value: "",
-	}
-
-	GpoPasswordFlag = cli.StringFlag{
-		Name:  "gpo.password",
-		Usage: "raw gas price password",
-		Value: "",
-	}
-
-	GpoRootCAPathFlag = cli.StringFlag{
-		Name:  "gpo.root-ca-path",
-		Usage: "raw gas price root ca path",
-		Value: "",
-	}
-
-	GpoL1CoinIdFlag = cli.IntFlag{
-		Name:  "gpo.l1-coin-id",
-		Usage: "raw gas price l1 coin id",
-		Value: 0,
-	}
-
-	GpoL2CoinIdFlag = cli.IntFlag{
-		Name:  "gpo.l2-coin-id",
-		Usage: "raw gas price l2 coin id",
-		Value: 0,
-	}
-
-	GpoDefaultL1CoinPriceFlag = cli.Float64Flag{
-		Name:  "gpo.default-l1-coin-price",
-		Usage: "raw gas price default l1 coin price",
-		Value: 0,
-	}
-
-	GpoDefaultL2CoinPriceFlag = cli.Float64Flag{
-		Name:  "gpo.default-l2-coin-price",
-		Usage: "raw gas price default l2 coin price",
-		Value: 0,
-	}
-
-	GpoGasPriceUsdtFlag = cli.Float64Flag{
-		Name:  "gpo.gas-price-usdt",
-		Usage: "raw gas price usdt",
-		Value: 0,
-	}
-
-	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
-		Name:  "gpo.enable-follower-adjust",
-		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
-		Value: true,
-	}
-
-	GpoCongestionThresholdFlag = cli.IntFlag{
-		Name:  "gpo.congestion-threshold",
-		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
-		Value: 0,
 	}
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
@@ -1603,73 +1488,8 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 		cfg.Default = big.NewInt(ctx.Int64(GpoDefaultGasPriceFlag.Name))
 	}
 
-	if ctx.IsSet(GpoTypeFlag.Name) {
-		cfg.Type = ctx.String(GpoTypeFlag.Name)
-	}
-
-	if ctx.IsSet(GpoUpdatePeriodFlag.Name) {
-		period, err := time.ParseDuration(ctx.String(GpoUpdatePeriodFlag.Name))
-		if err != nil {
-			panic(fmt.Sprintf("could not parse GpoUpdatePeriodFlag value %s", ctx.String(GpoUpdatePeriodFlag.Name)))
-		}
-		cfg.UpdatePeriod = period
-	}
-
-	if ctx.IsSet(GpoFactorFlag.Name) {
-		cfg.Factor = ctx.Float64(GpoFactorFlag.Name)
-	}
-
-	if ctx.IsSet(GpoKafkaURLFlag.Name) {
-		cfg.KafkaURL = ctx.String(GpoKafkaURLFlag.Name)
-	}
-
-	if ctx.IsSet(GpoTopicFlag.Name) {
-		cfg.Topic = ctx.String(GpoTopicFlag.Name)
-	}
-
-	if ctx.IsSet(GpoGroupIDFlag.Name) {
-		cfg.GroupID = ctx.String(GpoGroupIDFlag.Name)
-	}
-
-	if ctx.IsSet(GpoUsernameFlag.Name) {
-		cfg.Username = ctx.String(GpoUsernameFlag.Name)
-	}
-
-	if ctx.IsSet(GpoPasswordFlag.Name) {
-		cfg.Password = ctx.String(GpoPasswordFlag.Name)
-	}
-
-	if ctx.IsSet(GpoRootCAPathFlag.Name) {
-		cfg.RootCAPath = ctx.String(GpoRootCAPathFlag.Name)
-	}
-
-	if ctx.IsSet(GpoL1CoinIdFlag.Name) {
-		cfg.L1CoinId = ctx.Int(GpoL1CoinIdFlag.Name)
-	}
-
-	if ctx.IsSet(GpoL2CoinIdFlag.Name) {
-		cfg.L2CoinId = ctx.Int(GpoL2CoinIdFlag.Name)
-	}
-
-	if ctx.IsSet(GpoDefaultL1CoinPriceFlag.Name) {
-		cfg.DefaultL1CoinPrice = ctx.Float64(GpoDefaultL1CoinPriceFlag.Name)
-	}
-
-	if ctx.IsSet(GpoDefaultL2CoinPriceFlag.Name) {
-		cfg.DefaultL2CoinPrice = ctx.Float64(GpoDefaultL2CoinPriceFlag.Name)
-	}
-
-	if ctx.IsSet(GpoGasPriceUsdtFlag.Name) {
-		cfg.GasPriceUsdt = ctx.Float64(GpoGasPriceUsdtFlag.Name)
-	}
-
-	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
-		cfg.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
-	}
-
-	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
-		cfg.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)
-	}
+	// For X Layer
+	setGPOXLayer(ctx, &cfg.XLayer)
 }
 
 // nolint
@@ -1739,27 +1559,7 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
 
 	// XLayer config
-	if ctx.IsSet(TxPoolEnableWhitelistFlag.Name) {
-		cfg.EnableWhitelist = ctx.Bool(TxPoolEnableWhitelistFlag.Name)
-	}
-	if ctx.IsSet(TxPoolWhiteList.Name) {
-		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolWhiteList.Name))
-		cfg.WhiteList = make([]string, len(addrHexes))
-		for i, senderHex := range addrHexes {
-			sender := libcommon.HexToAddress(senderHex)
-			cfg.WhiteList[i] = sender.String()
-		}
-	}
-	if ctx.IsSet(TxPoolBlockedList.Name) {
-		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolBlockedList.Name))
-		cfg.BlockedList = make([]string, len(addrHexes))
-		for i, senderHex := range addrHexes {
-			sender := libcommon.HexToAddress(senderHex)
-			cfg.BlockedList[i] = sender.String()
-		}
-	}
+	setTxPoolXLayer(ctx, cfg)
 }
 
 func setEthash(ctx *cli.Context, datadir string, cfg *ethconfig.Config) {
@@ -2041,17 +1841,18 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	// Override any default configs for hard coded networks.
 	chain := ctx.String(ChainFlag.Name)
 	if strings.HasPrefix(chain, "dynamic") {
+		configFilePath := ctx.String(ConfigFlag.Name)
+		if configFilePath == "" {
+			Fatalf("Config file is required for dynamic chain")
+		}
+
+		// Be sure to set this first
+		params.DynamicChainConfigPath = filepath.Dir(configFilePath)
+		filename := path.Join(params.DynamicChainConfigPath, chain+"-conf.json")
+
 		genesis := core.GenesisBlockByChainName(chain)
 
 		dConf := DynamicConfig{}
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-
-		basePath := path.Join(homeDir, "dynamic-configs")
-		filename := path.Join(basePath, chain+"-conf.json")
 
 		if _, err := os.Stat(filename); err == nil {
 			dConfBytes, err := os.ReadFile(filename)

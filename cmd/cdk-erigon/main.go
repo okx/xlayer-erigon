@@ -62,6 +62,9 @@ func runErigon(cliCtx *cli.Context) error {
 	nodeCfg := node.NewNodConfigUrfave(cliCtx)
 	ethCfg := node.NewEthConfigUrfave(cliCtx, nodeCfg)
 
+	// Init for X Layer
+	initRunForXLayer(ethCfg, nodeCfg)
+
 	ethNode, err := node.New(nodeCfg, ethCfg)
 	if err != nil {
 		log.Error("Erigon startup", "err", err)

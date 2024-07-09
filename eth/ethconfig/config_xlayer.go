@@ -2,6 +2,7 @@ package ethconfig
 
 // XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
+	Apollo        ApolloClientConfig
 	Nacos         NacosConfig
 	EnableInnerTx bool
 }
@@ -14,4 +15,12 @@ type NacosConfig struct {
 	NamespaceId        string
 	ApplicationName    string
 	ExternalListenAddr string
+}
+
+// ApolloClientConfig is the config for apollo
+type ApolloClientConfig struct {
+	Enable        bool
+	IP            string
+	AppID         string
+	NamespaceName string
 }

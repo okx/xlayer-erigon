@@ -107,7 +107,7 @@ func TestParseCoinPrice(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		rp := newKafkaProcessor(Config{Topic: "middle_coinPrice_push"}, context.Background())
+		rp := newKafkaProcessor(XLayerConfig{Topic: "middle_coinPrice_push"}, context.Background())
 		rt, err := rp.parseCoinPrice([]byte(tc.msg), tc.coinIds)
 		tc.check(rt, err)
 	}
@@ -119,7 +119,7 @@ func TestUpdateL1L2CoinPrice(t *testing.T) {
 	}{
 		{
 			check: func() {
-				rp := newKafkaProcessor(Config{Topic: "middle_coinPrice_push"}, context.Background())
+				rp := newKafkaProcessor(XLayerConfig{Topic: "middle_coinPrice_push"}, context.Background())
 				prices := map[int]float64{ethcoinId: 1.5, okbcoinId: 0.5}
 				rp.updateL1L2CoinPrice(prices)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -129,7 +129,7 @@ func TestUpdateL1L2CoinPrice(t *testing.T) {
 		},
 		{
 			check: func() {
-				rp := newKafkaProcessor(Config{Topic: "middle_coinPrice_push"}, context.Background())
+				rp := newKafkaProcessor(XLayerConfig{Topic: "middle_coinPrice_push"}, context.Background())
 				prices := map[int]float64{ethcoinId: 1.5}
 				rp.updateL1L2CoinPrice(prices)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -149,7 +149,7 @@ func TestUpdateL1L2CoinPrice(t *testing.T) {
 		},
 		{
 			check: func() {
-				rp := newKafkaProcessor(Config{Topic: "middle_coinPrice_push"}, context.Background())
+				rp := newKafkaProcessor(XLayerConfig{Topic: "middle_coinPrice_push"}, context.Background())
 				prices := map[int]float64{okbcoinId: 0.5}
 				rp.updateL1L2CoinPrice(prices)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -176,13 +176,13 @@ func TestUpdateL1L2CoinPrice(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	testcases := []struct {
 		msg   string
-		cfg   Config
+		cfg   XLayerConfig
 		check func(rp *KafkaProcessor, err error)
 	}{
 		// FixedType
 		{ // correct
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}, {\"coinId\":%d,\"price\":0.002}, {\"coinId\":123,\"price\":0.005}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", ethcoinId, okbcoinId),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FixedType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FixedType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.NoError(t, err)
 				require.Equal(t, rp.GetL2CoinPrice(), 0.002)
@@ -190,7 +190,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{ // not find
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", ethcoinId),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FixedType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FixedType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.Equal(t, err, ErrNotFindCoinPrice)
 				require.Equal(t, rp.GetL2CoinPrice(), float64(0))
@@ -198,7 +198,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{ // not find
 			msg: "{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}",
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FixedType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FixedType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.EqualError(t, err, "the data PriceList is empty")
 				require.Equal(t, rp.GetL2CoinPrice(), float64(0))
@@ -208,7 +208,7 @@ func TestUpdate(t *testing.T) {
 		// FollowerType
 		{ // correct
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}, {\"coinId\":%d,\"price\":0.002}, {\"coinId\":123,\"price\":0.005}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", ethcoinId, okbcoinId),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FollowerType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FollowerType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.NoError(t, err)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -218,7 +218,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{ // not find
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", ethcoinId+1),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FollowerType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FollowerType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.Equal(t, err, ErrNotFindCoinPrice)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -228,7 +228,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{ // find one but not update
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", ethcoinId),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FollowerType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FollowerType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.NoError(t, err)
 				l1, l2 := rp.GetL1L2CoinPrice()
@@ -238,7 +238,7 @@ func TestUpdate(t *testing.T) {
 		},
 		{ // find one but not update
 			msg: fmt.Sprintf("{\"topic\":\"middle_coinPrice_push\",\"source\":null,\"type\":null,\"data\":{\"priceList\":[{\"coinId\":%d,\"price\":0.04}],\"id\":\"98a797ce-f61b-4e90-87ac-445e77ad3599\"}}", okbcoinId),
-			cfg: Config{Topic: "middle_coinPrice_push", Type: FollowerType},
+			cfg: XLayerConfig{Topic: "middle_coinPrice_push", Type: FollowerType},
 			check: func(rp *KafkaProcessor, err error) {
 				require.NoError(t, err)
 				l1, l2 := rp.GetL1L2CoinPrice()

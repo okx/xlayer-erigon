@@ -22,7 +22,7 @@ type L2GasPricer interface {
 // NewL2GasPriceSuggester init.
 func NewL2GasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) L2GasPricer {
 	var gpricer L2GasPricer
-	switch cfg.Type {
+	switch cfg.XLayer.Type {
 	case gaspricecfg.FollowerType:
 		log.Info("Follower type selected")
 		gpricer = newFollowerGasPriceSuggester(ctx, cfg)
@@ -33,7 +33,7 @@ func NewL2GasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) L2GasPr
 		log.Info("Fixed type selected")
 		gpricer = newFixedGasPriceSuggester(ctx, cfg)
 	default:
-		log.Error("unknown l2 gas price suggester type ", cfg.Type, ". Please specify a valid one: 'follower', 'fixed' or 'default'")
+		log.Error("unknown l2 gas price suggester type ", cfg.XLayer.Type, ". Please specify a valid one: 'follower', 'fixed' or 'default'")
 	}
 
 	return gpricer
@@ -45,9 +45,6 @@ func GetL1GasPrice(l1RpcUrl string) (*big.Int, error) {
 		return nil, err
 	}
 
-	if res.Error != nil {
-		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
-	}
 	if res.Error != nil {
 		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
 	}

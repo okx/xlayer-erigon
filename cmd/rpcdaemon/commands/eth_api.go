@@ -348,8 +348,10 @@ type APIImpl struct {
 	MaxGasPrice                uint64
 	GasPriceFactor             float64
 	L1GasPrice                 L1GasPrice
-	L2GasPircer                gasprice.L2GasPricer
-	EnableInnerTx              bool // XLayer
+
+	// For X Layer
+	L2GasPricer   gasprice.L2GasPricer
+	EnableInnerTx bool
 }
 
 // NewEthAPI returns APIImpl instance
@@ -376,13 +378,13 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
-		L2GasPircer:                gasprice.NewL2GasPriceSuggester(context.Background(), ethconfig.Defaults.GPO),
-		EnableInnerTx:              ethCfg.EnableInnerTx,
+		// For X Layer
+		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
+		EnableInnerTx: ethCfg.XLayer.EnableInnerTx,
 	}
 
-	// set default gas price
-	apii.gasCache.SetLatest(common.Hash{}, apii.L2GasPircer.GetConfig().Default)
-	go apii.runL2GasPriceSuggester()
+	// For X Layer
+	apii.runL2GasPricerForXLayer()
 
 	return apii
 }

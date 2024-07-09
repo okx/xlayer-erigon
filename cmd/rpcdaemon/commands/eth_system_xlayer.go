@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"strconv"
 	"time"
 
 	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
@@ -35,7 +36,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 	price, err := api.getGPFromTrustedNode()
 	if err != nil {
 		log.Error("eth_gasPrice error: ", err)
-		return (*hexutil.Big)(api.L2GasPircer.GetConfig().Default), nil
+		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
 	}
 
 	return (*hexutil.Big)(price), nil
@@ -62,7 +63,7 @@ func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, 
 		gasResult.Add(tipcap, head.BaseFee)
 	}
 
-	rgp := api.L2GasPircer.GetLastRawGP()
+	rgp := api.L2GasPricer.GetLastRawGP()
 	if gasResult.Cmp(rgp) < 0 {
 		gasResult = new(big.Int).Set(rgp)
 	}
@@ -70,6 +71,10 @@ func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, 
 	if !api.isCongested(ctx) {
 		gasResult = getAvgPrice(rgp, gasResult)
 	}
+
+	// For X Layer
+	lasthash, _ := api.gasCache.GetLatest()
+	api.gasCache.SetLatest(lasthash, gasResult)
 
 	return (*hexutil.Big)(gasResult), err
 }
@@ -87,7 +92,7 @@ func (api *APIImpl) isCongested(ctx context.Context) bool {
 		return false
 	}
 
-	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPircer.GetConfig().CongestionThreshold
+	isPendingTxCongested := int(poolStatus.PendingCount) >= api.L2GasPricer.GetConfig().XLayer.CongestionThreshold
 
 	return !isLatestBlockEmpty && isPendingTxCongested
 }
@@ -116,25 +121,32 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 		return nil, errors.New(res.Error.Message)
 	}
 
-	var gasPrice uint64
-	err = json.Unmarshal(res.Result, &gasPrice)
+	var gasPriceStr string
+	err = json.Unmarshal(res.Result, &gasPriceStr)
 	if err != nil {
-		return nil, errors.New("failed to read gas price from trusted node")
+		return nil, errors.New("failed to unmarshal gas price from trusted node")
 	}
-	return new(big.Int).SetUint64(gasPrice), nil
+
+	gasPriceStr = gasPriceStr[2:]
+	gp, err := strconv.ParseUint(gasPriceStr, 16, 64)
+	if err != nil {
+		return nil, errors.New("failed to parse gas price from trusted node")
+	}
+
+	return new(big.Int).SetUint64(gp), nil
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {
-	cfg := api.L2GasPircer.GetConfig()
-	ctx := api.L2GasPircer.GetCtx()
+	cfg := api.L2GasPricer.GetConfig()
+	ctx := api.L2GasPricer.GetCtx()
 
 	//todo: apollo
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
 	if err == nil {
-		api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+		api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 	}
-	updateTimer := time.NewTimer(cfg.UpdatePeriod)
+	updateTimer := time.NewTimer(cfg.XLayer.UpdatePeriod)
 	for {
 		select {
 		case <-ctx.Done():
@@ -143,9 +155,9 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 		case <-updateTimer.C:
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
-				api.L2GasPircer.UpdateGasPriceAvg(l1gp)
+				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 			}
-			updateTimer.Reset(cfg.UpdatePeriod)
+			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
 		}
 	}
 }

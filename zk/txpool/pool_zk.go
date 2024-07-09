@@ -32,7 +32,7 @@ func calcProtocolBaseFee(baseFee uint64) uint64 {
 // which sub pool they will need to go to. Sice this depends on other transactions from the same sender by with lower
 // nonces, and also affect other transactions from the same sender with higher nonce, it loops through all transactions
 // for a given senderID
-func onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
+func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, senderBalance uint256.Int, byNonce *BySenderAndNonce,
 	protocolBaseFee, blockGasLimit uint64, pending *PendingPool, baseFee, queued *SubPool, discard func(*metaTx, DiscardReason)) {
 	noGapsNonce := senderNonce
 	cumulativeRequiredBalance := uint256.NewInt(0)
@@ -158,6 +158,8 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
+
+	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
@@ -244,21 +246,8 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			mt.overflowZkCountersDuringExecution = true
+			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
 	}
-}
-
-// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
-func promoteZk(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint64, discard func(*metaTx, DiscardReason), announcements *types.Announcements) {
-	for i := 0; i < len(pending.best.ms); i++ {
-		mt := pending.best.ms[i]
-		if mt.overflowZkCountersDuringExecution {
-			pending.Remove(mt)
-			discard(mt, OverflowZkCounters)
-		}
-	}
-
-	promote(pending, baseFee, queued, pendingBaseFee, discard, announcements)
 }

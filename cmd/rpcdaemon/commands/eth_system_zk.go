@@ -20,8 +20,8 @@ type L1GasPrice struct {
 }
 
 func (api *APIImpl) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	// xlayer handler
-	if api.L2GasPircer.GetConfig().Type != "" {
+	// X Layer handler
+	if api.L2GasPricer.GetConfig().XLayer.Type != "" {
 		return api.gasPriceXL(ctx)
 	}
 
@@ -131,9 +131,6 @@ func (api *APIImpl) l1GasPrice() (*big.Int, error) {
 		return nil, err
 	}
 
-	if res.Error != nil {
-		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
-	}
 	if res.Error != nil {
 		return nil, fmt.Errorf("RPC error response: %s", res.Error.Message)
 	}

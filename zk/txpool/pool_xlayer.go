@@ -16,6 +16,8 @@ type WBConfig struct {
 	WhiteList []string
 	// FreeClaimGasAddr is the address list for free claimTx
 	FreeClaimGasAddr []string
+	// GasPriceMultiple is the factor claim tx gas price should mul
+	GasPriceMultiple uint64
 }
 
 type GPCache interface {

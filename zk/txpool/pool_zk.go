@@ -3,7 +3,6 @@ package txpool
 import (
 	"bytes"
 	"fmt"
-
 	mapset "github.com/deckarep/golang-set/v2"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
@@ -13,6 +12,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/log/v3"
+	"math/big"
 )
 
 /*
@@ -74,7 +74,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
-				mt.minTip = dGp.Uint64()
+				newGp := dGp.Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				mt.minTip = newGp.Uint64()
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}
 		}

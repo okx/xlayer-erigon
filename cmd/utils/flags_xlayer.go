@@ -54,6 +54,11 @@ var (
 		Usage: "support free gas for claim addrs",
 		Value: "",
 	}
+	TxPoolGasPriceMultiple = cli.StringFlag{
+		Name:  "txpool.gaspricemultiple",
+		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
+		Value: "",
+	}
 	// Gas Price
 	GpoDefaultGasPriceFlag = cli.Int64Flag{
 		Name:  "gpo.default-price",

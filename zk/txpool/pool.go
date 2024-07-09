@@ -380,6 +380,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
 			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
 			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
+			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
 		},
 		aclDB: aclDB,
 	}, nil

@@ -86,7 +86,7 @@ func init() {
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolFreeClaimGasFlag.Name, []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}, utils.TxPoolFreeClaimGasFlag.Usage)
-	rootCmd.Flags().Float64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, 2, utils.TxPoolGasPriceMultiple.Usage)
+	rootCmd.Flags().Uint64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, 2, utils.TxPoolGasPriceMultiple.Usage)
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)

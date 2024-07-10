@@ -31,8 +31,8 @@ LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 	[Aggregator.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "2m"
-		ConsolidationL1ConfirmationBlocks = 5
-		FinalizationL1ConfirmationBlocks = 10
+		SafeStatusL1NumberOfBlocks = 5
+		FinalizedStatusL1NumberOfBlocks = 10
 		WaitReceiptToBeGenerated = "8s"
 		PrivateKeys = [
 			{Path = "/pk/aggregator.keystore", Password = "testonly"},

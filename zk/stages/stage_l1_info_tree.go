@@ -1,20 +1,20 @@
 package stages
 
 import (
+	"context"
+	"fmt"
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
-	"fmt"
-	"github.com/ledgerwatch/log/v3"
-	"context"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/zk/contracts"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/l1infotree"
+	"github.com/ledgerwatch/log/v3"
 	"sort"
 	"time"
-	"github.com/ledgerwatch/erigon/zk/l1infotree"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
 )
 
 type L1InfoTreeCfg struct {
@@ -137,6 +137,7 @@ LOOP:
 					return err
 				}
 				found = true
+				log.Info(fmt.Sprintf("zjg, [%s] Processed L1 info tree update", logPrefix), "index", latestUpdate.Index, "block", l.BlockNumber, "tx", l.TxHash.String())
 
 				leafHash := l1infotree.HashLeafData(latestUpdate.GER, latestUpdate.ParentHash, latestUpdate.Timestamp)
 

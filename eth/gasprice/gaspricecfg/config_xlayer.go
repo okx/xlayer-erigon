@@ -1,6 +1,11 @@
 package gaspricecfg
 
-import "time"
+import (
+	"math/big"
+	"time"
+
+	"github.com/ledgerwatch/erigon/params"
+)
 
 // XLayerConfig is the X Layer gas price config
 type XLayerConfig struct {
@@ -27,9 +32,12 @@ type XLayerConfig struct {
 	CongestionThreshold int `toml:",omitempty"`
 }
 
-var DefaultXLayerConfig = XLayerConfig{
-	Type: DefaultType,
-}
+var (
+	DefaultXLayerConfig = XLayerConfig{
+		Type: DefaultType,
+	}
+	DefaultMinimumBaseFee = big.NewInt(10 * params.GWei)
+)
 
 const (
 	// DefaultType default gas price from config is set.

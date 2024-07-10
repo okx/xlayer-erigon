@@ -1484,11 +1484,10 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 		cfg.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 	}
 
-	if ctx.IsSet(GpoDefaultGasPriceFlag.Name) {
-		cfg.Default = big.NewInt(ctx.Int64(GpoDefaultGasPriceFlag.Name))
-	}
-
 	// For X Layer
+	if ctx.IsSet(DefaultGasPrice.Name) {
+		cfg.Default = big.NewInt(ctx.Int64(DefaultGasPrice.Name))
+	}
 	setGPOXLayer(ctx, &cfg.XLayer)
 }
 

@@ -266,10 +266,11 @@ func calculateNextL1TreeUpdateToUse(lastInfoIndex uint64, hermezDb *hermez_db.He
 	if err != nil {
 		return 0, nil, err
 	}
-
+	log.Info("zjg, calculateNextL1TreeUpdateToUse", "lastInfoIndex", lastInfoIndex, "l1_info", l1Info, "l1Info.Timestamp", l1Info.Timestamp, "proposedTimestamp", proposedTimestamp)
 	// ensure that we are above the min timestamp for this index to use it
 	if l1Info != nil && l1Info.Timestamp <= proposedTimestamp {
 		nextL1Index = l1Info.Index
+		log.Info("zjg, calculateNextL1TreeUpdateToUse, reset nextL1Index", "nextL1Index", nextL1Index)
 	}
 
 	return nextL1Index, l1Info, nil

@@ -139,6 +139,13 @@ func (evm *EVM) ResetBetweenBlocks(blockCtx evmtypes.BlockContext, txCtx evmtype
 	evm.intraBlockState = ibs
 	evm.config = vmConfig
 	evm.chainRules = chainRules
+	//XLayer
+	evm.innerTxMeta = &InnerTxMeta{
+		index:     0,
+		lastDepth: 0,
+		indexMap:  map[int]int{0: 0},
+		InnerTxs:  make([]*zktypes.InnerTx, 0),
+	}
 
 	// [zkevm] change
 	evm.interpreter = NewZKEVMInterpreter(evm, NewZkConfig(vmConfig, nil))

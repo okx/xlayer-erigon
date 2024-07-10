@@ -24,6 +24,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/params"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 // [zkevm] contains the list of zkevm precompiles
@@ -59,6 +60,12 @@ func NewZkEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state ev
 			chainConfig:     chainConfig,
 			chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
 			zkConfig:        &zkVmConfig,
+			innerTxMeta: &InnerTxMeta{
+				index:     0,
+				lastDepth: 0,
+				indexMap:  map[int]int{0: 0},
+				InnerTxs:  make([]*zktypes.InnerTx, 0),
+			},
 		}
 
 	// [zkevm] change

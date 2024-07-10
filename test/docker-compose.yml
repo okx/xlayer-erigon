@@ -50,7 +50,7 @@ services:
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.2-RC35
+    image: zjg555543/zkevm-aggregator:d267fda
     ports:
       - 50081:50081
     volumes:

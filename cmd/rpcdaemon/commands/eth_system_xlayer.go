@@ -167,3 +167,10 @@ func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
 	avg = avg.Quo(avg, big.NewInt(2)) //nolint:gomnd
 	return avg
 }
+
+func (api *APIImpl) MinGasPrice(ctx context.Context) (*hexutil.Big, error) {
+	mingp := api.L2GasPricer.GetConfig().Default
+	//todo: get mgp from sequencer
+
+	return (*hexutil.Big)(mingp), nil
+}

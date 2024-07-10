@@ -292,6 +292,7 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, l1In
 	if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, newBatch); err != nil {
 		return err
 	}
+	log.Info("zjg, updateSequencerProgress", "newHeight", newHeight, "newBatch", newBatch, "l1InfoIndex", l1InfoIndex)
 	if err := stages.SaveStageProgress(tx, stages.HighestUsedL1InfoIndex, l1InfoIndex); err != nil {
 		return err
 	}

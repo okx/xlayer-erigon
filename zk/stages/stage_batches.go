@@ -659,7 +659,7 @@ func UnwindBatchesStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg BatchesCfg, c
 	if err != nil {
 		return fmt.Errorf("get latest l1 info tree index error: %v", err)
 	}
-
+	log.Info(fmt.Sprintf("zjg, [%s] Saving stage progress", logPrefix), "highestL1InfoTreeIndex", highestL1InfoTreeIndex)
 	if err := stages.SaveStageProgress(tx, stages.HighestUsedL1InfoIndex, highestL1InfoTreeIndex); err != nil {
 		return err
 	}

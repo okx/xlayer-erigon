@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"time"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -49,8 +50,8 @@ var (
 		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
 	}
-	TxPoolFreeClaimGasFlag = cli.StringFlag{
-		Name:  "txpool.freeclaimgas",
+	TxPoolPackBatchSpacialList = cli.StringFlag{
+		Name:  "txpool.packbatchspaciallist",
 		Usage: "support free gas for claim addrs",
 		Value: "",
 	}
@@ -254,5 +255,22 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 			sender := libcommon.HexToAddress(senderHex)
 			cfg.BlockedList[i] = sender.String()
 		}
+	}
+	log.Infof("==========setTxpool")
+	if ctx.IsSet(TxPoolPackBatchSpacialList.Name) {
+		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpacialList.Name))
+		log.Infof("==========setTxpool, addr: %v", addrHexes)
+
+		cfg.FreeClaimGasAddr = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.FreeClaimGasAddr[i] = sender.String()
+		}
+		if len(cfg.FreeClaimGasAddr) == 0 {
+			cfg.FreeClaimGasAddr = []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}
+		}
+	}
+	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
+		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
 	}
 }

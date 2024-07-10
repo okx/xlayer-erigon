@@ -71,14 +71,19 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		}
 		mt.minTip = minTip
 		isClaimAddr := p.isFreeClaimAddr(senderID)
+		log.Info(fmt.Sprintf("=========isClaimAddr:%v", isClaimAddr))
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
+			log.Info(fmt.Sprintf("=========dgp:%v, multiple:%v", dGp, p.wbCfg.GasPriceMultiple))
+
 			if dGp != nil {
-				newGp := dGp.Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
 				mt.minTip = newGp.Uint64()
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}
 		}
+		log.Info(fmt.Sprintf("=========after, minTip:%d", mt.minTip))
 
 		mt.nonceDistance = 0
 		if mt.Tx.Nonce > senderNonce { // no uint underflow

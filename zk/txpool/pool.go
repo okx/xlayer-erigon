@@ -353,6 +353,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 	for _, sender := range cfg.TracedSenders {
 		tracedSenders[common.BytesToAddress([]byte(sender))] = struct{}{}
 	}
+	log.Info(fmt.Sprintf("=========txPool new. claimAddr:%v, multiple:%v", ethCfg.DeprecatedTxPool.FreeClaimGasAddr, ethCfg.DeprecatedTxPool.GasPriceMultiple))
 	return &TxPool{
 		lock:                    &sync.Mutex{},
 		byHash:                  map[string]*metaTx{},
@@ -1032,6 +1033,8 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		}
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
+
+	log.Info("============================addTxs")
 
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)

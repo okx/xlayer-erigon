@@ -45,6 +45,8 @@ db.read.concurrency: 20000
 txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
+txpool.packbatchspaciallist : ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"]
+txpool.gaspricemultiple : 2
 
 gpo.type: "follower"
 gpo.default-price: 1000000000

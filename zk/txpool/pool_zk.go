@@ -71,10 +71,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		}
 		mt.minTip = minTip
 		isClaimAddr := p.isFreeClaimAddr(senderID)
-		log.Info(fmt.Sprintf("=========isClaimAddr:%v", isClaimAddr))
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
-			log.Info(fmt.Sprintf("=========dgp:%v, multiple:%v", dGp, p.wbCfg.GasPriceMultiple))
 
 			if dGp != nil {
 				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
@@ -83,7 +81,6 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}
 		}
-		log.Info(fmt.Sprintf("=========after, minTip:%d", mt.minTip))
 
 		mt.nonceDistance = 0
 		if mt.Tx.Nonce > senderNonce { // no uint underflow
@@ -173,6 +170,8 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
+
+	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
@@ -259,21 +258,8 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			mt.overflowZkCountersDuringExecution = true
+			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
 	}
-}
-
-// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
-func promoteZk(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint64, discard func(*metaTx, DiscardReason), announcements *types.Announcements) {
-	for i := 0; i < len(pending.best.ms); i++ {
-		mt := pending.best.ms[i]
-		if mt.overflowZkCountersDuringExecution {
-			pending.Remove(mt)
-			discard(mt, OverflowZkCounters)
-		}
-	}
-
-	promote(pending, baseFee, queued, pendingBaseFee, discard, announcements)
 }

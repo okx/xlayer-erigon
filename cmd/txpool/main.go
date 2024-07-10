@@ -180,7 +180,6 @@ func doTxpool(ctx context.Context) error {
 		addr := common.HexToAddress(addrHex)
 		ethCfg.DeprecatedTxPool.BlockedList[i] = addr.String()
 	}
-	log.Info(fmt.Sprintf("===========init freeClaimGasAddr:%v", freeClaimGasAddr))
 	ethCfg.DeprecatedTxPool.FreeClaimGasAddr = make([]string, len(freeClaimGasAddr))
 	for i, addrHex := range freeClaimGasAddr {
 		addr := common.HexToAddress(addrHex)

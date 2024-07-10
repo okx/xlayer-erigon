@@ -822,6 +822,7 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block,
 	}
 
 	if l2Block.L1InfoTreeIndex != 0 {
+		log.Info(fmt.Sprintf("zjg, l2 block %d has l1 info tree index %d", l2Block.L2BlockNumber, l2Block.L1InfoTreeIndex))
 		if err = hermezDb.WriteBlockL1InfoTreeIndex(l2Block.L2BlockNumber, uint64(l2Block.L1InfoTreeIndex)); err != nil {
 			return err
 		}

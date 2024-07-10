@@ -241,12 +241,14 @@ func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, decodedBlock *zktx.DecodedBa
 		if l1TreeUpdateIndex > 0 {
 			infoTreeIndexProgress = l1TreeUpdateIndex
 		}
+		log.Info("zjg, using l1 tree update", "index", l1TreeUpdateIndex)
 	}
 
 	// we only want GER and l1 block hash for indexes above 0 - 0 is a special case
 	if l1TreeUpdate != nil && l1TreeUpdateIndex > 0 {
 		l1BlockHash = l1TreeUpdate.ParentHash
 		ger = l1TreeUpdate.GER
+		log.Info("zjg, using l1 block hash", "hash", l1BlockHash.Hex())
 	}
 
 	return infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, nil

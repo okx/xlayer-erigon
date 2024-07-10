@@ -31,7 +31,8 @@ const (
 	preForkId7BlockGasLimit = 30_000_000
 	forkId7BlockGasLimit    = 18446744073709551615 // 0xffffffffffffffff
 	forkId8BlockGasLimit    = 1125899906842624     // 0x4000000000000
-	HIGHEST_KNOWN_FORK      = 9
+	HIGHEST_KNOWN_FORK      = 11
+	STAGE_PROGRESS_SAVE     = 3000000
 )
 
 type ErigonDb interface {

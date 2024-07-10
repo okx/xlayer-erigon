@@ -1554,7 +1554,7 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
 
-	// XLayer config
+	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
 }
 

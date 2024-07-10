@@ -97,7 +97,7 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 	// For X Layer
 	defaultPrice := params.Default
 	if defaultPrice == nil || defaultPrice.Int64() <= 0 {
-		defaultPrice = gaspricecfg.DefaultMinimumBaseFee
+		defaultPrice = gaspricecfg.DefaultXLayerPrice
 	}
 	return &Oracle{
 		backend:          backend,

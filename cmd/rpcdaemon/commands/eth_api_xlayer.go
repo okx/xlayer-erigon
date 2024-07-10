@@ -13,7 +13,7 @@ func (apii *APIImpl) runL2GasPricerForXLayer() {
 	// set default gas price
 	defaultPrice := apii.L2GasPricer.GetConfig().Default
 	if defaultPrice == nil || defaultPrice.Int64() <= 0 {
-		defaultPrice = gaspricecfg.DefaultMinimumBaseFee
+		defaultPrice = gaspricecfg.DefaultXLayerPrice
 	}
 	apii.gasCache.SetLatest(common.Hash{}, defaultPrice)
 	go apii.runL2GasPriceSuggester()

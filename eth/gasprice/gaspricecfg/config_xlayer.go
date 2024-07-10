@@ -36,7 +36,7 @@ var (
 	DefaultXLayerConfig = XLayerConfig{
 		Type: DefaultType,
 	}
-	DefaultMinimumBaseFee = big.NewInt(10 * params.GWei)
+	DefaultXLayerPrice = big.NewInt(1 * params.GWei)
 )
 
 const (

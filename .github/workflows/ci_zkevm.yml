@@ -96,6 +96,7 @@ jobs:
           /usr/local/bin/yq -i '.args.data_availability_mode = "rollup"' cdk-erigon-sequencer-params.yml
           /usr/local/bin/yq -i '.args.cdk_erigon_node_image = "cdk-erigon:local"' cdk-erigon-sequencer-params.yml
           /usr/local/bin/yq -i '.args.zkevm_bridge_service_image = "hermeznetwork/zkevm-bridge-service:v0.5.0-RC8"' cdk-erigon-sequencer-params.yml
+          sed -i '/zkevm\.sequencer-initial-fork-id/d' ./templates/cdk-erigon/config-sequencer.yaml
 
       - name: Deploy Kurtosis CDK package
         working-directory: ./kurtosis-cdk
@@ -135,7 +136,8 @@ jobs:
           cd bridge
           mkdir tmp
           cat <<EOF > ./tmp/test.toml
-          TestAddrPrivate= "0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625"
+          TestL1AddrPrivate="0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625"
+          TestL2AddrPrivate="0x12d7de8621a77640c9241b2595ba78ce443d05e94090365ab3bb5e19df82c625"
           [ConnectionConfig]
           L1NodeURL="${ETH_RPC_URL}"
           L2NodeURL="${L2_RPC_URL}"
@@ -159,6 +161,9 @@ jobs:
           cd ci_logs
           kurtosis service logs cdk-v1 cdk-erigon-node-001 --all > cdk-erigon-node-001.log
           kurtosis service logs cdk-v1 cdk-erigon-sequencer-001 --all > cdk-erigon-sequencer-001.log
+          kurtosis service logs cdk-v1 zkevm-agglayer-001 --all > zkevm-agglayer-001.log
+          kurtosis service logs cdk-v1 zkevm-prover-001 --all > zkevm-prover-001.log
+          kurtosis service logs cdk-v1 zkevm-executor-pless-001 --all > zkevm-executor-pless-001.log
 
       - name: Upload logs
         if: failure()

@@ -88,7 +88,7 @@ Loop:
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
 				case contracts.InitialSequenceBatchesTopic:
-					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
+					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header, cfg.zkCfg.SequencerInitialForkId); err != nil {
 						return err
 					}
 					// we only ever handle a single injected batch as a sequencer currently so we can just
@@ -183,6 +183,7 @@ func HandleL1InfoTreeUpdate(
 
 const (
 	injectedBatchLogTrailingBytes        = 24
+	injectedBatchLogTrailingBytesForkID9 = 23
 	injectedBatchLogTransactionStartByte = 128
 	injectedBatchLastGerStartByte        = 31
 	injectedBatchLastGerEndByte          = 64
@@ -195,6 +196,7 @@ func HandleInitialSequenceBatches(
 	db *hermez_db.HermezDb,
 	l ethTypes.Log,
 	header *ethTypes.Header,
+	squencerInitialForkId uint64,
 ) error {
 	var err error
 
@@ -210,6 +212,10 @@ func HandleInitialSequenceBatches(
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
 
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
+	//if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
+	//	trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
+	//	log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
+	//}
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,

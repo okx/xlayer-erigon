@@ -88,3 +88,9 @@ stream/*
 
 dist
 __debug_bin
+
+# X Layer
+data/
+start.sh
+xlayerconfig-mainnet.yaml
+xlayerconfig-testnet.yaml

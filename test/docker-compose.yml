@@ -13,9 +13,6 @@ services:
       - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-state-db:
     container_name: erigon-state-db
@@ -41,20 +38,19 @@ services:
 
   erigon-seqsender:
     container_name: erigon-seqsender
-    image: hermeznetwork/zkevm-seqsender:v0.1.1-RC1
+    image: zjg555543/zkevm-seqsender:93b8dab
     volumes:
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
       - ./config/seqsender.node.config.toml:/app/config.toml
       - ./config/test.genesis.config.json:/app/genesis.json
-    restart: always
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-seqsender run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequence-sender"
+      - "/app/zkevm-seqsender run --cfg /app/config.toml --network custom --custom-network-file /app/genesis.json"
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.1-RC7
+    image: zjg555543/zkevm-aggregator:d267fda
     ports:
       - 50081:50081
     volumes:
@@ -94,14 +90,11 @@ services:
 
   erigon-prover:
     container_name: erigon-prover
-    image: hermeznetwork/zkevm-prover:v6.0.3-RC17
+    image: xzavier2048/zkevm-mock-prover
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-approve:
     container_name: erigon-approve
@@ -149,7 +142,7 @@ services:
 
   erigon-mock-l1-network:
     container_name: erigon-mock-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
+    image: giskook/elderberry-v0.3.9-geth1.13.11
     ports:
       - 8545:8545
       - 8546:8546
@@ -176,3 +169,30 @@ services:
       - "--syncmode"
       - "full"
       - "--rpc.allow-unprotected-txs"
+
+  xlayer-data-availability:
+    container_name: xlayer-data-availability
+    image: okexchain/xlayer-data-availability:origin_release_v0.3.1_20240411102017_f84bdab
+    ports:
+      - 8444:8444
+    volumes:
+      - ./config/test.da.toml:/app/config.toml
+      - ./keystore/test-member.keystore:/pk/test-member.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-data-availability run --cfg /app/config.toml"
+
+  xlayer-data-availability-db:
+    container_name: xlayer-data-availability-db
+    image: postgres:15
+    ports:
+      - 5438:5432
+    environment:
+      - POSTGRES_USER=committee_user
+      - POSTGRES_PASSWORD=committee_password
+      - POSTGRES_DB=committee_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"

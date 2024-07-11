@@ -211,6 +211,11 @@ func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
 		cfg.XLayer.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)
 	}
+
+	// Default price check
+	if cfg.Default == nil || cfg.Default.Int64() <= 0 {
+		cfg.Default = gaspricecfg.DefaultXLayerPrice
+	}
 }
 
 func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {

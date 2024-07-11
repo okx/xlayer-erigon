@@ -90,7 +90,7 @@ services:
 
   erigon-prover:
     container_name: erigon-prover
-    image: hermeznetwork/zkevm-prover:v6.0.3-RC17
+    image: xzavier2048/zkevm-mock-prover
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >

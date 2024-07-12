@@ -539,10 +539,12 @@ func NewGasPriceCache() *GasPriceCache {
 
 func (c *GasPriceCache) GetLatest() (common.Hash, *big.Int) {
 	var hash common.Hash
+	var price *big.Int
 	c.mtx.Lock()
 	hash = c.latestHash
+	price = c.latestPrice
 	c.mtx.Unlock()
-	return hash, new(big.Int).Set(c.latestPrice)
+	return hash, price
 }
 
 func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {

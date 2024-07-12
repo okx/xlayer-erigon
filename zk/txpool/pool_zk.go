@@ -70,6 +70,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
 		}
 		mt.minTip = minTip
+		// For X Layer
 		isClaimAddr := p.isFreeClaimAddr(senderID)
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()

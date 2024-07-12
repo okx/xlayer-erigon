@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
+	"strconv"
 	"time"
 
 	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
@@ -34,7 +36,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 
 	price, err := api.getGPFromTrustedNode()
 	if err != nil {
-		log.Error("eth_gasPrice error: ", err)
+		log.Error(fmt.Sprintf("eth_gasPrice error: %v", err))
 		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
 	}
 
@@ -120,12 +122,19 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 		return nil, errors.New(res.Error.Message)
 	}
 
-	var gasPrice uint64
-	err = json.Unmarshal(res.Result, &gasPrice)
+	var gasPriceStr string
+	err = json.Unmarshal(res.Result, &gasPriceStr)
 	if err != nil {
-		return nil, errors.New("failed to read gas price from trusted node")
+		return nil, errors.New("failed to unmarshal gas price from trusted node")
 	}
-	return new(big.Int).SetUint64(gasPrice), nil
+
+	gasPriceStr = gasPriceStr[2:]
+	gp, err := strconv.ParseUint(gasPriceStr, 16, 64)
+	if err != nil {
+		return nil, errors.New("failed to parse gas price from trusted node")
+	}
+
+	return new(big.Int).SetUint64(gp), nil
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {

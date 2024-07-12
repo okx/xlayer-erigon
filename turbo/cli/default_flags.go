@@ -239,6 +239,10 @@ var DefaultFlags = []cli.Flag{
 	&utils.DisableVirtualCounters,
 	&utils.DAUrl,
 	// X Layer Flags
+	&utils.ApolloEnableFlag,
+	&utils.ApolloIPAddr,
+	&utils.ApolloAppId,
+	&utils.ApolloNamespaceName,
 	&utils.NacosURLsFlag,
 	&utils.NacosNamespaceIdFlag,
 	&utils.NacosApplicationNameFlag,
@@ -246,4 +250,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolEnableWhitelistFlag,
 	&utils.TxPoolWhiteList,
 	&utils.TxPoolBlockedList,
+	&utils.SequencerBatchSleepDuration,
 }

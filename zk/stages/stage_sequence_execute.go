@@ -462,6 +462,9 @@ func SpawnSequencingStage(
 		}
 	}
 
+	// X Layer handle
+	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
+
 	return nil
 }
 

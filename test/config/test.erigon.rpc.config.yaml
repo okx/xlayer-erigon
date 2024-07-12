@@ -3,7 +3,7 @@ chain: dynamic-mynetwork
 http: true
 private.api.addr: localhost:9091
 zkevm.l2-chain-id: 195
-zkevm.l2-sequencer-rpc-url: erigon-seq:8545
+zkevm.l2-sequencer-rpc-url: http://erigon-seq:8545
 zkevm.l2-datastreamer-url: erigon-seq:6900
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
@@ -29,6 +29,11 @@ zkevm.executor-strict: false
 zkevm.witness-full: true
 
 zkevm.sequencer-initial-fork-id: 9
+zkevm.sequencer-block-seal-time: "6s"
+zkevm.sequencer-batch-seal-time: "12s"
+zkevm.sequencer-non-empty-batch-seal-time: "3s"
+zkevm.sequencer-batch-sleep-duration: "0s"
+
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
@@ -42,21 +47,23 @@ http.addr: 0.0.0.0
 http.port: 8545
 http.vhosts: any
 http.corsdomain: any
+http.timeouts.read: "60s"
+http.timeouts.write: "60s"
+rpc.batch.concurrency: 2
+rpc.batch.limit: 20
 ws: true
+
+zkevm.apollo-enabled: false
+zkevm.apollo-ip-addr: ""
+zkevm.apollo-app-id: ""
+zkevm.apollo-namespace-name: ""
+
+zkevm.nacos-urls: ""
+zkevm.nacos-namespace-id: ""
+zkevm.nacos-application-name: ""
+zkevm.nacos-external-listen-addr: ""
 
 db.read.concurrency: 20000
 txpool.globalslots: 100000
 txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
-
-gpo.type: "follower"
-gpo.default-price: 1000000000
-gpo.update-period: "10s"
-gpo.factor: 0.01
-gpo.kafka-url: "0.0.0.0"
-gpo.topic: "explorer"
-gpo.group-id: "web3"
-gpo.default-l1-coin-price: 2000
-gpo.default-l2-coin-price: 50
-gpo.gas-price-usdt: 0.000000476190476
-gpo.enable-follower-adjust: true

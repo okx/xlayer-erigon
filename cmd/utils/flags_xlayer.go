@@ -12,6 +12,23 @@ import (
 )
 
 var (
+	// X Layer apollo
+	ApolloEnableFlag = cli.BoolFlag{
+		Name:  "zkevm.apollo-enabled",
+		Usage: "Apollo enable flag.",
+	}
+	ApolloIPAddr = cli.StringFlag{
+		Name:  "zkevm.apollo-ip-addr",
+		Usage: "Apollo IP address.",
+	}
+	ApolloAppId = cli.StringFlag{
+		Name:  "zkevm.apollo-app-id",
+		Usage: "Apollo App ID.",
+	}
+	ApolloNamespaceName = cli.StringFlag{
+		Name:  "zkevm.apollo-namespace-name",
+		Usage: "Apollo namespace name.",
+	}
 	// X Layer nacos
 	NacosURLsFlag = cli.StringFlag{
 		Name:  "zkevm.nacos-urls",
@@ -55,101 +72,90 @@ var (
 		Usage: "Default gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.Default.Int64(),
 	}
-
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
 		Usage: "raw gas price strategy type: default, follower, fixed",
 		Value: "default",
 	}
-
 	GpoUpdatePeriodFlag = cli.StringFlag{
 		Name:  "gpo.update-period",
 		Usage: "raw gas price update period",
 		Value: "10s",
 	}
-
 	GpoFactorFlag = cli.Float64Flag{
 		Name:  "gpo.factor",
 		Usage: "raw gas price facotr",
 		Value: 0.15,
 	}
-
 	GpoKafkaURLFlag = cli.StringFlag{
 		Name:  "gpo.kafka-url",
 		Usage: "raw gas price kafka url",
 		Value: "",
 	}
-
 	GpoTopicFlag = cli.StringFlag{
 		Name:  "gpo.topic",
 		Usage: "raw gas price topic",
 		Value: "",
 	}
-
 	GpoGroupIDFlag = cli.StringFlag{
 		Name:  "gpo.group-id",
 		Usage: "raw gas price group id",
 		Value: "",
 	}
-
 	GpoUsernameFlag = cli.StringFlag{
 		Name:  "gpo.username",
 		Usage: "raw gas price username",
 		Value: "",
 	}
-
 	GpoPasswordFlag = cli.StringFlag{
 		Name:  "gpo.password",
 		Usage: "raw gas price password",
 		Value: "",
 	}
-
 	GpoRootCAPathFlag = cli.StringFlag{
 		Name:  "gpo.root-ca-path",
 		Usage: "raw gas price root ca path",
 		Value: "",
 	}
-
 	GpoL1CoinIdFlag = cli.IntFlag{
 		Name:  "gpo.l1-coin-id",
 		Usage: "raw gas price l1 coin id",
 		Value: 0,
 	}
-
 	GpoL2CoinIdFlag = cli.IntFlag{
 		Name:  "gpo.l2-coin-id",
 		Usage: "raw gas price l2 coin id",
 		Value: 0,
 	}
-
 	GpoDefaultL1CoinPriceFlag = cli.Float64Flag{
 		Name:  "gpo.default-l1-coin-price",
 		Usage: "raw gas price default l1 coin price",
 		Value: 0,
 	}
-
 	GpoDefaultL2CoinPriceFlag = cli.Float64Flag{
 		Name:  "gpo.default-l2-coin-price",
 		Usage: "raw gas price default l2 coin price",
 		Value: 0,
 	}
-
 	GpoGasPriceUsdtFlag = cli.Float64Flag{
 		Name:  "gpo.gas-price-usdt",
 		Usage: "raw gas price usdt",
 		Value: 0,
 	}
-
 	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
 		Name:  "gpo.enable-follower-adjust",
 		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
 		Value: true,
 	}
-
 	GpoCongestionThresholdFlag = cli.IntFlag{
 		Name:  "gpo.congestion-threshold",
 		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
 		Value: 0,
+	}
+	SequencerBatchSleepDuration = cli.DurationFlag{
+		Name:  "zkevm.sequencer-batch-sleep-duration",
+		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
+		Value: 0 * time.Second,
 	}
 )
 

@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk/constants"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -212,10 +213,10 @@ func HandleInitialSequenceBatches(
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
 
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
-	//if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
-	//	trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
-	//	log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
-	//}
+	if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
+		trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
+		log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
+	}
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,

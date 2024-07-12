@@ -412,7 +412,6 @@ func SpawnSequencingStage(
 			}
 			runLoopBlocks = false // close the batch because there are no counters left
 		}
-		log.Info(fmt.Sprintf("zjg, [%s] Finish block %d, l1TreeUpdateIndex:%v", logPrefix, thisBlockNumber, l1TreeUpdateIndex))
 		if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(thisBlockNumber, l1TreeUpdateIndex); err != nil {
 			return err
 		}

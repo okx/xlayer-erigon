@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
 	"time"
@@ -36,7 +35,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 
 	price, err := api.getGPFromTrustedNode()
 	if err != nil {
-		log.Error(fmt.Sprintf("eth_gasPrice error: %v", err))
+		log.Error("eth_gasPrice error: ", err)
 		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
 	}
 

@@ -659,7 +659,7 @@ func UnwindBatchesStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg BatchesCfg, c
 	if err != nil {
 		return fmt.Errorf("get latest l1 info tree index error: %v", err)
 	}
-	log.Info(fmt.Sprintf("zjg, [%s] Saving stage progress", logPrefix), "highestL1InfoTreeIndex", highestL1InfoTreeIndex)
+
 	if err := stages.SaveStageProgress(tx, stages.HighestUsedL1InfoIndex, highestL1InfoTreeIndex); err != nil {
 		return err
 	}
@@ -830,7 +830,6 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block,
 	}
 
 	if l2Block.L1InfoTreeIndex != 0 {
-		log.Info(fmt.Sprintf("zjg, l2 block %d has l1 info tree index %d", l2Block.L2BlockNumber, l2Block.L1InfoTreeIndex))
 		if err = hermezDb.WriteBlockL1InfoTreeIndex(l2Block.L2BlockNumber, uint64(l2Block.L1InfoTreeIndex)); err != nil {
 			return err
 		}

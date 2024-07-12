@@ -241,14 +241,12 @@ func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, decodedBlock *zktx.DecodedBa
 		if l1TreeUpdateIndex > 0 {
 			infoTreeIndexProgress = l1TreeUpdateIndex
 		}
-		log.Info("zjg, using l1 tree update", "index", l1TreeUpdateIndex)
 	}
 
 	// we only want GER and l1 block hash for indexes above 0 - 0 is a special case
 	if l1TreeUpdate != nil && l1TreeUpdateIndex > 0 {
 		l1BlockHash = l1TreeUpdate.ParentHash
 		ger = l1TreeUpdate.GER
-		log.Info("zjg, using l1 block hash", "hash", l1BlockHash.Hex())
 	}
 
 	return infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, nil
@@ -266,15 +264,10 @@ func calculateNextL1TreeUpdateToUse(lastInfoIndex uint64, hermezDb *hermez_db.He
 	if err != nil {
 		return 0, nil, err
 	}
-	if l1Info == nil {
-		log.Info("zjg, calculateNextL1TreeUpdateToUse, no l1 info found", "lastInfoIndex", lastInfoIndex, "proposedTimestamp", proposedTimestamp)
-	} else {
-		log.Info("zjg, calculateNextL1TreeUpdateToUse", "lastInfoIndex", lastInfoIndex, "l1_info", l1Info, "l1Info.Timestamp", l1Info.Timestamp, "proposedTimestamp", proposedTimestamp)
-	}
+
 	// ensure that we are above the min timestamp for this index to use it
 	if l1Info != nil && l1Info.Timestamp <= proposedTimestamp {
 		nextL1Index = l1Info.Index
-		log.Info("zjg, calculateNextL1TreeUpdateToUse, reset nextL1Index", "nextL1Index", nextL1Index)
 	}
 
 	return nextL1Index, l1Info, nil
@@ -292,7 +285,6 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, l1In
 	if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, newBatch); err != nil {
 		return err
 	}
-	log.Info("zjg, updateSequencerProgress", "newHeight", newHeight, "newBatch", newBatch, "l1InfoIndex", l1InfoIndex)
 	if err := stages.SaveStageProgress(tx, stages.HighestUsedL1InfoIndex, l1InfoIndex); err != nil {
 		return err
 	}

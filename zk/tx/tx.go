@@ -96,7 +96,6 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 			currentDelta = binary.BigEndian.Uint32(txsData[pos+1 : pos+5])
 			currentL1InfoTreeIndex = binary.BigEndian.Uint32(txsData[pos+5 : pos+9])
 
-			log.Info(fmt.Sprintf("zjg, currentDelta: %v, currentL1InfoTreeIndex:%v", currentDelta, currentL1InfoTreeIndex))
 			pos += changeL2BlockLength
 
 			continue

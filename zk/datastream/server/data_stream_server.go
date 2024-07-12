@@ -10,7 +10,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	"github.com/ledgerwatch/log/v3"
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
@@ -302,7 +301,6 @@ func (srv *DataStreamServer) CreateStreamEntriesProto(
 	}
 
 	l1InfoIndex, err := reader.GetBlockL1InfoTreeIndex(blockNum)
-	log.Info("zjg,L1InfoIndex", "blockNum", blockNum, "l1InfoIndex", l1InfoIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +308,6 @@ func (srv *DataStreamServer) CreateStreamEntriesProto(
 	if l1InfoIndex > 0 {
 		// get the l1 info data, so we can add the min timestamp to the map
 		l1Info, err := reader.GetL1InfoTreeUpdate(l1InfoIndex)
-		log.Info("zjg,L1InfoTreeUpdate", "l1Info.BlockNumber", l1Info.BlockNumber, "l1Info.Index", l1Info.Index, "l1Info.Timestamp", l1Info.Timestamp, "l1Info.MainnetExitRoot", l1Info.MainnetExitRoot, "l1Info.RollupExitRoot", l1Info.RollupExitRoot, "l1Info.ParentHash", l1Info.ParentHash)
 		if err != nil {
 			return nil, err
 		}

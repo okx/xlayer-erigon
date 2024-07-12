@@ -137,7 +137,6 @@ LOOP:
 					return err
 				}
 				found = true
-				log.Info(fmt.Sprintf("zjg, [%s] Processed L1 info tree update", logPrefix), "index", latestUpdate.Index, "block", l.BlockNumber, "tx", l.TxHash.String())
 
 				leafHash := l1infotree.HashLeafData(latestUpdate.GER, latestUpdate.ParentHash, latestUpdate.Timestamp)
 

@@ -412,6 +412,7 @@ func SpawnSequencingStage(
 			}
 			runLoopBlocks = false // close the batch because there are no counters left
 		}
+
 		if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(thisBlockNumber, l1TreeUpdateIndex); err != nil {
 			return err
 		}

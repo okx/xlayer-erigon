@@ -200,6 +200,7 @@ func HandleInitialSequenceBatches(
 	squencerInitialForkId uint64,
 ) error {
 	var err error
+
 	if header == nil {
 		header, err = syncer.GetHeader(l.BlockNumber)
 		if err != nil {

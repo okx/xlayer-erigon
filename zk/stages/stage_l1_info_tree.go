@@ -3,6 +3,9 @@ package stages
 import (
 	"context"
 	"fmt"
+	"sort"
+	"time"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -13,8 +16,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1infotree"
 	"github.com/ledgerwatch/log/v3"
-	"sort"
-	"time"
 )
 
 type L1InfoTreeCfg struct {

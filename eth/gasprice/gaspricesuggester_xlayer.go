@@ -33,7 +33,7 @@ func NewL2GasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) L2GasPr
 		log.Info("Fixed type selected")
 		gpricer = newFixedGasPriceSuggester(ctx, cfg)
 	default:
-		log.Error("unknown l2 gas price suggester type ", cfg.XLayer.Type, ". Please specify a valid one: 'follower', 'fixed' or 'default'")
+		log.Error(fmt.Sprintf("unknown l2 gas price suggester type %v. Please specify a valid one: 'follower', 'fixed' or 'default'", cfg.XLayer.Type))
 	}
 
 	return gpricer

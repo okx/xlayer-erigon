@@ -15,22 +15,13 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/erigon/rpc"
+	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
 )
 
 func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	cc, err := api.chainConfig(tx)
-	if err != nil {
-		return nil, err
-	}
-	chainId := cc.ChainID
-	if !api.isZkNonSequencer(chainId) {
+	if sequencer.IsSequencer() {
 		return api.gasPriceNonRedirectedXL(ctx)
 	}
 
@@ -49,12 +40,7 @@ func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, 
 		return nil, err
 	}
 	defer tx.Rollback()
-	cc, err := api.chainConfig(tx)
-	if err != nil {
-		return nil, err
-	}
-	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
-	tipcap, err := oracle.SuggestTipCap(ctx)
+	_, tipcap := api.gasCache.GetLatest()
 	gasResult := big.NewInt(0)
 	gasResult.Set(tipcap)
 	if err != nil {
@@ -158,9 +144,31 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			if err == nil {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 			}
+			api.updateDynamicGP(ctx)
 			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
 		}
 	}
+}
+
+func (api *APIImpl) updateDynamicGP(ctx context.Context) {
+	tx, err := api.db.BeginRo(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("error db.BeginRo: %v", err))
+		return
+	}
+	defer tx.Rollback()
+	cc, err := api.chainConfig(tx)
+	if err != nil {
+		log.Error(fmt.Sprintf("error chainConfig: %v", err))
+		return
+	}
+	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
+	dgp, err := oracle.SuggestTipCap(ctx)
+	if err != nil {
+		log.Error(fmt.Sprintf("error SuggestTipCap: %v", err))
+		return
+	}
+	log.Info(fmt.Sprintf("Updated dynamic gas price: %s", dgp.String()))
 }
 
 func getAvgPrice(low *big.Int, high *big.Int) *big.Int {

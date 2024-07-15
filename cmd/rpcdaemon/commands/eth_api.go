@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
+	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -384,7 +385,9 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	}
 
 	// For X Layer
-	apii.runL2GasPricerForXLayer()
+	if sequencer.IsSequencer() {
+		apii.runL2GasPricerForXLayer()
+	}
 
 	return apii
 }

@@ -385,6 +385,8 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	}
 
 	// For X Layer
+	// Only Sequencer requires to calculate dynamic gas price periodically
+	// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
 	if sequencer.IsSequencer() {
 		apii.runL2GasPricerForXLayer()
 	}

@@ -211,12 +211,12 @@ func HandleInitialSequenceBatches(
 	// the log appears to have some trailing 24 bytes of all 0s in it.  Not sure why but we can't handle the
 	// TX without trimming these off
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
-
-	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
 	if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
 		trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
 		log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
 	}
+
+	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
 
 	ib := &types.L1InjectedBatch{
 		L1BlockNumber:      l.BlockNumber,

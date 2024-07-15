@@ -53,7 +53,7 @@ services:
       - "/app/zkevm-seqsender run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequence-sender"
 
 # built from https://github.com/yann-sjtu/zkevm-aggregator/tree/v002-RC31-fix
-# commit id: 5b523de
+# commit id: 82d6677
   erigon-aggregator:
     container_name: erigon-aggregator
     image: xzavier2048/zkevm-aggregator:v0.0.2-RC31

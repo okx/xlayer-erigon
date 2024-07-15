@@ -35,16 +35,16 @@ type XLayerConfig struct {
 var (
 	DefaultXLayerConfig = XLayerConfig{
 		Type:                            DefaultType,
-	  UpdatePeriod:                    10 * time.Second,
-	  Factor:                          0.01,
-	  KafkaURL:                        "0.0.0.0",
-	  Topic:                           "xlayer",
-	  GroupID:                         "xlayer",
-	  DefaultL1CoinPrice:              2000,
-	  DefaultL2CoinPrice:              50,
-	  GasPriceUsdt:                    0.000000476190476,
-	  EnableFollowerAdjustByL2L1Price: true,
-	  CongestionThreshold:             0,
+		UpdatePeriod:                    10 * time.Second,
+		Factor:                          0.01,
+		KafkaURL:                        "0.0.0.0",
+		Topic:                           "xlayer",
+		GroupID:                         "xlayer",
+		DefaultL1CoinPrice:              2000,
+		DefaultL2CoinPrice:              50,
+		GasPriceUsdt:                    0.000000476190476,
+		EnableFollowerAdjustByL2L1Price: true,
+		CongestionThreshold:             0,
 	}
 	DefaultXLayerPrice = big.NewInt(1 * params.GWei)
 )

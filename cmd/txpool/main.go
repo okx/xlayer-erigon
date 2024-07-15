@@ -85,7 +85,8 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&priceBump, "txpool.pricebump", txpoolcfg.DefaultConfig.PriceBump, "Price bump percentage to replace an already existing transaction")
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
-	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolPackBatchSpacialList.Name, []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}, utils.TxPoolPackBatchSpacialList.Usage)
+	// For X Layer
+	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolPackBatchSpecialList.Name, []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}, utils.TxPoolPackBatchSpecialList.Usage)
 	rootCmd.Flags().Uint64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, 2, utils.TxPoolGasPriceMultiple.Usage)
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)

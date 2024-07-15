@@ -26,6 +26,34 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 			if v == 0 {
 				panic(fmt.Sprintf("Flag not set: %s", flagName))
 			}
+		case uint32:
+			if v == 0 {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case uint:
+			if v == 0 {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case int:
+			if v == 0 {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case []string:
+			if len(v) == 0 {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case libcommon.Address:
+			if v == (libcommon.Address{}) {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case time.Duration:
+			if v == 0 {
+				panic(fmt.Sprintf("Flag not set: %s", flagName))
+			}
+		case bool:
+			// nothing to check
+		default:
+			panic(fmt.Sprintf("Unsupported type for flag check: %T", value))
 		}
 	}
 
@@ -135,7 +163,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	if !sequencer.IsSequencer() {
 		checkFlag(utils.L2RpcUrlFlag.Name, cfg.L2RpcUrl)
 		checkFlag(utils.L2DataStreamerUrlFlag.Name, cfg.L2DataStreamerUrl)
-		checkFlag(utils.L2DataStreamerTimeout.Name, cfg.L2DataStreamerTimeout)
 	} else {
 		checkFlag(utils.SequencerInitialForkId.Name, cfg.SequencerInitialForkId)
 		checkFlag(utils.ExecutorUrls.Name, cfg.ExecutorUrls)

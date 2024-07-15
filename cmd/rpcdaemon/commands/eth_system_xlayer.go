@@ -100,7 +100,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 	cfg := api.L2GasPricer.GetConfig()
 	ctx := api.L2GasPricer.GetCtx()
 
-	//todo: apollo
+	// TODO: apollo
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
 	if err == nil {

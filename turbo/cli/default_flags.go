@@ -119,7 +119,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.GpoBlocksFlag,
 	&utils.GpoPercentileFlag,
 	&utils.GpoMaxGasPriceFlag,
-	&utils.GpoDefaultGasPriceFlag,
 	&utils.GpoTypeFlag,
 	&utils.GpoUpdatePeriodFlag,
 	&utils.GpoFactorFlag,

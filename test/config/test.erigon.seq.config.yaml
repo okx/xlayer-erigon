@@ -68,7 +68,6 @@ txpool.packbatchspaciallist : ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"]
 txpool.gaspricemultiple : 2
 
 gpo.type: "follower"
-gpo.default-price: 1000000000
 gpo.update-period: "10s"
 gpo.factor: 0.01
 gpo.kafka-url: "0.0.0.0"

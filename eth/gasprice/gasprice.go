@@ -62,6 +62,9 @@ type Oracle struct {
 	checkBlocks                       int
 	percentile                        int
 	maxHeaderHistory, maxBlockHistory int
+
+	// For X Layer
+	defaultPrice *big.Int
 }
 
 // NewOracle returns a new gasprice oracle which can recommend suitable
@@ -91,6 +94,11 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 		ignorePrice = gaspricecfg.DefaultIgnorePrice
 		log.Warn("Sanitizing invalid gasprice oracle ignore price", "provided", params.IgnorePrice, "updated", ignorePrice)
 	}
+	// For X Layer
+	defaultPrice := params.Default
+	if defaultPrice == nil || defaultPrice.Int64() <= 0 {
+		defaultPrice = gaspricecfg.DefaultXLayerPrice
+	}
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
@@ -101,6 +109,8 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 		cache:            cache,
 		maxHeaderHistory: params.MaxHeaderHistory,
 		maxBlockHistory:  params.MaxBlockHistory,
+		// For X Layer
+		defaultPrice: defaultPrice,
 	}
 }
 
@@ -151,12 +161,13 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		// Don't need to pop it, just take from the top of the heap
 		price = txPrices[0].ToBig()
 	}
-	if oracle.maxPrice.Int64() > 0 && price.Cmp(oracle.maxPrice) > 0 {
+	if price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
 	}
 
-	if price.Cmp(oracle.lastPrice) < 0 {
-		price = new(big.Int).Set(oracle.lastPrice)
+	// For X Layer
+	if price.Cmp(oracle.defaultPrice) < 0 {
+		price = new(big.Int).Set(oracle.defaultPrice)
 	}
 
 	oracle.cache.SetLatest(headHash, price)
@@ -259,9 +270,9 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 		}
 	}
 
-	// xlayer
+	// For X Layer
 	if count == 0 {
-		defaultGP := uint256.NewInt(oracle.lastPrice.Uint64())
+		defaultGP := uint256.NewInt(oracle.defaultPrice.Uint64())
 		heap.Push(s, defaultGP)
 	}
 

@@ -67,8 +67,8 @@ var (
 		Usage: "Comma separated list of addresses, who can't send and receive transactions",
 		Value: "",
 	}
-	TxPoolPackBatchSpacialList = cli.StringFlag{
-		Name:  "txpool.packbatchspaciallist",
+	TxPoolPackBatchSpecialList = cli.StringFlag{
+		Name:  "txpool.packbatchspeciallist",
 		Usage: "support free gas for claim addrs",
 		Value: "",
 	}

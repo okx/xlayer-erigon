@@ -35,35 +35,8 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 }
 
 func (api *APIImpl) gasPriceNonRedirectedXL(ctx context.Context) (*hexutil.Big, error) {
-	tx, err := api.db.BeginRo(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	_, tipcap := api.gasCache.GetLatest()
-	gasResult := big.NewInt(0)
-	gasResult.Set(tipcap)
-	if err != nil {
-		return nil, err
-	}
-	if head := rawdb.ReadCurrentHeader(tx); head != nil && head.BaseFee != nil {
-		gasResult.Add(tipcap, head.BaseFee)
-	}
-
-	rgp := api.L2GasPricer.GetLastRawGP()
-	if gasResult.Cmp(rgp) < 0 {
-		gasResult = new(big.Int).Set(rgp)
-	}
-
-	if !api.isCongested(ctx) {
-		gasResult = getAvgPrice(rgp, gasResult)
-	}
-
-	// For X Layer
-	lasthash, _ := api.gasCache.GetLatest()
-	api.gasCache.SetLatest(lasthash, gasResult)
-
-	return (*hexutil.Big)(gasResult), err
+	_, gasResult := api.gasCache.GetLatest()
+	return (*hexutil.Big)(gasResult), nil
 }
 
 func (api *APIImpl) isCongested(ctx context.Context) bool {
@@ -163,12 +136,30 @@ func (api *APIImpl) updateDynamicGP(ctx context.Context) {
 		return
 	}
 	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
-	dgp, err := oracle.SuggestTipCap(ctx)
+	tipcap, err := oracle.SuggestTipCap(ctx)
 	if err != nil {
 		log.Error(fmt.Sprintf("error SuggestTipCap: %v", err))
 		return
 	}
-	log.Info(fmt.Sprintf("Updated dynamic gas price: %s", dgp.String()))
+	gasResult := big.NewInt(0)
+	gasResult.Set(tipcap)
+	if head := rawdb.ReadCurrentHeader(tx); head != nil && head.BaseFee != nil {
+		gasResult.Add(tipcap, head.BaseFee)
+	}
+
+	rgp := api.L2GasPricer.GetLastRawGP()
+	if gasResult.Cmp(rgp) < 0 {
+		gasResult = new(big.Int).Set(rgp)
+	}
+
+	if !api.isCongested(ctx) {
+		gasResult = getAvgPrice(rgp, gasResult)
+	}
+
+	lasthash, _ := api.gasCache.GetLatest()
+	api.gasCache.SetLatest(lasthash, gasResult)
+
+	log.Info(fmt.Sprintf("Updated dynamic gas price: %s", gasResult.String()))
 }
 
 func getAvgPrice(low *big.Int, high *big.Int) *big.Int {

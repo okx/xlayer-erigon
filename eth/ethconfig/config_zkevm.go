@@ -23,6 +23,7 @@ type Zk struct {
 	L1RollupId                             uint64
 	L1BlockRange                           uint64
 	L1QueryDelay                           uint64
+	L1HighestBlockType                     string
 	L1MaticContractAddress                 common.Address
 	L1FirstBlock                           uint64
 	RpcRateLimits                          int
@@ -34,6 +35,7 @@ type Zk struct {
 	ExecutorUrls                           []string
 	ExecutorStrictMode                     bool
 	ExecutorRequestTimeout                 time.Duration
+	DatastreamNewBlockTimeout              time.Duration
 	ExecutorMaxConcurrentRequests          int
 	AllowFreeTransactions                  bool
 	AllowPreEIP155Transactions             bool
@@ -44,30 +46,34 @@ type Zk struct {
 	DefaultGasPrice                        uint64
 	MaxGasPrice                            uint64
 	GasPriceFactor                         float64
+	DAUrl                                  string
+	DataStreamHost                         string
+	DataStreamPort                         uint
 
-	RebuildTreeAfter uint64
-	WitnessFull      bool
-	SyncLimit        uint64
-	Gasless          bool
+	RebuildTreeAfter      uint64
+	IncrementTreeAlways   bool
+	SmtRegenerateInMemory bool
+	WitnessFull           bool
+	SyncLimit             uint64
+	Gasless               bool
 
 	DebugNoSync    bool
 	DebugLimit     uint64
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	// For Xlayer
-	NacosURLs               string
-	NacosNamespaceId        string
-	NacosApplicationName    string
-	NacosExternalListenAddr string
-
 	PoolManagerUrl         string
 	DisableVirtualCounters bool
 	ExecutorPayloadOutput  string
-	EnableInnerTx          bool // XLayer
+
+	// For X Layer
+	XLayer *XLayerConfig
 }
 
-var DefaultZkConfig = &Zk{}
+var DefaultZkConfig = &Zk{
+	// For X Layer
+	XLayer: DefaultXLayerConfig,
+}
 
 func (c *Zk) ShouldCountersBeUnlimited(l1Recovery bool) bool {
 	return l1Recovery || (c.DisableVirtualCounters && !c.ExecutorStrictMode && len(c.ExecutorUrls) != 0)

@@ -19,12 +19,16 @@ package utils
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -42,10 +46,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/urfave/cli/v2"
 
-	"encoding/json"
-	"os"
-	"path"
-
 	"github.com/ledgerwatch/erigon/cl/clparams"
 	"github.com/ledgerwatch/erigon/cmd/downloader/downloadernat"
 	"github.com/ledgerwatch/erigon/common/paths"
@@ -60,7 +60,6 @@ import (
 	"github.com/ledgerwatch/erigon/p2p/netutil"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/params/networkname"
-	"time"
 )
 
 // These are all the command line flags we support.
@@ -202,21 +201,6 @@ var (
 		Name:  "txpool.commit.every",
 		Usage: "How often transactions should be committed to the storage",
 		Value: txpoolcfg.DefaultConfig.CommitEvery,
-	}
-	TxPoolEnableWhitelistFlag = cli.BoolFlag{
-		Name:  "txpool.enable.whitelist",
-		Usage: "Enable or disable tx sender white list",
-		Value: false,
-	}
-	TxPoolWhiteList = cli.StringFlag{
-		Name:  "txpool.whitelist",
-		Usage: "Comma separated list of addresses, who can send transactions",
-		Value: "",
-	}
-	TxPoolBlockedList = cli.StringFlag{
-		Name:  "txpool.blockedlist",
-		Usage: "Comma separated list of addresses, who can't send and receive transactions",
-		Value: "",
 	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
@@ -447,6 +431,11 @@ var (
 		Usage:    "Ethereum L1 delay between queries for verifications and sequences - in milliseconds",
 		Value:    6000,
 	}
+	L1HighestBlockTypeFlag = cli.StringFlag{
+		Name:  "zkevm.l1-highest-block-type",
+		Usage: "The type of the highest block in the L1 chain. latest, safe, or finalized",
+		Value: "finalized",
+	}
 	L1MaticContractAddressFlag = cli.StringFlag{
 		Name:  "zkevm.l1-matic-contract-address",
 		Usage: "Ethereum L1 Matic contract address",
@@ -461,6 +450,16 @@ var (
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
 		Value: 10000,
+	}
+	IncrementTreeAlways = cli.BoolFlag{
+		Name:  "zkevm.increment-tree-always",
+		Usage: "Increment the state tree, never rebuild",
+		Value: false,
+	}
+	SmtRegenerateInMemory = cli.BoolFlag{
+		Name:  "zkevm.smt-regenerate-in-memory",
+		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
+		Value: false,
 	}
 	SequencerInitialForkId = cli.Uint64Flag{
 		Name:  "zkevm.sequencer-initial-fork-id",
@@ -496,6 +495,11 @@ var (
 		Name:  "zkevm.executor-request-timeout",
 		Usage: "The timeout for the executor request",
 		Value: 60 * time.Second,
+	}
+	DatastreamNewBlockTimeout = cli.DurationFlag{
+		Name:  "zkevm.datastream-new-block-timeout",
+		Usage: "The timeout for the executor request",
+		Value: 500 * time.Millisecond,
 	}
 	ExecutorMaxConcurrentRequests = cli.IntFlag{
 		Name:  "zkevm.executor-max-concurrent-requests",
@@ -597,6 +601,11 @@ var (
 		Usage: "Output the payload of the executor, serialised requests stored to disk by batch number",
 		Value: "",
 	}
+	DAUrl = cli.StringFlag{
+		Name:  "zkevm.da-url",
+		Usage: "The URL of the data availability service",
+		Value: "",
+	}
 	AllowInternalTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-internal-transactions",
 		Usage: "Allow the sequencer to proceed internal transactions",
@@ -619,27 +628,6 @@ var (
 	DebugStepAfter = cli.UintFlag{
 		Name:  "debug.step-after",
 		Usage: "Start incrementing by debug.step after this block",
-	}
-	// XLayer nacos
-	NacosURLsFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-urls",
-		Usage: "Nacos urls.",
-		Value: "",
-	}
-	NacosNamespaceIdFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-namespace-id",
-		Usage: "Nacos namespace Id.",
-		Value: "",
-	}
-	NacosApplicationNameFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-application-name",
-		Usage: "Nacos application name",
-		Value: "",
-	}
-	NacosExternalListenAddrFlag = cli.StringFlag{
-		Name:  "zkevm.nacos-external-listen-addr",
-		Usage: "Nacos external listen addr.",
-		Value: "",
 	}
 	RpcBatchConcurrencyFlag = cli.UintFlag{
 		Name:  "rpc.batch.concurrency",
@@ -882,11 +870,10 @@ var (
 		Value: ethconfig.Defaults.GPO.Percentile,
 	}
 	GpoMaxGasPriceFlag = cli.Int64Flag{
-		Name:  "gpo.maxprice",
+		Name:  "gpo.max-price",
 		Usage: "Maximum gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.MaxPrice.Int64(),
 	}
-
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",
@@ -1496,6 +1483,13 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	if ctx.IsSet(GpoMaxGasPriceFlag.Name) {
 		cfg.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 	}
+
+	if ctx.IsSet(GpoDefaultGasPriceFlag.Name) {
+		cfg.Default = big.NewInt(ctx.Int64(GpoDefaultGasPriceFlag.Name))
+	}
+
+	// For X Layer
+	setGPOXLayer(ctx, &cfg.XLayer)
 }
 
 // nolint
@@ -1565,27 +1559,7 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
 
 	// XLayer config
-	if ctx.IsSet(TxPoolEnableWhitelistFlag.Name) {
-		cfg.EnableWhitelist = ctx.Bool(TxPoolEnableWhitelistFlag.Name)
-	}
-	if ctx.IsSet(TxPoolWhiteList.Name) {
-		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolWhiteList.Name))
-		cfg.WhiteList = make([]string, len(addrHexes))
-		for i, senderHex := range addrHexes {
-			sender := libcommon.HexToAddress(senderHex)
-			cfg.WhiteList[i] = sender.String()
-		}
-	}
-	if ctx.IsSet(TxPoolBlockedList.Name) {
-		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolBlockedList.Name))
-		cfg.BlockedList = make([]string, len(addrHexes))
-		for i, senderHex := range addrHexes {
-			sender := libcommon.HexToAddress(senderHex)
-			cfg.BlockedList[i] = sender.String()
-		}
-	}
+	setTxPoolXLayer(ctx, cfg)
 }
 
 func setEthash(ctx *cli.Context, datadir string, cfg *ethconfig.Config) {
@@ -1867,17 +1841,18 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	// Override any default configs for hard coded networks.
 	chain := ctx.String(ChainFlag.Name)
 	if strings.HasPrefix(chain, "dynamic") {
+		configFilePath := ctx.String(ConfigFlag.Name)
+		if configFilePath == "" {
+			Fatalf("Config file is required for dynamic chain")
+		}
+
+		// Be sure to set this first
+		params.DynamicChainConfigPath = filepath.Dir(configFilePath)
+		filename := path.Join(params.DynamicChainConfigPath, chain+"-conf.json")
+
 		genesis := core.GenesisBlockByChainName(chain)
 
 		dConf := DynamicConfig{}
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			panic(err)
-		}
-
-		basePath := path.Join(homeDir, "dynamic-configs")
-		filename := path.Join(basePath, chain+"-conf.json")
 
 		if _, err := os.Stat(filename); err == nil {
 			dConfBytes, err := os.ReadFile(filename)

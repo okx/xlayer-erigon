@@ -11,6 +11,7 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/log/v3"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -347,7 +348,10 @@ type APIImpl struct {
 	MaxGasPrice                uint64
 	GasPriceFactor             float64
 	L1GasPrice                 L1GasPrice
-	EnableInnerTx              bool // XLayer
+
+	// For X Layer
+	L2GasPricer   gasprice.L2GasPricer
+	EnableInnerTx bool
 }
 
 // NewEthAPI returns APIImpl instance
@@ -356,7 +360,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		gascap = uint64(math.MaxUint64 / 2)
 	}
 
-	return &APIImpl{
+	apii := &APIImpl{
 		BaseAPI:                    base,
 		db:                         db,
 		ethBackend:                 eth,
@@ -374,8 +378,15 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
-		EnableInnerTx:              ethCfg.EnableInnerTx,
+		// For X Layer
+		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
+		EnableInnerTx: ethCfg.XLayer.EnableInnerTx,
 	}
+
+	// For X Layer
+	apii.runL2GasPricerForXLayer()
+
+	return apii
 }
 
 // RPCTransaction represents a transaction that will serialize to the RPC representation of a transaction

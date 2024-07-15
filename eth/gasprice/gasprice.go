@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
@@ -151,8 +151,12 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 		// Don't need to pop it, just take from the top of the heap
 		price = txPrices[0].ToBig()
 	}
-	if price.Cmp(oracle.maxPrice) > 0 {
+	if oracle.maxPrice.Int64() > 0 && price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
+	}
+
+	if price.Cmp(oracle.lastPrice) < 0 {
+		price = new(big.Int).Set(oracle.lastPrice)
 	}
 
 	oracle.cache.SetLatest(headHash, price)
@@ -254,6 +258,13 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 			count = count + 1
 		}
 	}
+
+	// xlayer
+	if count == 0 {
+		defaultGP := uint256.NewInt(oracle.lastPrice.Uint64())
+		heap.Push(s, defaultGP)
+	}
+
 	return nil
 }
 

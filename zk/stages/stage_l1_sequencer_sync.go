@@ -212,7 +212,7 @@ func HandleInitialSequenceBatches(
 	// TX without trimming these off
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
 	if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
-		trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
+		//trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
 		log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
 	}
 

@@ -41,9 +41,9 @@ run: ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_SEQ_SENDER)
 	sleep 3
-	$(RUN_DOCKER_AGGREGATOR)
-	sleep 3
 	$(RUN_DOCKER_RPC)
+	sleep 3
+	$(RUN_DOCKER_AGGREGATOR)
 
 .PHONY: stop
 stop: ## Stops all services

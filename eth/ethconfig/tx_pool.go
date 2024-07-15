@@ -51,7 +51,10 @@ type DeprecatedTxPoolConfig struct {
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
-
+	// FreeClaimGasAddr is the address list for claim
+	FreeClaimGasAddr []string
+	// GasPriceMultiple is the factor claim tx gas price should mul
+	GasPriceMultiple uint64
 	// EnableFreeGasByNonce enable free gas
 	EnableFreeGasByNonce bool
 	// FreeGasExAddress is the ex address which can be free gas for the transfer receiver

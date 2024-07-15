@@ -3,7 +3,7 @@ package txpool
 import (
 	"bytes"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zkevm/hex"
+	"math/big"
 	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -14,6 +14,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
+	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -81,32 +82,32 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			p.freeGasAddress[addrHex] = true
 		}
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
-			if freeGas {
-				// todo get dynamic gp
-				if claim {
-					//*minFeeCap = dynamicGP * factorClaim
-				} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
-					//*minFeeCap = dynamicGP
-				}
-			} else {
-				*minFeeCap = mt.Tx.FeeCap
-			}
-
+			*minFeeCap = mt.Tx.FeeCap
 		}
 		mt.minFeeCap = *minFeeCap
 		if mt.Tx.Tip.IsUint64() {
-			if freeGas {
-				// todo get dynamic gp
-				if claim {
-					//minTip = dynamicGP * factorClaim
-				} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
-					//minTip = dynamicGP
-				}
-			} else {
-				minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
-			}
+			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
 		}
 		mt.minTip = minTip
+		// For X Layer
+		if freeGas {
+			// get dynamic gp
+			_, dGp := p.gpCache.GetLatest()
+			newGp := new(big.Int).SetInt64(int64(minTip))
+			if dGp != nil {
+				newGp = newGp.Set(dGp)
+			}
+			if claim {
+				//minTip = dynamicGP * factorClaim
+				newGp = newGp.Mul(newGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+			} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
+				//minTip = dynamicGP
+				// todo diff factor
+				newGp = newGp.Mul(newGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+			}
+			mt.minTip = newGp.Uint64()
+			mt.minFeeCap = *uint256.NewInt(mt.minTip)
+		}
 
 		mt.nonceDistance = 0
 		if mt.Tx.Nonce > senderNonce { // no uint underflow
@@ -196,6 +197,8 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
+
+	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
@@ -282,21 +285,8 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			mt.overflowZkCountersDuringExecution = true
+			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
 	}
-}
-
-// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
-func promoteZk(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint64, discard func(*metaTx, DiscardReason), announcements *types.Announcements) {
-	for i := 0; i < len(pending.best.ms); i++ {
-		mt := pending.best.ms[i]
-		if mt.overflowZkCountersDuringExecution {
-			pending.Remove(mt)
-			discard(mt, OverflowZkCounters)
-		}
-	}
-
-	promote(pending, baseFee, queued, pendingBaseFee, discard, announcements)
 }

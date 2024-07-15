@@ -1484,12 +1484,8 @@ func setGPO(ctx *cli.Context, cfg *gaspricecfg.Config) {
 		cfg.MaxPrice = big.NewInt(ctx.Int64(GpoMaxGasPriceFlag.Name))
 	}
 
-	if ctx.IsSet(GpoDefaultGasPriceFlag.Name) {
-		cfg.Default = big.NewInt(ctx.Int64(GpoDefaultGasPriceFlag.Name))
-	}
-
 	// For X Layer
-	setGPOXLayer(ctx, &cfg.XLayer)
+	setGPOXLayer(ctx, cfg)
 }
 
 // nolint
@@ -1558,7 +1554,7 @@ func setTxPool(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 
 	cfg.CommitEvery = common2.RandomizeDuration(ctx.Duration(TxPoolCommitEveryFlag.Name))
 
-	// XLayer config
+	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
 }
 

@@ -250,8 +250,8 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 			cfg.BlockedList[i] = sender.String()
 		}
 	}
-	if ctx.IsSet(TxPoolPackBatchSpacialList.Name) {
-		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpacialList.Name))
+	if ctx.IsSet(TxPoolPackBatchSpecialList.Name) {
+		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpecialList.Name))
 
 		cfg.FreeClaimGasAddr = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {

@@ -9,10 +9,11 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	eritypes "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 )
 
 const GenesisForkId = 0 // genesis fork is always 0 in the datastream
@@ -79,9 +80,24 @@ func WriteBlocksToStream(
 	}
 
 	if highestDatastreamBlock > from {
-		if err := srv.UnwindToBlock(from); err != nil {
+		// now we need to unwind the batch right back to the point of the start of the batch we are going to write again
+		batch, err := reader.GetBatchNoByL2Block(from)
+		if err != nil {
+
+		}
+		if err := srv.UnwindToBatchStart(batch); err != nil {
 			return err
 		}
+
+		// now find the first block in the batch we just unwound to
+		firstBlockInBatch, found, err := reader.GetLowestBlockInBatch(batch)
+		if err != nil {
+			return err
+		}
+		if !found {
+			return fmt.Errorf("could not find the first block in the batch %v", batch)
+		}
+		from = firstBlockInBatch
 	}
 
 	logTicker := time.NewTicker(10 * time.Second)
@@ -202,7 +218,7 @@ func WriteGenesisToStream(
 	l2Block := srv.CreateL2BlockProto(genesis, genesis.Hash().Bytes(), batchNo, ger, 0, 0, common.Hash{}, 0, common.Hash{})
 	batchStart := srv.CreateBatchStartProto(batchNo, chainId, GenesisForkId, datastream.BatchType_BATCH_TYPE_REGULAR)
 
-	ler, err := srv.getLocalExitRoot(0, reader, tx)
+	ler, err := utils.GetBatchLocalExitRoot(0, reader, tx)
 	if err != nil {
 		return err
 	}

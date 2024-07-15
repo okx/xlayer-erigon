@@ -252,7 +252,6 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolPackBatchSpecialList.Name) {
 		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpecialList.Name))
-
 		cfg.FreeClaimGasAddr = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)

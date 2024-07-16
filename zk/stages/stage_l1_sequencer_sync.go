@@ -242,7 +242,7 @@ func PruneL1SequencerSyncStage(s *stagedsync.PruneState, tx kv.RwTx, cfg L1Seque
 
 func getTrailingCutoffLen(logData []byte) int {
 	length := len(logData)
-	if length < injectedBatchLogTrailingBytes || logData[length-24] == 0 {
+	if logData[length-24] == 0 {
 		return injectedBatchLogTrailingBytes
 	}
 	return injectedBatchLogTrailingBytes - 1

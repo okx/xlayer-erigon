@@ -57,9 +57,11 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList bool
-	whiteList       []string
-	blockList       []string
+	enableWhiteList  bool
+	whiteList        []string
+	blockList        []string
+	freeClaimGasAddr []string
+	gasPriceMultiple uint64
 )
 
 func init() {
@@ -83,6 +85,9 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&priceBump, "txpool.pricebump", txpoolcfg.DefaultConfig.PriceBump, "Price bump percentage to replace an already existing transaction")
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
+	// For X Layer
+	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolPackBatchSpecialList.Name, []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}, utils.TxPoolPackBatchSpecialList.Usage)
+	rootCmd.Flags().Uint64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, 2, utils.TxPoolGasPriceMultiple.Usage)
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)
@@ -176,6 +181,15 @@ func doTxpool(ctx context.Context) error {
 		addr := common.HexToAddress(addrHex)
 		ethCfg.DeprecatedTxPool.BlockedList[i] = addr.String()
 	}
+	ethCfg.DeprecatedTxPool.FreeClaimGasAddr = make([]string, len(freeClaimGasAddr))
+	for i, addrHex := range freeClaimGasAddr {
+		addr := common.HexToAddress(addrHex)
+		ethCfg.DeprecatedTxPool.FreeClaimGasAddr[i] = addr.String()
+	}
+	if len(ethCfg.DeprecatedTxPool.FreeClaimGasAddr) == 0 {
+		ethCfg.DeprecatedTxPool.FreeClaimGasAddr = []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}
+	}
+	ethCfg.DeprecatedTxPool.GasPriceMultiple = gasPriceMultiple
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)

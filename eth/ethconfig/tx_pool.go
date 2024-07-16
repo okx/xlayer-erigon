@@ -51,6 +51,10 @@ type DeprecatedTxPoolConfig struct {
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
+	// FreeClaimGasAddr is the address list for claim
+	FreeClaimGasAddr []string
+	// GasPriceMultiple is the factor claim tx gas price should mul
+	GasPriceMultiple uint64
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

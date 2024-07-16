@@ -712,8 +712,8 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return UnsupportedTx
 	}
 
-	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !isLocal && uint256.NewInt(p.cfg.MinFeeCap).Cmp(&txn.FeeCap) == 1 {
+	// Drop transactions under our minimal accepted gas price or tip
+	if uint256.NewInt(p.cfg.MinFeeCap).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}

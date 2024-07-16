@@ -21,6 +21,8 @@ zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
+log.console.verbosity: 4
+
 #zkevm.executor-urls: erigon-stateless-executor:50071
 zkevm.executor-urls: ""
 zkevm.executor-strict: false

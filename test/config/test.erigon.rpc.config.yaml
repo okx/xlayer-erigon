@@ -33,6 +33,7 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
+zkevm.gasless: true
 zkevm.allow-internal-transactions: true
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]

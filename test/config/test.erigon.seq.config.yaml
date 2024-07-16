@@ -37,6 +37,7 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
+zkevm.gasless: true
 
 zkevm.l1-highest-block-type: latest
 

@@ -3,7 +3,6 @@ package stages
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zk/constants"
 	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -89,7 +88,7 @@ Loop:
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
 				case contracts.InitialSequenceBatchesTopic:
-					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header, cfg.zkCfg.SequencerInitialForkId); err != nil {
+					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
 						return err
 					}
 					// we only ever handle a single injected batch as a sequencer currently so we can just
@@ -184,7 +183,6 @@ func HandleL1InfoTreeUpdate(
 
 const (
 	injectedBatchLogTrailingBytes        = 24
-	injectedBatchLogTrailingBytesForkID9 = 23
 	injectedBatchLogTransactionStartByte = 128
 	injectedBatchLastGerStartByte        = 31
 	injectedBatchLastGerEndByte          = 64
@@ -197,7 +195,6 @@ func HandleInitialSequenceBatches(
 	db *hermez_db.HermezDb,
 	l ethTypes.Log,
 	header *ethTypes.Header,
-	squencerInitialForkId uint64,
 ) error {
 	var err error
 
@@ -210,11 +207,8 @@ func HandleInitialSequenceBatches(
 
 	// the log appears to have some trailing 24 bytes of all 0s in it.  Not sure why but we can't handle the
 	// TX without trimming these off
+	injectedBatchLogTrailingBytes := getTrailingCutoffLen(l.Data)
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
-	if squencerInitialForkId == uint64(constants.ForkID9Elderberry2) {
-		//trailingCutoff = len(l.Data) - injectedBatchLogTrailingBytesForkID9
-		log.Warn("Using Elderberry2 fork ID, trimming 23 bytes from injected batch log data")
-	}
 
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
 
@@ -241,4 +235,13 @@ func UnwindL1SequencerSyncStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg L1Seq
 
 func PruneL1SequencerSyncStage(s *stagedsync.PruneState, tx kv.RwTx, cfg L1SequencerSyncCfg, ctx context.Context) error {
 	return nil
+}
+
+func getTrailingCutoffLen(logData []byte) int {
+	log.Info(fmt.Sprintf("Handle initial sequence batches, log data: %v", logData))
+	length := len(logData)
+	if length < injectedBatchLogTrailingBytes || logData[length-24] == 0 {
+		return injectedBatchLogTrailingBytes
+	}
+	return injectedBatchLogTrailingBytes - 1
 }

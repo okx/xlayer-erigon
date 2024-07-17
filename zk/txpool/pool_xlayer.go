@@ -53,19 +53,33 @@ func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	return false
 }
 
-func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
+func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
+	p.gpCache = gpCache
+}
+
+func (p *TxPool) checkFreeGasExAddress(senderID uint64) bool {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false
 	}
-	for _, e := range p.wbCfg.FreeClaimGasAddr {
+	for _, e := range p.wbCfg.FreeGasExAddress {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
 	}
 	return false
 }
-
-func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
-	p.gpCache = gpCache
+func (p *TxPool) checkFreeGas(senderID uint64) (bool, bool) {
+	addr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false, false
+	}
+	// is claim tx
+	for _, e := range p.wbCfg.FreeClaimGasAddr {
+		if common.HexToAddress(e) == addr {
+			return true, true
+		}
+	}
+	free := p.freeGasAddress[addr.String()]
+	return free, false
 }

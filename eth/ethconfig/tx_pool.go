@@ -21,7 +21,6 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
-	"github.com/ledgerwatch/erigon/params"
 )
 
 // DeprecatedTxPoolConfig are the configuration parameters of the transaction pool.
@@ -49,7 +48,7 @@ type DeprecatedTxPoolConfig struct {
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction
 // pool.
 var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
-	PriceLimit: params.InitialBaseFee,
+	PriceLimit: 1_000_000_000, // Set default minimum price limit to 1gwei
 	PriceBump:  10,
 
 	AccountSlots:       16,

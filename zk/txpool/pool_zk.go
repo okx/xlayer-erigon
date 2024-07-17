@@ -42,7 +42,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 	minFeeCap := uint256.NewInt(0).SetAllOne()
 	minTip := uint64(math.MaxUint64)
 	var toDel []*metaTx // can't delete items while iterate them
-	freeGas, claim := p.checkFreeGas(senderID)
+	isfreeGasAddr, claim := p.checkFreeGasAddr(senderID)
 	byNonce.ascend(senderID, func(mt *metaTx) bool {
 		if mt.Tx.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: onSenderStateChange loop iteration idHash=%x senderID=%d, senderNonce=%d, txn.nonce=%d, currentSubPool=%s", mt.Tx.IDHash, senderID, senderNonce, mt.Tx.Nonce, mt.currentSubPool))
@@ -90,20 +90,20 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		}
 		mt.minTip = minTip
 		// For X Layer
-		if freeGas {
+		// free case: 1. is claim tx; 2. new bridge account with the first few tx
+		if claim ||
+			(isfreeGasAddr && mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr) {
 			// get dynamic gp
-			_, dGp := p.gpCache.GetLatest()
 			newGp := new(big.Int).SetInt64(int64(minTip))
+			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
 				newGp = newGp.Set(dGp)
 			}
 			if claim {
-				//minTip = dynamicGP * factorClaim
 				newGp = newGp.Mul(newGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
-			} else if mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
-				//minTip = dynamicGP
-				// todo diff factor
-				newGp = newGp.Mul(newGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.wbCfg.GasPriceMultiple, newGp))
+			} else {
+				log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%v", mt.Tx.Nonce, dGp, newGp))
 			}
 			mt.minTip = newGp.Uint64()
 			mt.minFeeCap = *uint256.NewInt(mt.minTip)

@@ -69,7 +69,7 @@ func (p *TxPool) checkFreeGasExAddress(senderID uint64) bool {
 	}
 	return false
 }
-func (p *TxPool) checkFreeGas(senderID uint64) (bool, bool) {
+func (p *TxPool) checkFreeGasAddr(senderID uint64) (bool, bool) {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false, false

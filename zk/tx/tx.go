@@ -189,9 +189,9 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 	return result, nil
 }
 
-func DecodeTx(encodedTx []byte, efficiencyPercentage byte, forkId uint16) (types.Transaction, uint8, error) {
+func DecodeTx(encodedTx []byte, efficiencyPercentage byte, forkId uint64) (types.Transaction, uint8, error) {
 	// efficiencyPercentage := uint8(0)
-	if forkId >= uint16(constants.ForkID5Dragonfruit) {
+	if forkId >= uint64(constants.ForkID5Dragonfruit) {
 		encodedTx = append(encodedTx, efficiencyPercentage)
 	}
 
@@ -320,7 +320,7 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 		removeLeadingZeroesFromBytes(nonceBytes),
 		removeLeadingZeroesFromBytes(gasPriceBytes),
 		removeLeadingZeroesFromBytes(gas),
-		removeLeadingZeroesFromBytes(to),
+		to, // don't remove leading 0s from addr
 		removeLeadingZeroesFromBytes(valueBytes),
 		removeLeadingZeroesFromBytes(tx.GetData()),
 	}
@@ -334,6 +334,10 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	encoded, err := rlp.EncodeToBytes(toEncode)
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
+		log.Debug("break me!")
 	}
 
 	// reverse the eip-155 changes for the V value for transport
@@ -351,6 +355,11 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	if forkId >= uint16(constants.ForkID5Dragonfruit) {
 		ep := hermez_db.Uint8ToBytes(efficiencyPercentage)
 		encoded = append(encoded, ep...)
+	}
+
+	// break if encoded contains 937c4
+	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
+		log.Debug("break me!")
 	}
 
 	return encoded, nil
@@ -382,7 +391,7 @@ func GetDecodedV(tx types.Transaction, v *uint256.Int) *uint256.Int {
 	return result
 }
 
-func GenerateBlockBatchL2Data(forkId uint16, deltaTimestamp uint32, l1InfoTreeIndex uint32, transactions []types.Transaction) ([]byte, error) {
+func GenerateBlockBatchL2Data(forkId uint16, deltaTimestamp uint32, l1InfoTreeIndex uint32, transactions []types.Transaction, egTx map[common.Hash]uint8) ([]byte, error) {
 	var result []byte
 
 	// add in the changeL2Block transaction
@@ -391,7 +400,7 @@ func GenerateBlockBatchL2Data(forkId uint16, deltaTimestamp uint32, l1InfoTreeIn
 	result = binary.BigEndian.AppendUint32(result, l1InfoTreeIndex)
 
 	for _, transaction := range transactions {
-		encoded, err := TransactionToL2Data(transaction, forkId, MaxEffectivePercentage)
+		encoded, err := TransactionToL2Data(transaction, forkId, egTx[transaction.Hash()])
 		if err != nil {
 			return nil, err
 		}

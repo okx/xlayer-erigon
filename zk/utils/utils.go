@@ -9,6 +9,8 @@ import (
 	"github.com/ledgerwatch/erigon/zk/constants"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/log/v3"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon/core/state"
 )
 
 // if current sync is before verified batch - short circuit to verified batch, otherwise to enx of next batch
@@ -70,7 +72,8 @@ func ShouldShortCircuitExecution(tx kv.RwTx, logPrefix string) (bool, uint64, er
 }
 
 type ForkReader interface {
-	GetForkIdBlock(forkId uint64) (uint64, bool, error)
+	GetLowestBatchByFork(forkId uint64) (uint64, error)
+	GetLowestBlockInBatch(batchNo uint64) (blockNo uint64, found bool, err error)
 }
 
 type ForkConfigWriter interface {
@@ -82,9 +85,12 @@ func UpdateZkEVMBlockCfg(cfg ForkConfigWriter, hermezDb ForkReader, logPrefix st
 	var foundAny bool = false
 
 	for _, forkId := range chain.ForkIdsOrdered {
-		blockNum, found, err := hermezDb.GetForkIdBlock(uint64(forkId))
+		batch, err := hermezDb.GetLowestBatchByFork(uint64(forkId))
 		if err != nil {
-			log.Error(fmt.Sprintf("[%s] Error getting fork id %v from db: %v", logPrefix, forkId, err))
+			return err
+		}
+		blockNum, found, err := hermezDb.GetLowestBlockInBatch(batch)
+		if err != nil {
 			return err
 		}
 
@@ -105,4 +111,58 @@ func UpdateZkEVMBlockCfg(cfg ForkConfigWriter, hermezDb ForkReader, logPrefix st
 	}
 
 	return nil
+}
+
+func RecoverySetBlockConfigForks(blockNum uint64, forkId uint64, cfg ForkConfigWriter, logPrefix string) error {
+	for _, fork := range chain.ForkIdsOrdered {
+		if uint64(fork) <= forkId {
+			if err := cfg.SetForkIdBlock(fork, blockNum); err != nil {
+				log.Error(fmt.Sprintf("[%s] Error setting fork id %v to block %v", logPrefix, forkId, blockNum))
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func GetBatchLocalExitRoot(batchNo uint64, db *hermez_db.HermezDbReader, tx kv.Tx) (libcommon.Hash, error) {
+	// check db first
+	localExitRoot, err := db.GetLocalExitRootForBatchNo(batchNo)
+	if err != nil {
+		return libcommon.Hash{}, err
+	}
+
+	if localExitRoot != (libcommon.Hash{}) {
+		return localExitRoot, nil
+	}
+
+	return GetBatchLocalExitRootFromSCStorage(batchNo, db, tx)
+}
+
+func GetBatchLocalExitRootFromSCStorage(batchNo uint64, db *hermez_db.HermezDbReader, tx kv.Tx) (libcommon.Hash, error) {
+	var localExitRoot libcommon.Hash
+
+	if batchNo > 0 {
+		checkBatch := batchNo
+		for ; checkBatch > 0; checkBatch-- {
+			blockNo, err := db.GetHighestBlockInBatch(checkBatch)
+			if err != nil {
+				return libcommon.Hash{}, err
+			}
+			stateReader := state.NewPlainState(tx, blockNo, nil)
+			rawLer, err := stateReader.ReadAccountStorage(state.GER_MANAGER_ADDRESS, 1, &state.GLOBAL_EXIT_ROOT_POS_1)
+			if err != nil {
+				stateReader.Close()
+				return libcommon.Hash{}, err
+			}
+			stateReader.Close()
+			localExitRoot = libcommon.BytesToHash(rawLer)
+			if localExitRoot != (libcommon.Hash{}) {
+				break
+			}
+		}
+	}
+
+	return localExitRoot, nil
 }

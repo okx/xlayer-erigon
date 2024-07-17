@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
@@ -62,6 +62,9 @@ type Oracle struct {
 	checkBlocks                       int
 	percentile                        int
 	maxHeaderHistory, maxBlockHistory int
+
+	// For X Layer
+	defaultPrice *big.Int
 }
 
 // NewOracle returns a new gasprice oracle which can recommend suitable
@@ -91,6 +94,11 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 		ignorePrice = gaspricecfg.DefaultIgnorePrice
 		log.Warn("Sanitizing invalid gasprice oracle ignore price", "provided", params.IgnorePrice, "updated", ignorePrice)
 	}
+	// For X Layer
+	defaultPrice := params.Default
+	if defaultPrice == nil || defaultPrice.Int64() <= 0 {
+		defaultPrice = gaspricecfg.DefaultXLayerPrice
+	}
 	return &Oracle{
 		backend:          backend,
 		lastPrice:        params.Default,
@@ -101,6 +109,8 @@ func NewOracle(backend OracleBackend, params gaspricecfg.Config, cache Cache) *O
 		cache:            cache,
 		maxHeaderHistory: params.MaxHeaderHistory,
 		maxBlockHistory:  params.MaxBlockHistory,
+		// For X Layer
+		defaultPrice: defaultPrice,
 	}
 }
 
@@ -153,6 +163,11 @@ func (oracle *Oracle) SuggestTipCap(ctx context.Context) (*big.Int, error) {
 	}
 	if price.Cmp(oracle.maxPrice) > 0 {
 		price = new(big.Int).Set(oracle.maxPrice)
+	}
+
+	// For X Layer
+	if price.Cmp(oracle.defaultPrice) < 0 {
+		price = new(big.Int).Set(oracle.defaultPrice)
 	}
 
 	oracle.cache.SetLatest(headHash, price)
@@ -254,6 +269,13 @@ func (oracle *Oracle) getBlockPrices(ctx context.Context, blockNum uint64, limit
 			count = count + 1
 		}
 	}
+
+	// For X Layer
+	if count == 0 {
+		defaultGP := uint256.NewInt(oracle.defaultPrice.Uint64())
+		heap.Push(s, defaultGP)
+	}
+
 	return nil
 }
 

@@ -3,6 +3,7 @@ package vm
 import (
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
+	"github.com/ledgerwatch/erigon/common/hexutil"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"math/big"
 	"strconv"
@@ -17,29 +18,6 @@ const (
 	CREATE2_TYP      = "create2"
 	SUICIDE_TYP      = "suicide"
 )
-
-//// InnerTx stores the basic field of an inner tx.
-//// NOTE: DON'T change this struct for:
-//// 1. It will be written to database, and must be keep the same type When reading history data from db
-//// 2. It will be returned by rpc method
-//type InnerTx struct {
-//	Dept          big.Int `json:"dept"`
-//	InternalIndex big.Int `json:"internal_index"`
-//	CallType      string  `json:"call_type"`
-//	Name          string  `json:"name"`
-//	TraceAddress  string  `json:"trace_address"`
-//	CodeAddress   string  `json:"code_address"`
-//	From          string  `json:"from"`
-//	To            string  `json:"to"`
-//	Input         string  `json:"input"`
-//	Output        string  `json:"output"`
-//	IsError       bool    `json:"is_error"`
-//	Gas           uint64  `json:"gas"`
-//	GasUsed       uint64  `json:"gas_used"`
-//	Value         string  `json:"value"`
-//	ValueWei      string  `json:"value_wei"`
-//	Error         string  `json:"error"`
-//}
 
 type InnerTxMeta struct {
 	index     int
@@ -66,11 +44,12 @@ func beforeOp(
 	gas uint64,
 	value *big.Int) (*zktypes.InnerTx, int) {
 	innerTx := &zktypes.InnerTx{
-		CallType: callTyp,
-		From:     fromAddr.String(),
-		ValueWei: value.String(),
-		Gas:      gas,
-		IsError:  false,
+		CallType:     callTyp,
+		From:         fromAddr.String(),
+		ValueWei:     value.String(),
+		CallValueWei: hexutil.EncodeBig(value),
+		Gas:          gas,
+		IsError:      false,
 	}
 
 	if toAddr != nil {
@@ -127,7 +106,7 @@ func afterOp(interpreter *EVMInterpreter, opType string, gas_used uint64, newInd
 	}
 
 	switch opType {
-	case "create":
+	case CREATE_TYP, CREATE2_TYP:
 		innerTx.To = addr.String()
 	}
 }

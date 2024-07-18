@@ -309,7 +309,7 @@ func (s *L1Syncer) getLatestL1Block() (uint64, error) {
 func (s *L1Syncer) queryBlocks() error {
 	startBlock := s.lastCheckedL1Block.Load() + 1
 
-	log.Debug("GetHighestSequence", "startBlock", s.lastCheckedL1Block.Load())
+	log.Debug("GetHighestSequence", "startBlock", startBlock)
 
 	// define the blocks we're going to fetch up front
 	fetches := make([]fetchJob, 0)

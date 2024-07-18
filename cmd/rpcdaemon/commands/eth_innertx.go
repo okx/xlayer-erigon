@@ -11,6 +11,7 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // GetInternalTransactions ...
@@ -50,8 +51,10 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 
 	hermezReader := hermez_db.NewHermezDbReader(tx)
 	blockInnerTxs := hermezReader.GetInnerTxs(blockNum)
-	if len(blockInnerTxs) != len(block.Transactions()) {
-		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	if len(blockInnerTxs) < len(block.Transactions()) {
+		return nil, fmt.Errorf("block inner tx count %d is less than block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	} else if len(blockInnerTxs) > len(block.Transactions()) {
+		log.Warn(fmt.Sprintf("block inner tx count %d is greater than block tx count %d", len(blockInnerTxs), len(block.Transactions())))
 	}
 
 	return blockInnerTxs[txnIndex], nil
@@ -100,12 +103,14 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 
 	hermezReader := hermez_db.NewHermezDbReader(tx)
 	blockInnerTxs := hermezReader.GetInnerTxs(n)
-	if len(blockInnerTxs) != len(block.Transactions()) {
-		return nil, fmt.Errorf("block inner tx count %d not equal to block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	if len(blockInnerTxs) < len(block.Transactions()) {
+		return nil, fmt.Errorf("block inner tx count %d is less than block tx count %d", len(blockInnerTxs), len(block.Transactions()))
+	} else if len(blockInnerTxs) > len(block.Transactions()) {
+		log.Warn(fmt.Sprintf("block inner tx count %d is greater than block tx count %d", len(blockInnerTxs), len(block.Transactions())))
 	}
 
 	res := make(map[libcommon.Hash][]*zktypes.InnerTx)
-	for index, innerTxs := range blockInnerTxs {
+	for index, innerTxs := range blockInnerTxs[:len(block.Transactions())] {
 		res[block.Transactions()[index].Hash()] = innerTxs
 	}
 

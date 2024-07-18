@@ -333,23 +333,24 @@ func (api *BaseAPI) pruneMode(tx kv.Tx) (*prune.Mode, error) {
 // APIImpl is implementation of the EthAPI interface based on remote Db access
 type APIImpl struct {
 	*BaseAPI
-	ethBackend                 rpchelper.ApiBackend
-	txPool                     txpool.TxpoolClient
-	mining                     txpool.MiningClient
-	gasCache                   *GasPriceCache
-	db                         kv.RoDB
-	GasCap                     uint64
-	ReturnDataLimit            int
-	ZkRpcUrl                   string
-	PoolManagerUrl             string
-	AllowFreeTransactions      bool
-	AllowPreEIP155Transactions bool
-	L1RpcUrl                   string
-	DefaultGasPrice            uint64
-	MaxGasPrice                uint64
-	GasPriceFactor             float64
-	L1GasPrice                 L1GasPrice
-
+	ethBackend                  rpchelper.ApiBackend
+	txPool                      txpool.TxpoolClient
+	mining                      txpool.MiningClient
+	gasCache                    *GasPriceCache
+	db                          kv.RoDB
+	GasCap                      uint64
+	ReturnDataLimit             int
+	ZkRpcUrl                    string
+	PoolManagerUrl              string
+	AllowFreeTransactions       bool
+	AllowPreEIP155Transactions  bool
+	L1RpcUrl                    string
+	DefaultGasPrice             uint64
+	MaxGasPrice                 uint64
+	GasPriceFactor              float64
+	L1GasPrice                  L1GasPrice
+	VirtualCountersSmtReduction float64
+	
 	// For X Layer
 	L2GasPricer   gasprice.L2GasPricer
 	EnableInnerTx bool
@@ -379,6 +380,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		MaxGasPrice:                ethCfg.MaxGasPrice,
 		GasPriceFactor:             ethCfg.GasPriceFactor,
 		L1GasPrice:                 L1GasPrice{},
+		VirtualCountersSmtReduction: ethCfg.VirtualCountersSmtReduction,
 		// For X Layer
 		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
 		EnableInnerTx: ethCfg.XLayer.EnableInnerTx,
@@ -543,12 +545,10 @@ func NewGasPriceCache() *GasPriceCache {
 }
 
 func (c *GasPriceCache) GetLatest() (common.Hash, *big.Int) {
-	var hash common.Hash
-	var price *big.Int
 	c.mtx.Lock()
-	hash = c.latestHash
-	price = c.latestPrice
-	c.mtx.Unlock()
+	defer c.mtx.Unlock()
+	hash := c.latestHash
+	price := new(big.Int).Set(c.latestPrice) // deep copy
 	return hash, price
 }
 

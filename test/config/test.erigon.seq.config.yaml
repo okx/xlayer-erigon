@@ -16,8 +16,8 @@ zkevm.address-ger-manager: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
 
 zkevm.l1-rollup-id: 1
 zkevm.l1-first-block: 136
-zkevm.l1-block-range: 10
-zkevm.l1-query-delay: 100
+zkevm.l1-block-range: 1000
+zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
@@ -26,7 +26,6 @@ zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: true
 
-zkevm.sequencer-initial-fork-id: 9
 zkevm.sequencer-block-seal-time: "6s"
 zkevm.sequencer-batch-seal-time: "12s"
 zkevm.sequencer-non-empty-batch-seal-time: "3s"

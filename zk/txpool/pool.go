@@ -43,6 +43,7 @@ import (
 	core_types "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/status-im/keycard-go/hexutils"
 
 	"github.com/gateway-fm/cdk-erigon-lib/chain"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -147,8 +148,10 @@ const (
 	SenderDisallowedSendTx DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 
-	ReceiverDisallowedReceiveTx DiscardReason = 27 // XLayer receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 28 // XLayer the transaction is sent by a no whitelisted account
+	ReceiverDisallowedReceiveTx DiscardReason = 127 // XLayer receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 128 // XLayer the transaction is sent by a no whitelisted account
+
+	DiscardByLimbo DiscardReason = 27
 )
 
 func (r DiscardReason) String() string {
@@ -211,6 +214,8 @@ func (r DiscardReason) String() string {
 		return "You are not allowed to send transactions on the X Layer as we are under the phase 1, X layer will be open to the public soon"
 	case SenderDisallowedDeploy:
 		return "sender disallowed to deploy contract by ACL policy"
+	case DiscardByLimbo:
+		return "limbo error"
 	default:
 		panic(fmt.Sprintf("discard reason: %d", r))
 	}
@@ -244,6 +249,9 @@ type SubPoolType uint8
 const PendingSubPool SubPoolType = 1
 const BaseFeeSubPool SubPoolType = 2
 const QueuedSubPool SubPoolType = 3
+const LimboSubPool SubPoolType = 4
+
+const LimboSubPoolSize = 100_000 // overkill but better too large than too small
 
 func (sp SubPoolType) String() string {
 	switch sp {
@@ -306,7 +314,7 @@ type TxPool struct {
 	newPendingTxs           chan types.Announcements         // notifications about new txs in Pending sub-pool
 	all                     *BySenderAndNonce                // senderID => (sorted map of tx nonce => *metaTx)
 	deletedTxs              []*metaTx                        // list of discarded txs since last db commit
-	overflowZkCounters      []*metaTx
+	overflowZkCounters      []*metaTx                        // X Layer optimize tx pool
 	promoted                types.Announcements
 	cfg                     txpoolcfg.Config
 	chainID                 uint256.Int
@@ -318,7 +326,7 @@ type TxPool struct {
 	isPostLondon            atomic.Bool
 	shanghaiTime            *big.Int
 	isPostShanghai          atomic.Bool
-	allowFreeTransactions   bool
+	ethCfg                  *ethconfig.Config
 	aclDB                   kv.RwDB
 
 	wbCfg WBConfig // XLayer config
@@ -331,6 +339,9 @@ type TxPool struct {
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
 	// vice versa
 	flushMtx *sync.Mutex
+
+	// limbo specific fields where bad batch transactions identified by the executor go
+	limbo *Limbo
 }
 
 func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, ethCfg *ethconfig.Config, cache kvcache.Cache, chainID uint256.Int, shanghaiTime *big.Int, londonBlock *big.Int, aclDB kv.RwDB) (*TxPool, error) {
@@ -373,8 +384,10 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		unprocessedRemoteByHash: map[string]int{},
 		londonBlock:             londonBlock,
 		shanghaiTime:            shanghaiTime,
-		allowFreeTransactions:   ethCfg.AllowFreeTransactions,
+		ethCfg:                  ethCfg,
 		flushMtx:                &sync.Mutex{},
+		aclDB:                   aclDB,
+		limbo:                   newLimbo(),
 		wbCfg: WBConfig{ // XLayer config
 			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
 			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
@@ -382,13 +395,13 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
 			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
 		},
-		aclDB: aclDB,
 	}, nil
 }
 
 func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChangeBatch, unwindTxs, minedTxs types.TxSlots, tx kv.Tx) error {
 	defer newBlockTimer.UpdateDuration(time.Now())
-	//t := time.Now()
+
+	isAfterLimbo := len(unwindTxs.Txs) > 0 && p.isDeniedYieldingTransactions()
 
 	cache := p.cache()
 	cache.OnNewBlock(stateChanges)
@@ -423,7 +436,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	}
 
 	var baseFee uint64
-	if !p.allowFreeTransactions {
+	if !p.ethCfg.AllowFreeTransactions {
 		baseFee = stateChanges.PendingBlockBaseFee
 	} else {
 		baseFee = uint64(0)
@@ -432,7 +445,7 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 	pendingBaseFee, baseFeeChanged := p.setBaseFee(baseFee)
 	// Update pendingBase for all pool queues and slices
 	if baseFeeChanged {
-		p.pending.sorted = false // `pending.best` need to be resort if base fee changed
+		p.pending.sorted = false // X Layer `pending.best` need to be resort if base fee changed
 		p.pending.best.pendingBaseFee = pendingBaseFee
 		p.pending.worst.pendingBaseFee = pendingBaseFee
 		p.baseFee.best.pendingBastFee = pendingBaseFee
@@ -441,14 +454,20 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		p.queued.worst.pendingBaseFee = pendingBaseFee
 	}
 
+	p.addLimboToUnwindTxs(&unwindTxs)
+
 	p.blockGasLimit.Store(stateChanges.BlockGasLimit)
 	if err := p.senders.onNewBlock(stateChanges, unwindTxs, minedTxs); err != nil {
 		return err
 	}
-	_, unwindTxs, err = p.validateTxs(&unwindTxs, cacheView)
-	if err != nil {
-		return err
-	}
+
+	// No point to validate transactions that have already been executed.
+	// It is clear that some of them will not pass the validation, because a unwound tx may depend on another unwound transaction. In this case the depended tx will be discarded
+	// Let's all of them pass so they can stay in the queue subpool.
+	// _, unwindTxs, err = p.validateTxs(&unwindTxs, cacheView)
+	// if err != nil {
+	// 	return err
+	// }
 
 	if assert.Enable {
 		for _, txn := range unwindTxs.Txs {
@@ -467,11 +486,30 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		return err
 	}
 
+	blockNum := p.lastSeenBlock.Load()
+
+	sendersWithChangedStateBeforeLimboTrim := prepareSendersWithChangedState(&unwindTxs)
+	unwindTxs, limboTxs, forDiscard := p.trimLimboSlots(&unwindTxs)
+
 	//log.Debug("[txpool] new block", "unwinded", len(unwindTxs.txs), "mined", len(minedTxs.txs), "baseFee", baseFee, "blockHeight", blockHeight)
 
-	announcements, err := p.addTxsOnNewBlock(p.lastSeenBlock.Load(), cacheView, stateChanges, p.senders, unwindTxs,
-		pendingBaseFee, stateChanges.BlockGasLimit,
-		p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked)
+	announcements, err := p.addTxsOnNewBlock(
+		blockNum,
+		cacheView,
+		stateChanges,
+		p.senders,
+		unwindTxs,
+		pendingBaseFee,
+		stateChanges.BlockGasLimit,
+		p.pending,
+		p.baseFee,
+		p.queued,
+		p.all,
+		p.byHash,
+		sendersWithChangedStateBeforeLimboTrim,
+		p.addLocked,
+		p.discardLocked,
+	)
 	if err != nil {
 		return err
 	}
@@ -492,6 +530,16 @@ func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChang
 		case p.newPendingTxs <- p.promoted.Copy():
 		default:
 		}
+	}
+
+	for idx, slot := range forDiscard.Txs {
+		mt := newMetaTx(slot, forDiscard.IsLocal[idx], blockNum)
+		p.discardLocked(mt, DiscardByLimbo)
+		log.Info("[txpool] Discarding", "tx-hash", hexutils.BytesToHex(slot.IDHash[:]))
+	}
+	p.finalizeLimboOnNewBlock(limboTxs)
+	if isAfterLimbo {
+		p.allowYieldingTransactions()
 	}
 
 	//log.Info("[txpool] new block", "number", p.lastSeenBlock.Load(), "pendngBaseFee", pendingBaseFee, "in", time.Since(t))
@@ -737,13 +785,13 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return InsufficientFunds
 	}
 
-	//XLayer check if sender is blocked
+	// X Layer check if sender is blocked
 	if p.checkBlockedAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx
 	}
 
-	// check if receiver is blocked
+	// X Layer check if receiver is blocked
 	if !txn.Creation {
 		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
 		to := txnDec.GetTo()
@@ -755,7 +803,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		}
 	}
 
-	// check if sender is whitelisted
+	// X Layer check if sender is whitelisted
 	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
@@ -1034,7 +1082,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
-	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
+	// XLayer Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
 	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)
@@ -1049,10 +1097,12 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		if err != nil {
 			return announcements, discardReasons, err
 		}
+		// X Layer optimize tx pool
 		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
+	// X Layer optimize tx pool
 	promote(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
 
 	return announcements, discardReasons, nil
@@ -1060,7 +1110,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, stateChanges *remote.StateChangeBatch,
 	senders *sendersBatch, newTxs types.TxSlots, pendingBaseFee uint64, blockGasLimit uint64,
 	pending *PendingPool, baseFee, queued *SubPool,
-	byNonce *BySenderAndNonce, byHash map[string]*metaTx, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
+	byNonce *BySenderAndNonce, byHash map[string]*metaTx, sendersWithChangedStateBeforeLimboTrim *LimboSendersWithChangedState, add func(*metaTx, *types.Announcements) DiscardReason, discard func(*metaTx, DiscardReason)) (types.Announcements, error) {
 	protocolBaseFee := calcProtocolBaseFee(pendingBaseFee)
 	if assert.Enable {
 		for _, txn := range newTxs.Txs {
@@ -1082,11 +1132,13 @@ func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, 
 	announcements := types.Announcements{}
 	for i, txn := range newTxs.Txs {
 		if _, ok := byHash[string(txn.IDHash[:])]; ok {
+			sendersWithChangedStateBeforeLimboTrim.decrement(txn.SenderID)
 			continue
 		}
 		mt := newMetaTx(txn, newTxs.IsLocal[i], blockNum)
 		if reason := add(mt, &announcements); reason != NotSet {
 			discard(mt, reason)
+			sendersWithChangedStateBeforeLimboTrim.decrement(txn.SenderID)
 			continue
 		}
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
@@ -1096,13 +1148,14 @@ func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, 
 	for _, changesList := range stateChanges.ChangeBatch {
 		for _, change := range changesList.Changes {
 			switch change.Action {
-			case remote.Action_UPSERT, remote.Action_UPSERT_CODE:
+			case remote.Action_UPSERT, remote.Action_UPSERT_CODE, remote.Action_REMOVE:
 				if change.Incarnation > 0 {
 					continue
 				}
 				addr := gointerfaces.ConvertH160toAddress(change.Address)
 				id, ok := senders.getID(addr)
 				if !ok {
+					sendersWithChangedStateBeforeLimboTrim.decrement(id)
 					continue
 				}
 				sendersWithChangedState[id] = struct{}{}
@@ -1110,7 +1163,7 @@ func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, 
 		}
 	}
 
-	// We must delete them first and then re-tag the related transactions
+	// X Layer We must delete them first and then re-tag the related transactions
 	// The new tags will be used to sort transactions
 	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)
@@ -1124,10 +1177,12 @@ func (p *TxPool) addTxsOnNewBlock(blockNum uint64, cacheView kvcache.CacheView, 
 		if err != nil {
 			return announcements, err
 		}
+		// X Layer optimize tx pool
 		p.onSenderStateChange(senderID, nonce, balance, byNonce,
 			protocolBaseFee, blockGasLimit, pending, baseFee, queued, discard)
 	}
 
+	// X Layer optimize tx pool
 	promote(pending, baseFee, queued, pendingBaseFee, discard, &announcements)
 
 	return announcements, nil
@@ -1177,7 +1232,7 @@ func (p *TxPool) addLocked(mt *metaTx, announcements *types.Announcements) Disca
 
 		p.discardLocked(found, ReplacedByHigherTip)
 	} else if p.pending.IsFull() {
-		// always accept a tx if it would replace an old tx
+		// X Layer always accept a tx if it would replace an old tx
 		// otherwise it is denied when pending pool is full
 		return PendingPoolOverflow
 	}
@@ -1336,7 +1391,7 @@ func promote(pending *PendingPool, baseFee, queued *SubPool, pendingBaseFee uint
 		discard(baseFee.PopWorst(), BaseFeePoolOverflow)
 	}
 
-	// Discard worst transactions from the queued sub pool until it is within its capacity limits
+	// X Layer Discard worst transactions from the queued sub pool until it is within its capacity limits
 	for queued.Len() > queued.limit {
 		discard(queued.PopWorst(), QueuedPoolOverflow)
 	}
@@ -1583,6 +1638,9 @@ func (p *TxPool) flushLocked(tx kv.RwTx) (err error) {
 	if err := PutLastSeenBlock(tx, p.lastSeenBlock.Load(), encID); err != nil {
 		return err
 	}
+	if err := p.flushLockedLimbo(tx); err != nil {
+		return err
+	}
 
 	// clean - in-memory data structure as later as possible - because if during this Tx will happen error,
 	// DB will stay consistent but some in-memory structures may be already cleaned, and retry will not work
@@ -1645,6 +1703,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 
 		isLocalTx := p.isLocalLRU.Contains(string(k))
 
+		// X Layer validate transaction
 		if reason := p.validateTx(txn, isLocalTx, cacheView, addr); reason != NotSet && reason != Success {
 			return nil
 		}
@@ -1675,6 +1734,10 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		return err
 	}
 	p.pendingBaseFee.Store(pendingBaseFee)
+
+	if err = p.fromDBLimbo(ctx, tx, cacheView); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -2098,7 +2161,7 @@ type PendingPool struct {
 	limit int
 	t     SubPoolType
 
-	sorted bool // means `PendingPool.best` is sorted or not
+	sorted bool // X Layer means `PendingPool.best` is sorted or not
 }
 
 func NewPendingSubPool(t SubPoolType, limit int) *PendingPool {
@@ -2135,6 +2198,7 @@ func (p *PendingPool) EnforceWorstInvariants() {
 	heap.Init(p.worst)
 }
 func (p *PendingPool) EnforceBestInvariants() {
+	// X Layer optimize pool
 	if !p.sorted {
 		sort.Sort(p.best)
 		p.sorted = true
@@ -2163,13 +2227,17 @@ func (p *PendingPool) PopWorst() *metaTx { //nolint
 func (p *PendingPool) Updated(mt *metaTx) {
 	heap.Fix(p.worst, mt.worstIndex)
 }
-func (p *PendingPool) Len() int     { return len(p.best.ms) }
+func (p *PendingPool) Len() int { return len(p.best.ms) }
+
+// X Layer optimize pool
 func (p *PendingPool) IsFull() bool { return p.Len() >= p.limit }
 
 func (p *PendingPool) Remove(i *metaTx) {
 	if i.worstIndex >= 0 {
 		heap.Remove(p.worst, i.worstIndex)
 	}
+
+	// X Layer optimize pool
 	if i.bestIndex != p.Len()-1 {
 		p.sorted = false
 	}
@@ -2185,6 +2253,8 @@ func (p *PendingPool) Add(i *metaTx) {
 	}
 	i.currentSubPool = p.t
 	heap.Push(p.worst, i)
+
+	// X Layer optimize pool
 	p.sorted = false
 	p.best.UnsafeAdd(i)
 }

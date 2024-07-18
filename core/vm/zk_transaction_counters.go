@@ -16,10 +16,12 @@ type TransactionCounter struct {
 	executionCounters  *CounterCollector
 	processingCounters *CounterCollector
 	smtLevels          int
+	forkId             uint16
+	l2DataCache        []byte
 }
 
-func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, shouldCountersBeUnlimited bool) *TransactionCounter {
-	totalLevel := calculateSmtLevels(smtMaxLevel, 32)
+func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkId uint16, mcpReduction float64, shouldCountersBeUnlimited bool) *TransactionCounter {
+	totalLevel := calculateSmtLevels(smtMaxLevel, 32, mcpReduction)
 
 	var tc *TransactionCounter
 
@@ -30,14 +32,16 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, shoul
 			executionCounters:  NewUnlimitedCounterCollector(),
 			processingCounters: NewUnlimitedCounterCollector(),
 			smtLevels:          1, // max depth of the tree anyways
+			forkId:             forkId,
 		}
 	} else {
 		tc = &TransactionCounter{
 			transaction:        transaction,
-			rlpCounters:        NewCounterCollector(totalLevel),
-			executionCounters:  NewCounterCollector(totalLevel),
-			processingCounters: NewCounterCollector(totalLevel),
+			rlpCounters:        NewCounterCollector(totalLevel, forkId),
+			executionCounters:  NewCounterCollector(totalLevel, forkId),
+			processingCounters: NewCounterCollector(totalLevel, forkId),
 			smtLevels:          totalLevel,
+			forkId:             forkId,
 		}
 	}
 	tc.executionCounters.SetTransaction(transaction)
@@ -46,17 +50,36 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, shoul
 }
 
 func (tc *TransactionCounter) Clone() *TransactionCounter {
+	var l2DataCacheCopy []byte
+	if tc.l2DataCache != nil {
+		l2DataCacheCopy = make([]byte, len(tc.l2DataCache))
+		copy(l2DataCacheCopy, tc.l2DataCache)
+	}
+
 	return &TransactionCounter{
 		transaction:        tc.transaction,
 		rlpCounters:        tc.rlpCounters.Clone(),
 		executionCounters:  tc.executionCounters.Clone(),
 		processingCounters: tc.processingCounters.Clone(),
 		smtLevels:          tc.smtLevels,
+		l2DataCache:        l2DataCacheCopy,
 	}
 }
 
+func (tc *TransactionCounter) GetL2DataCache() ([]byte, error) {
+	if tc.l2DataCache == nil {
+		data, err := tx.TransactionToL2Data(tc.transaction, 8, tx.MaxEffectivePercentage)
+		if err != nil {
+			return data, err
+		}
+
+		tc.l2DataCache = data
+	}
+	return tc.l2DataCache, nil
+}
+
 func (tc *TransactionCounter) CalculateRlp() error {
-	raw, err := tx.TransactionToL2Data(tc.transaction, 8, tx.MaxEffectivePercentage)
+	raw, err := tc.GetL2DataCache()
 	if err != nil {
 		return err
 	}
@@ -83,7 +106,7 @@ func (tc *TransactionCounter) CalculateRlp() error {
 	chainIdLength := len(chainIdHex) / 2
 	nonceLength := len(nonceHex) / 2
 
-	collector := NewCounterCollector(tc.smtLevels)
+	collector := NewCounterCollector(tc.smtLevels, tc.forkId)
 	collector.Deduct(S, 250)
 	collector.Deduct(B, 1+1)
 	collector.Deduct(K, int(math.Ceil(float64(txRlpLength+1)/136)))
@@ -125,8 +148,7 @@ func (tc *TransactionCounter) CalculateRlp() error {
 
 	v, r, s := tc.transaction.RawSignatureValues()
 	v = tx.GetDecodedV(tc.transaction, v)
-	err = collector.ecRecover(v, r, s, false)
-	if err != nil {
+	if err := collector.ecRecover(v, r, s, false); err != nil {
 		return err
 	}
 
@@ -146,7 +168,7 @@ func (tc *TransactionCounter) ProcessTx(ibs *state.IntraBlockState, returnData [
 		byteCodeLength = ibs.GetCodeSize(*toAddress)
 	}
 
-	cc := NewCounterCollector(tc.smtLevels)
+	cc := NewCounterCollector(tc.smtLevels, tc.forkId)
 	cc.Deduct(S, 300)
 	cc.Deduct(B, 11+7)
 	cc.Deduct(P, 14*tc.smtLevels)

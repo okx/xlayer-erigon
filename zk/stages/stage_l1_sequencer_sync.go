@@ -3,7 +3,8 @@ package stages
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -38,7 +39,6 @@ func SpawnL1SequencerSyncStage(
 	tx kv.RwTx,
 	cfg L1SequencerSyncCfg,
 	ctx context.Context,
-	initialCycle bool,
 	quiet bool,
 ) (err error) {
 	logPrefix := s.LogPrefix()
@@ -91,10 +91,49 @@ Loop:
 					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
 						return err
 					}
-					// we only ever handle a single injected batch as a sequencer currently so we can just
-					// exit early here
-					log.Info("Found injected batch , and break loop")
-					break Loop
+				case contracts.AddNewRollupTypeTopic:
+					rollupType := l.Topics[1].Big().Uint64()
+					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
+					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
+					if err := hermezDb.WriteRollupType(rollupType, forkId); err != nil {
+						return err
+					}
+				case contracts.CreateNewRollupTopic:
+					rollupId := l.Topics[1].Big().Uint64()
+					if rollupId != cfg.zkCfg.L1RollupId {
+						continue
+					}
+					rollupTypeBytes := l.Data[0:32]
+					rollupType := new(big.Int).SetBytes(rollupTypeBytes).Uint64()
+					fork, err := hermezDb.GetForkFromRollupType(rollupType)
+					if err != nil {
+						return err
+					}
+					if fork == 0 {
+						log.Error("received CreateNewRollupTopic for unknown rollup type", "rollupType", rollupType)
+					}
+					if err := hermezDb.WriteNewForkHistory(fork, 0); err != nil {
+						return err
+					}
+				case contracts.UpdateRollupTopic:
+					rollupId := l.Topics[1].Big().Uint64()
+					if rollupId != cfg.zkCfg.L1RollupId {
+						continue
+					}
+					newRollupBytes := l.Data[0:32]
+					newRollup := new(big.Int).SetBytes(newRollupBytes).Uint64()
+					fork, err := hermezDb.GetForkFromRollupType(newRollup)
+					if err != nil {
+						return err
+					}
+					if fork == 0 {
+						return fmt.Errorf("received UpdateRollupTopic for unknown rollup type: %v", newRollup)
+					}
+					latestVerifiedBytes := l.Data[32:64]
+					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
+					if err := hermezDb.WriteNewForkHistory(fork, latestVerified); err != nil {
+						return err
+					}
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
 				}
@@ -102,8 +141,9 @@ Loop:
 		case progMsg := <-progressChan:
 			log.Info(fmt.Sprintf("[%s] %s", logPrefix, progMsg))
 		default:
-			log.Info(fmt.Sprintf("[%s] Waiting for sequencer InitialSequenceBatchesTopic log...", logPrefix))
-			time.Sleep(1 * time.Second)
+			if !cfg.syncer.IsDownloading() {
+				break Loop
+			}
 		}
 	}
 

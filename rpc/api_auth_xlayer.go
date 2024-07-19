@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -16,13 +17,13 @@ import (
 // ApiKeyItem is the api key item
 type ApiKeyItem struct {
 	// Name defines the name of the key
-	Project string `mapstructure:"Project"`
+	Project string `json:"project"`
 	// Key defines the key
-	Key string `mapstructure:"Key"`
+	Key string `json:"key"`
 	// Timeout defines the timeout
-	Timeout string `mapstructure:"Timeout"`
+	Timeout string `json:"timeout"`
 	// Methods defines the methods
-	RateLimitConfig string
+	rateLimitConfig *RateLimitConfig
 }
 
 type apiAllow struct {
@@ -42,18 +43,33 @@ func InitApiAuth(apikeysconfig string) {
 	if apikeysconfig == "" {
 		return
 	}
-	keyItems := strings.Split(apikeysconfig, ",")
+	log.Info("api auth enabled", "apikeysconfig", apikeysconfig)
+	keyItems := strings.Split(apikeysconfig, "\n")
 	var keys []ApiKeyItem
+
 	for _, item := range keyItems {
-		//project1:apikey1:timeout1:method1|method2|method3:count:duration
-		parties := strings.SplitN(item, ":", 4)
-		if len(parties) < 3 {
+		var itemins = struct {
+			// Name defines the name of the key
+			Project string   `json:"project"`
+			Key     string   `json:"key"`
+			Timeout string   `json:"timeout"`
+			Methods []string `json:"methods"`
+			Count   int      `json:"count"`
+			Bucket  int      `json:"bucket"`
+		}{}
+		err := json.Unmarshal([]byte(item), &itemins)
+		if err != nil {
 			log.Warn("invalid key item: %s", item)
 			continue
 		}
-		apiKeyItem := ApiKeyItem{Project: parties[0], Key: parties[1], Timeout: parties[2]}
-		if len(parties) == 4 {
-			apiKeyItem.RateLimitConfig = parties[3]
+		apiKeyItem := ApiKeyItem{Project: itemins.Project, Key: itemins.Key, Timeout: itemins.Timeout}
+		if len(itemins.Methods) > 0 {
+			rlc := RateLimitConfig{
+				RateLimitApis:   itemins.Methods,
+				RateLimitCount:  itemins.Count,
+				RateLimitBucket: itemins.Bucket,
+			}
+			apiKeyItem.rateLimitConfig = &rlc
 		}
 		keys = append(keys, apiKeyItem)
 	}
@@ -64,7 +80,7 @@ func InitApiAuth(apikeysconfig string) {
 func setApiAuth(kis []ApiKeyItem) {
 	al.enable = len(kis) > 0
 	var tmp = make(map[string]keyItem)
-	var rateLimitConfig = make(map[string]string)
+	var rateLimitConfig = make(map[string]*RateLimitConfig)
 	for _, k := range kis {
 		k.Key = strings.ToLower(k.Key)
 		parse, err := time.Parse("2006-01-02", k.Timeout)
@@ -77,8 +93,8 @@ func setApiAuth(kis []ApiKeyItem) {
 			continue
 		}
 		tmp[k.Key] = keyItem{project: k.Project, timeout: parse}
-		if k.RateLimitConfig != "" {
-			rateLimitConfig[k.Key] = k.RateLimitConfig
+		if k.rateLimitConfig != nil {
+			rateLimitConfig[k.Key] = k.rateLimitConfig
 		}
 	}
 	al.allowKeys = tmp

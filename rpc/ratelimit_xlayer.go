@@ -1,11 +1,10 @@
 package rpc
 
 import (
-	"strings"
+	"encoding/json"
 	"sync"
 
 	"github.com/ledgerwatch/log/v3"
-	"github.com/spf13/cast"
 	"golang.org/x/time/rate"
 )
 
@@ -13,13 +12,13 @@ import (
 type RateLimitConfig struct {
 
 	// RateLimitApis defines the apis that need to be rate limited
-	RateLimitApis []string `mapstructure:"RateLimitApis"`
+	RateLimitApis []string `json:"methods"`
 
 	// RateLimitBurst defines the maximum burst size of requests
-	RateLimitCount int `mapstructure:"RateLimitCount"`
+	RateLimitCount int `json:"count"`
 
-	// RateLimitDuration defines the time window for the rate limit
-	RateLimitDuration int `mapstructure:"RateLimitDuration"`
+	// RateLimitBucket defines the time window for the rate limit
+	RateLimitBucket int `json:"bucket"`
 }
 
 // RateLimit is the rate limit config
@@ -35,20 +34,12 @@ func InitRateLimit(cfg string) {
 	if cfg == "" {
 		return
 	}
-	parties := strings.Split(cfg, ":")
-	if len(parties) != 3 {
+	rlc := RateLimitConfig{}
+	err := json.Unmarshal([]byte(cfg), &rlc)
+	if err != nil {
 		log.Warn("invalid rate limit config: %s", cfg)
 		return
 	}
-	rlc := RateLimitConfig{}
-	rlc.RateLimitApis = strings.Split(parties[0], "|")
-	if len(rlc.RateLimitApis) == 0 {
-		log.Warn("invalid rate limit apis: %s", parties[0])
-		return
-	}
-	rlc.RateLimitCount = cast.ToInt(parties[1])
-	rlc.RateLimitDuration = cast.ToInt(parties[2])
-
 	setRateLimit(rlc)
 }
 
@@ -63,10 +54,10 @@ func setRateLimit(rlc RateLimitConfig) {
 func updateRateLimit(rateLimit RateLimitConfig) map[string]*rate.Limiter {
 	log.Info("rate limit config updated", "config", rateLimit)
 	if len(rateLimit.RateLimitApis) > 0 {
-		log.Info("rate limit enabled", "api", rateLimit.RateLimitApis, "count", rateLimit.RateLimitCount, "duration", rateLimit.RateLimitDuration)
+		log.Info("rate limit enabled", "api", rateLimit.RateLimitApis, "count", rateLimit.RateLimitCount, "bucket", rateLimit.RateLimitBucket)
 		rlm := make(map[string]*rate.Limiter)
 		for _, api := range rateLimit.RateLimitApis {
-			rlm[api] = rate.NewLimiter(rate.Limit(rateLimit.RateLimitCount), rateLimit.RateLimitDuration)
+			rlm[api] = rate.NewLimiter(rate.Limit(rateLimit.RateLimitCount), rateLimit.RateLimitBucket)
 		}
 		return rlm
 	}
@@ -93,57 +84,30 @@ type ApikeyRateLimit struct {
 var apiKeyRateLimit = &ApikeyRateLimit{}
 
 // initApikeyRateLimit initializes the apikey rate limit config
-func initApikeyRateLimit(cfg map[string]string) {
+func initApikeyRateLimit(cfg map[string]*RateLimitConfig) {
 	if len(cfg) == 0 {
 		return
 	}
-	var mconfig = make(map[string]RateLimitConfig)
-	for apikey, config := range cfg {
-		parties := strings.Split(config, ":")
-		if len(parties) != 3 {
-			log.Warn("invalid rate limit config: %s", config)
-			continue
-		}
-		rlc := RateLimitConfig{}
-		rlc.RateLimitApis = strings.Split(parties[0], "|")
-		if len(rlc.RateLimitApis) == 0 {
-			log.Warn("invalid rate limit apis: %s", parties[0])
-			continue
-		}
-		count, err := cast.ToIntE(parties[1])
-		if err != nil {
-			log.Warn("invalid rate limit count: %s", parties[1])
-			continue
-		}
-		duration, err := cast.ToIntE(parties[2])
-		if err != nil {
-			log.Warn("invalid rate limit duration: %s", parties[2])
-			continue
-		}
-		rlc.RateLimitCount = count
-		rlc.RateLimitDuration = duration
-		mconfig[apikey] = rlc
-	}
-	setApikeyRateLimit(mconfig)
+	setApikeyRateLimit(cfg)
 }
 
 // setApikeyRateLimit sets the rate limit config
-func setApikeyRateLimit(rlc map[string]RateLimitConfig) {
+func setApikeyRateLimit(rlc map[string]*RateLimitConfig) {
 	apiKeyRateLimit.Lock()
 	defer apiKeyRateLimit.Unlock()
 	apiKeyRateLimit.rlm = updateApikeyRateLimit(rlc)
 }
 
 // updateApikeyRateLimit updates the rate limit config
-func updateApikeyRateLimit(rateLimit map[string]RateLimitConfig) map[string]map[string]*rate.Limiter {
-	log.Info("apikey rate limit config updated", "config", rateLimit)
+func updateApikeyRateLimit(rateLimit map[string]*RateLimitConfig) map[string]map[string]*rate.Limiter {
 	akrlm := make(map[string]map[string]*rate.Limiter)
+	log.Info("apikey rate limit config updated", "config", rateLimit)
 	for apikey, config := range rateLimit {
 		if len(config.RateLimitApis) > 0 {
-			log.Info("rate limit enabled", "api", config.RateLimitApis, "count", config.RateLimitCount, "duration", config.RateLimitDuration)
+			log.Info("rate limit enabled", "api", config.RateLimitApis, "count", config.RateLimitCount, "bucket", config.RateLimitBucket)
 			rlm := make(map[string]*rate.Limiter)
 			for _, api := range config.RateLimitApis {
-				rlm[api] = rate.NewLimiter(rate.Limit(config.RateLimitCount), config.RateLimitDuration)
+				rlm[api] = rate.NewLimiter(rate.Limit(config.RateLimitCount), config.RateLimitBucket)
 			}
 			akrlm[apikey] = rlm
 		}

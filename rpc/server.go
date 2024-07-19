@@ -93,6 +93,7 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	s.ServeCodecWithAPIKey(codec, options, "")
 }
 
+// ServeCodecWithAPIKey For X Layer
 func (s *Server) ServeCodecWithAPIKey(codec ServerCodec, options CodecOption, apikey string) {
 	defer codec.close()
 

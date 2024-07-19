@@ -78,7 +78,9 @@ type Client struct {
 	isHTTP          bool
 	services        *serviceRegistry
 	methodAllowList AllowList
-	apiKey          string
+
+	// apiKey is the API key used for authentication.  For X Layer
+	apiKey string
 
 	idCounter uint32
 
@@ -208,7 +210,7 @@ func initClient(conn ServerCodec, idgen func() ID, services *serviceRegistry, ap
 		idgen:       idgen,
 		isHTTP:      isHTTP,
 		services:    services,
-		apiKey:      apikey,
+		apiKey:      apikey, // For X Layer
 		writeConn:   conn,
 		close:       make(chan struct{}),
 		closing:     make(chan struct{}),

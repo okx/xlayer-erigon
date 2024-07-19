@@ -506,6 +506,8 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 
 	log.Trace("TraceRequests = %t\n", cfg.TraceRequests)
 	srv := rpc.NewServer(cfg.RpcBatchConcurrency, cfg.TraceRequests, cfg.RpcStreamingDisable)
+
+	// For X Layer
 	rpc.InitRateLimit(cfg.MethodRateLimit)
 
 	allowListForRPC, err := parseAllowListForRPC(cfg.RpcAllowListFilePath)
@@ -547,6 +549,8 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	if err != nil {
 		return err
 	}
+
+	// For X Layer
 	apiHandler = rpc.ApiAuthHandler(cfg.HttpApiKeys, apiHandler)
 
 	listener, httpAddr, err := node.StartHTTPEndpoint(httpEndpoint, cfg.HTTPTimeouts, apiHandler)

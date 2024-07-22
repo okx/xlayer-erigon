@@ -66,6 +66,7 @@ type handler struct {
 
 	allowList     AllowList // a list of explicitly allowed methods, if empty -- everything is allowed
 	forbiddenList ForbiddenList
+	ApiKey        string
 
 	subLock             sync.Mutex
 	serverSubs          map[ID]*Subscription
@@ -110,7 +111,7 @@ func HandleError(err error, stream *jsoniter.Stream) error {
 	return nil
 }
 
-func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *serviceRegistry, allowList AllowList, maxBatchConcurrency uint, traceRequests bool) *handler {
+func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *serviceRegistry, allowList AllowList, maxBatchConcurrency uint, traceRequests bool, apikey string) *handler {
 	rootCtx, cancelRoot := context.WithCancel(connCtx)
 	forbiddenList := newForbiddenList()
 	h := &handler{
@@ -126,6 +127,7 @@ func newHandler(connCtx context.Context, conn jsonWriter, idgen func() ID, reg *
 		log:            log.Root(),
 		allowList:      allowList,
 		forbiddenList:  forbiddenList,
+		ApiKey:         apikey,
 
 		maxBatchConcurrency: maxBatchConcurrency,
 		traceRequests:       traceRequests,
@@ -174,7 +176,11 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 					wg.Done()
 					<-boundedConcurrency
 				}()
-
+				// For X Layer
+				if !apikeyMethodRateLimitAllow(h.ApiKey, calls[i].Method) || !methodRateLimitAllow(calls[i].Method) {
+					answersWithNils[i] = errorMessage(fmt.Errorf("method rate limit exceeded"))
+					return
+				}
 				select {
 				case <-cp.ctx.Done():
 					return
@@ -215,6 +221,11 @@ func (h *handler) handleMsg(msg *jsonrpcMessage, stream *jsoniter.Stream) {
 		return
 	}
 	h.startCallProc(func(cp *callProc) {
+		// For X Layer
+		if !apikeyMethodRateLimitAllow(h.ApiKey, msg.Method) || !methodRateLimitAllow(msg.Method) {
+			h.conn.writeJSON(cp.ctx, errorMessage(fmt.Errorf("rate limit exceeded")))
+			return
+		}
 		needWriteStream := false
 		if stream == nil {
 			stream = jsoniter.NewStream(jsoniter.ConfigDefault, nil, 4096)

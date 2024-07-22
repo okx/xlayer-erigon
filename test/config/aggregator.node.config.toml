@@ -10,6 +10,7 @@ ProofStatePollingInterval = "5s"
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
 CleanupLockedProofsInterval = "2m"
 GeneratingProofCleanupThreshold = "10m"
+BatchProofSanityCheckEnabled = true
 ForkId = 9
 WitnessURL = "http://erigon-seq:8545"
 LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
@@ -30,8 +31,8 @@ LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 	[Aggregator.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "2m"
-		ConsolidationL1ConfirmationBlocks = 5
-		FinalizationL1ConfirmationBlocks = 10
+		SafeStatusL1NumberOfBlocks = 5
+		FinalizedStatusL1NumberOfBlocks = 10
 		WaitReceiptToBeGenerated = "8s"
 		PrivateKeys = [
 			{Path = "/pk/aggregator.keystore", Password = "testonly"},
@@ -57,6 +58,13 @@ LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 			SyncInterval = "10s"
 			SyncChunkSize = 1000
 			GenesisBlockNumber = 136
+		[Aggregator.Synchronizer.Etherman]
+			[Aggregator.Synchronizer.Etherman.Validium]
+			Enabled = true
+			TrustedSequencerURL = "http://erigon-seq:8545"
+			DataSourcePriority = ["external"]
+			[Aggregator.Synchronizer.Etherman.Validium.Translator]
+			FullMatchRules = []
 		[Aggregator.Synchronizer.Log]
 			Environment = "development" # "production" or "development"
 			Level = "debug"

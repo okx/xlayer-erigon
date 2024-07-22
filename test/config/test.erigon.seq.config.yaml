@@ -2,24 +2,26 @@ datadir: /home/erigon/data/
 chain: dynamic-mynetwork
 http: true
 private.api.addr: localhost:9091
-zkevm.l2-chain-id: 1001
+zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url:
 zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
-zkevm.address-zkevm: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
-zkevm.address-admin: "0xB7f8BC63BbcaD18155201308C8f3540b07f84F5e"
-zkevm.address-rollup: "0x8dAF17A20c9DBA35f005b6324F493785D239719d"
-zkevm.address-ger-manager: "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318"
+zkevm.address-zkevm: "0xeb173087729c88a47568AF87b17C653039377BA6"
+zkevm.address-admin: "0x28BB4e66addE1f042B77E04cf7D3784C1dcDBbA3"
+zkevm.address-rollup: "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
+zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
 zkevm.l1-rollup-id: 1
-zkevm.l1-first-block: 136
-zkevm.l1-block-range: 1000
+zkevm.l1-first-block: 368
+zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
+
+log.console.verbosity: 4
 
 #zkevm.executor-urls: erigon-stateless-executor:50071
 zkevm.executor-urls: ""
@@ -36,6 +38,9 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
+zkevm.gasless: true
+
+zkevm.l1-highest-block-type: latest
 
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]

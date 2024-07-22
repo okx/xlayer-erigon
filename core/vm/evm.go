@@ -103,7 +103,7 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 		config:          vmConfig,
 		chainConfig:     chainConfig,
 		chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
-		innerTxMeta: &InnerTxMeta{
+		innerTxMeta: &InnerTxMeta{ // X Layer inner TX
 			index:     0,
 			lastDepth: 0,
 			indexMap:  map[int]int{0: 0},

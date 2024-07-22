@@ -90,6 +90,12 @@ func (s *Server) RegisterName(name string, receiver interface{}) error {
 //
 // Note that codec options are no longer supported.
 func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
+	// X Layer API Key
+	s.ServeCodecWithAPIKey(codec, options, "")
+}
+
+// ServeCodecWithAPIKey For X Layer
+func (s *Server) ServeCodecWithAPIKey(codec ServerCodec, options CodecOption, apikey string) {
 	defer codec.close()
 
 	// Don't serve if server is stopped.
@@ -101,7 +107,8 @@ func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	s.codecs.Add(codec)
 	defer s.codecs.Remove(codec)
 
-	c := initClient(codec, s.idgen, &s.services)
+	// X Layer api key
+	c := initClient(codec, s.idgen, &s.services, apikey)
 	<-codec.closed()
 	c.Close()
 }
@@ -114,11 +121,10 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec, stre
 	if atomic.LoadInt32(&s.run) == 0 {
 		return
 	}
-
-	h := newHandler(ctx, codec, s.idgen, &s.services, s.methodAllowList, s.batchConcurrency, s.traceRequests)
+	// X Layer api key
+	h := newHandler(ctx, codec, s.idgen, &s.services, s.methodAllowList, s.batchConcurrency, s.traceRequests, ctx.Value("apikey").(string))
 	h.allowSubscribe = false
 	defer h.close(io.EOF, nil)
-
 	reqs, batch, err := codec.readBatch()
 	if err != nil {
 		if err != io.EOF {

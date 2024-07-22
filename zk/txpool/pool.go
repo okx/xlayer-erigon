@@ -1089,7 +1089,6 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		discard(tx, OverflowZkCounters)
 		sendersWithChangedState[tx.Tx.SenderID] = struct{}{}
 	}
-
 	p.overflowZkCounters = p.overflowZkCounters[:0] // clear overflowZkCounters
 
 	for senderID := range sendersWithChangedState {

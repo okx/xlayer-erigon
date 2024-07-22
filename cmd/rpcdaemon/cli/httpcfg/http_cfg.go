@@ -70,4 +70,6 @@ type HttpCfg struct {
 	DataStreamHost         string
 	DataStreamWriteTimeout time.Duration
 	L2RpcUrl               string
+	HttpApiKeys            string
+	MethodRateLimit        string
 }

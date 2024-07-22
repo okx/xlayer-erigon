@@ -60,7 +60,7 @@ func NewZkEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state ev
 			chainConfig:     chainConfig,
 			chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
 			zkConfig:        &zkVmConfig,
-			innerTxMeta: &InnerTxMeta{
+			innerTxMeta: &InnerTxMeta{ // X Layer inter TX
 				index:     0,
 				lastDepth: 0,
 				indexMap:  map[int]int{0: 0},

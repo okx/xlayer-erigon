@@ -116,6 +116,7 @@ services:
     ports:
       - 8123:8545
       - 6900:6900
+      - 9092:9095
     volumes:
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
@@ -132,6 +133,7 @@ services:
     ports:
       - 8124:8545
       - 6901:6900
+      - 9091:9095
     volumes:
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json

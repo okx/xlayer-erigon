@@ -1,20 +1,21 @@
 package stages
 
 import (
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/eth/stagedsync"
-	"fmt"
-	"github.com/ledgerwatch/log/v3"
 	"context"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
-	"github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/zk/contracts"
+	"fmt"
 	"sort"
 	"time"
-	"github.com/ledgerwatch/erigon/zk/l1infotree"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/stagedsync"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/contracts"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/l1infotree"
+	"github.com/ledgerwatch/log/v3"
 )
 
 type L1InfoTreeCfg struct {
@@ -93,7 +94,16 @@ LOOP:
 
 	// sort the logs by block number - it is important that we process them in order to get the index correct
 	sort.Slice(allLogs, func(i, j int) bool {
-		return allLogs[i].BlockNumber < allLogs[j].BlockNumber
+		l1 := allLogs[i]
+		l2 := allLogs[j]
+		// first sort by block number and if equal then by tx index
+		if l1.BlockNumber != l2.BlockNumber {
+			return l1.BlockNumber < l2.BlockNumber
+		}
+		if l1.TxIndex != l2.TxIndex {
+			return l1.TxIndex < l2.TxIndex
+		}
+		return l1.Index < l2.Index
 	})
 
 	// chunk the logs into batches, so we don't overload the RPC endpoints too much at once
@@ -152,6 +162,14 @@ LOOP:
 				if err != nil {
 					return err
 				}
+				log.Debug("New L1 Index",
+					"index", latestUpdate.Index,
+					"root", newRoot.String(),
+					"mainnet", latestUpdate.MainnetExitRoot.String(),
+					"rollup", latestUpdate.RollupExitRoot.String(),
+					"ger", latestUpdate.GER.String(),
+					"parent", latestUpdate.ParentHash.String(),
+				)
 
 				err = hermezDb.WriteL1InfoTreeRoot(common.BytesToHash(newRoot[:]), latestUpdate.Index)
 				if err != nil {

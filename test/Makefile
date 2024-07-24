@@ -4,6 +4,12 @@ DOCKER_STATE_DB := erigon-state-db
 DOCKER_SEQ_SENDER := erigon-seqsender
 DOCKER_AGGREGATOR := erigon-aggregator
 DOCKER_AGGREGATOR_DB := erigon-aggregator-db
+DOCKER_BRIDGE_DB := xlayer-bridge-db
+DOCKER_BRIDGE_REDIS := xlayer-bridge-redis
+DOCKER_BRIDGE_ZOOKEEPER := kafka-zookeeper
+DOCKER_BRIDGE_COIN_KAFKA := xlayer-bridge-coin-kafka
+DOCKER_BRIDGE_SERVICE := xlayer-bridge-service
+DOCKER_BRIDGE_UI := xlayer-bridge-ui
 DOCKER_PROVER := erigon-prover
 DOCKER_APPROVE := erigon-approve
 DOCKER_SEQ := erigon-seq
@@ -17,6 +23,12 @@ RUN_DOCKER_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_STATE_DB)
 RUN_DOCKER_SEQ_SENDER := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ_SENDER)
 RUN_DOCKER_AGGREGATOR := $(DOCKER_COMPOSE) up -d $(DOCKER_AGGREGATOR)
 RUN_DOCKER_AGGREGATOR_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_AGGREGATOR_DB)
+RUN_DOCKER_BRIDGE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_DB)
+RUN_DOCKER_BRIDGE_REDIS := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_REDIS)
+RUN_DOCKER_BRIDGE_ZOOKEEPER := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_ZOOKEEPER)
+RUN_DOCKER_BRIDGE_COIN_KAFKA := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_COIN_KAFKA)
+RUN_DOCKER_BRIDGE_SERVICE := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_SERVICE)
+RUN_DOCKER_BRIDGE_UI := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_UI)
 RUN_DOCKER_PROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_PROVER)
 RUN_DOCKER_APPROVE := $(DOCKER_COMPOSE) up -d $(DOCKER_APPROVE)
 RUN_DOCKER_SEQ := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ)
@@ -50,6 +62,38 @@ run: ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_RPC)
 
+.PHONY: all
+all: ## Runs a full node
+	$(RUN_DOCKER_L1_NETWORK)
+	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
+	$(RUN_DOCKER_STATE_DB)
+	$(RUN_DOCKER_AGGREGATOR_DB)
+	$(RUN_DOCKER_BRIDGE_DB)
+	$(RUN_DOCKER_BRIDGE_REDIS)
+	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
+	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
+	sleep 3
+	$(RUN_DOCKER_DATA_AVAILABILITY)
+	#sleep 3
+	#$(RUN_DOCKER_STATELESS_EXECUTOR)
+	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 3
+	$(RUN_DOCKER_SEQ)
+	sleep 3
+	$(RUN_DOCKER_APPROVE)
+	sleep 3
+	$(RUN_DOCKER_SEQ_SENDER)
+	sleep 3
+	$(RUN_DOCKER_AGGREGATOR)
+	sleep 3
+	$(RUN_DOCKER_RPC)
+
+	sleep 3
+	$(RUN_DOCKER_BRIDGE_SERVICE)
+	sleep 3
+	$(RUN_DOCKER_BRIDGE_UI)
+
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)
@@ -61,3 +105,15 @@ min-run: ## Runs a minimal node
 	$(RUN_DOCKER_SEQ)
 	sleep 20
 	$(RUN_DOCKER_RPC)
+
+
+.PHONY: test
+test: test-1 ## Runs all e2e tests
+	echo "Tests passed"
+	sleep 3
+
+.PHONY: test-1
+test-1: stop run ## Runs group 1 e2e tests checking race conditions
+	sleep 3
+	docker ps -a
+	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...

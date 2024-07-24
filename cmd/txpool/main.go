@@ -186,9 +186,6 @@ func doTxpool(ctx context.Context) error {
 		addr := common.HexToAddress(addrHex)
 		ethCfg.DeprecatedTxPool.FreeClaimGasAddr[i] = addr.String()
 	}
-	if len(ethCfg.DeprecatedTxPool.FreeClaimGasAddr) == 0 {
-		ethCfg.DeprecatedTxPool.FreeClaimGasAddr = []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}
-	}
 	ethCfg.DeprecatedTxPool.GasPriceMultiple = gasPriceMultiple
 
 	newTxs := make(chan types.Announcements, 1024)

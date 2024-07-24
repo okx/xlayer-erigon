@@ -28,7 +28,7 @@ zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: true
 
-zkevm.sequencer-block-seal-time: "6s"
+zkevm.sequencer-block-seal-time: "3s"
 zkevm.sequencer-batch-seal-time: "12s"
 zkevm.sequencer-non-empty-batch-seal-time: "3s"
 zkevm.sequencer-batch-sleep-duration: "0s"
@@ -38,7 +38,7 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
-zkevm.gasless: true
+#zkevm.gasless: true
 
 zkevm.l1-highest-block-type: latest
 
@@ -70,6 +70,7 @@ txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
 txpool.packbatchspeciallist : ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"]
 txpool.gaspricemultiple : 2
+txpool.blockedlist: ["0xdD2FD4581271e230360230F9337D5c0430Bf44C0"]
 
 gpo.type: "follower"
 gpo.update-period: "10s"

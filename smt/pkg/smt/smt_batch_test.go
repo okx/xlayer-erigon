@@ -55,8 +55,9 @@ func TestBatchSimpleInsert(t *testing.T) {
 	keyPointers := []*utils.NodeKey{}
 	valuePointers := []*utils.NodeValue8{}
 
-	smtIncremental := smt.NewSMT(nil)
-	smtBatch := smt.NewSMT(nil)
+	smtIncremental := smt.NewSMT(nil, false)
+	smtBatch := smt.NewSMT(nil, false)
+	smtBatchNoSave := smt.NewSMT(nil, true)
 
 	for i := range keysRaw {
 		k := utils.ScalarToNodeKey(keysRaw[i])
@@ -72,6 +73,9 @@ func TestBatchSimpleInsert(t *testing.T) {
 	_, err := smtBatch.InsertBatch(context.Background(), "", keyPointers, valuePointers, nil, nil)
 	assert.NilError(t, err)
 
+	_, err = smtBatchNoSave.InsertBatch(context.Background(), "", keyPointers, valuePointers, nil, nil)
+	assert.NilError(t, err)
+
 	smtIncremental.DumpTree()
 	fmt.Println()
 	smtBatch.DumpTree()
@@ -81,9 +85,115 @@ func TestBatchSimpleInsert(t *testing.T) {
 
 	smtIncrementalRootHash, _ := smtIncremental.Db.GetLastRoot()
 	smtBatchRootHash, _ := smtBatch.Db.GetLastRoot()
+	smtBatchNoSaveRootHash, _ := smtBatchNoSave.Db.GetLastRoot()
 	assert.Equal(t, utils.ConvertBigIntToHex(smtBatchRootHash), utils.ConvertBigIntToHex(smtIncrementalRootHash))
+	assert.Equal(t, utils.ConvertBigIntToHex(smtBatchRootHash), utils.ConvertBigIntToHex(smtBatchNoSaveRootHash))
 
 	assertSmtDbStructure(t, smtBatch, false)
+}
+
+func incrementalInsert(tree *smt.SMT, key, val []*big.Int) {
+	for i := range key {
+		k := utils.ScalarToNodeKey(key[i])
+		tree.InsertKA(k, val[i])
+	}
+}
+
+func batchInsert(tree *smt.SMT, key, val []*big.Int) {
+	keyPointers := []*utils.NodeKey{}
+	valuePointers := []*utils.NodeValue8{}
+
+	for i := range key {
+		k := utils.ScalarToNodeKey(key[i])
+		vArray := utils.ScalarToArrayBig(val[i])
+		v, _ := utils.NodeValue8FromBigIntArray(vArray)
+
+		keyPointers = append(keyPointers, &k)
+		valuePointers = append(valuePointers, v)
+	}
+	tree.InsertBatch(context.Background(), "", keyPointers, valuePointers, nil, nil)
+}
+
+func BenchmarkIncrementalInsert(b *testing.B) {
+	keys := []*big.Int{}
+	vals := []*big.Int{}
+	for i := 0; i < 1000; i++ {
+		rand.Seed(time.Now().UnixNano())
+		keys = append(keys, big.NewInt(int64(rand.Intn(10000))))
+
+		rand.Seed(time.Now().UnixNano())
+		vals = append(vals, big.NewInt(int64(rand.Intn(10000))))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		smtIncremental := smt.NewSMT(nil, false)
+		incrementalInsert(smtIncremental, keys, vals)
+	}
+}
+
+func BenchmarkBatchInsert(b *testing.B) {
+	keys := []*big.Int{}
+	vals := []*big.Int{}
+	for i := 0; i < 1000; i++ {
+		rand.Seed(time.Now().UnixNano())
+		keys = append(keys, big.NewInt(int64(rand.Intn(10000))))
+
+		rand.Seed(time.Now().UnixNano())
+		vals = append(vals, big.NewInt(int64(rand.Intn(10000))))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		smtBatch := smt.NewSMT(nil, false)
+		batchInsert(smtBatch, keys, vals)
+	}
+}
+
+func BenchmarkBatchInsertNoSave(b *testing.B) {
+	keys := []*big.Int{}
+	vals := []*big.Int{}
+	for i := 0; i < 1000; i++ {
+		rand.Seed(time.Now().UnixNano())
+		keys = append(keys, big.NewInt(int64(rand.Intn(10000))))
+
+		rand.Seed(time.Now().UnixNano())
+		vals = append(vals, big.NewInt(int64(rand.Intn(10000))))
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		smtBatch := smt.NewSMT(nil, true)
+		batchInsert(smtBatch, keys, vals)
+	}
+}
+
+func TestBatchSimpleInsert2(t *testing.T) {
+	keys := []*big.Int{}
+	vals := []*big.Int{}
+	for i := 0; i < 1000; i++ {
+		rand.Seed(time.Now().UnixNano())
+		keys = append(keys, big.NewInt(int64(rand.Intn(10000))))
+
+		rand.Seed(time.Now().UnixNano())
+		vals = append(vals, big.NewInt(int64(rand.Intn(10000))))
+	}
+
+	smtIncremental := smt.NewSMT(nil, false)
+	incrementalInsert(smtIncremental, keys, vals)
+
+	smtBatch := smt.NewSMT(nil, false)
+	batchInsert(smtBatch, keys, vals)
+
+	smtBatchNoSave := smt.NewSMT(nil, false)
+	batchInsert(smtBatchNoSave, keys, vals)
+
+	smtIncrementalRootHash, _ := smtIncremental.Db.GetLastRoot()
+	smtBatchRootHash, _ := smtBatch.Db.GetLastRoot()
+	smtBatchNoSaveRootHash, _ := smtBatchNoSave.Db.GetLastRoot()
+
+	assert.Equal(t, utils.ConvertBigIntToHex(smtBatchRootHash), utils.ConvertBigIntToHex(smtIncrementalRootHash))
+	assert.Equal(t, utils.ConvertBigIntToHex(smtBatchRootHash), utils.ConvertBigIntToHex(smtBatchNoSaveRootHash))
 }
 
 func TestBatchWitness(t *testing.T) {
@@ -247,8 +357,8 @@ func TestBatchWitness(t *testing.T) {
 		})
 	}
 
-	smtIncremental := smt.NewSMT(nil)
-	smtBatch := smt.NewSMT(nil)
+	smtIncremental := smt.NewSMT(nil, false)
+	smtBatch := smt.NewSMT(nil, false)
 
 	for i, k := range keys {
 		smtIncremental.Insert(k, values[i])
@@ -311,8 +421,8 @@ func TestBatchDelete(t *testing.T) {
 		})
 	}
 
-	smtIncremental := smt.NewSMT(nil)
-	smtBatch := smt.NewSMT(nil)
+	smtIncremental := smt.NewSMT(nil, false)
+	smtBatch := smt.NewSMT(nil, false)
 
 	for i, k := range keys {
 		smtIncremental.Insert(k, values[i])
@@ -339,8 +449,8 @@ func TestBatchRawInsert(t *testing.T) {
 	keysForIncremental := []utils.NodeKey{}
 	valuesForIncremental := []utils.NodeValue8{}
 
-	smtIncremental := smt.NewSMT(nil)
-	smtBatch := smt.NewSMT(nil)
+	smtIncremental := smt.NewSMT(nil, false)
+	smtBatch := smt.NewSMT(nil, false)
 
 	rand.Seed(1)
 	size := 1 << 10
@@ -426,9 +536,9 @@ func TestCompareAllTreesInsertTimesAndFinalHashesUsingDiskDb(t *testing.T) {
 	batchDbPath := "/tmp/smt-batch"
 	smtBatchDb, smtBatchTx, smtBatchSmtDb := initDb(t, batchDbPath)
 
-	smtIncremental := smt.NewSMT(smtIncrementalSmtDb)
-	smtBulk := smt.NewSMT(smtBulkSmtDb)
-	smtBatch := smt.NewSMT(smtBatchSmtDb)
+	smtIncremental := smt.NewSMT(smtIncrementalSmtDb, false)
+	smtBulk := smt.NewSMT(smtBulkSmtDb, false)
+	smtBatch := smt.NewSMT(smtBatchSmtDb, false)
 
 	compareAllTreesInsertTimesAndFinalHashes(t, smtIncremental, smtBulk, smtBatch)
 
@@ -446,9 +556,9 @@ func TestCompareAllTreesInsertTimesAndFinalHashesUsingDiskDb(t *testing.T) {
 }
 
 func TestCompareAllTreesInsertTimesAndFinalHashesUsingInMemoryDb(t *testing.T) {
-	smtIncremental := smt.NewSMT(nil)
-	smtBulk := smt.NewSMT(nil)
-	smtBatch := smt.NewSMT(nil)
+	smtIncremental := smt.NewSMT(nil, false)
+	smtBulk := smt.NewSMT(nil, false)
+	smtBatch := smt.NewSMT(nil, false)
 
 	compareAllTreesInsertTimesAndFinalHashes(t, smtIncremental, smtBulk, smtBatch)
 }

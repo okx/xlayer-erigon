@@ -13,6 +13,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/urfave/cli/v2"
+	utils2 "github.com/ledgerwatch/erigon/zk/utils"
 )
 
 func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
@@ -123,7 +124,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		RebuildTreeAfter:                       ctx.Uint64(utils.RebuildTreeAfterFlag.Name),
 		IncrementTreeAlways:                    ctx.Bool(utils.IncrementTreeAlways.Name),
 		SmtRegenerateInMemory:                  ctx.Bool(utils.SmtRegenerateInMemory.Name),
-		SequencerInitialForkId:                 ctx.Uint64(utils.SequencerInitialForkId.Name),
 		SequencerBlockSealTime:                 sequencerBlockSealTime,
 		SequencerBatchSealTime:                 sequencerBatchSealTime,
 		SequencerNonEmptyBatchSealTime:         sequencerNonEmptyBatchSealTime,
@@ -132,6 +132,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		ExecutorRequestTimeout:                 ctx.Duration(utils.ExecutorRequestTimeout.Name),
 		DatastreamNewBlockTimeout:              ctx.Duration(utils.DatastreamNewBlockTimeout.Name),
 		ExecutorMaxConcurrentRequests:          ctx.Int(utils.ExecutorMaxConcurrentRequests.Name),
+		Limbo:                                  ctx.Bool(utils.Limbo.Name),
 		AllowFreeTransactions:                  ctx.Bool(utils.AllowFreeTransactions.Name),
 		AllowPreEIP155Transactions:             ctx.Bool(utils.AllowPreEIP155Transactions.Name),
 		EffectiveGasPriceForEthTransfer:        uint8(math.Round(effectiveGasPriceForEthTransferVal * 255.0)),
@@ -144,6 +145,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		WitnessFull:                            ctx.Bool(utils.WitnessFullFlag.Name),
 		SyncLimit:                              ctx.Uint64(utils.SyncLimit.Name),
 		Gasless:                                ctx.Bool(utils.SupportGasless.Name),
+		DebugTimers:                            ctx.Bool(utils.DebugTimers.Name),
 		DebugNoSync:                            ctx.Bool(utils.DebugNoSync.Name),
 		DebugLimit:                             ctx.Uint64(utils.DebugLimit.Name),
 		DebugStep:                              ctx.Uint64(utils.DebugStep.Name),
@@ -154,25 +156,39 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DAUrl:                                  ctx.String(utils.DAUrl.Name),
 		DataStreamHost:                         ctx.String(utils.DataStreamHost.Name),
 		DataStreamPort:                         ctx.Uint(utils.DataStreamPort.Name),
+		DataStreamWriteTimeout:                 ctx.Duration(utils.DataStreamWriteTimeout.Name),
 	}
 
 	// For X Layer
 	ApplyFlagsForXLayerConfig(ctx, cfg)
+	utils2.EnableTimer(cfg.DebugTimers)
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.L2ChainId)
 	if !sequencer.IsSequencer() {
 		checkFlag(utils.L2RpcUrlFlag.Name, cfg.L2RpcUrl)
 		checkFlag(utils.L2DataStreamerUrlFlag.Name, cfg.L2DataStreamerUrl)
 	} else {
-		checkFlag(utils.SequencerInitialForkId.Name, cfg.SequencerInitialForkId)
 		checkFlag(utils.ExecutorUrls.Name, cfg.ExecutorUrls)
 		checkFlag(utils.ExecutorStrictMode.Name, cfg.ExecutorStrictMode)
 		checkFlag(utils.DataStreamHost.Name, cfg.DataStreamHost)
 		checkFlag(utils.DataStreamPort.Name, cfg.DataStreamPort)
+		checkFlag(utils.DataStreamWriteTimeout.Name, cfg.DataStreamWriteTimeout)
+
+		if cfg.DeprecatedTxPool.Disable {
+			panic("You need tx-pool in order to run a sequencer. Enable it using txpool.disable: false")
+		}
 
 		// if we are running in strict mode, the default, and we have no executor URLs then we panic
 		if cfg.ExecutorStrictMode && !cfg.HasExecutors() {
 			panic("You must set executor urls when running in executor strict mode (zkevm.executor-strict)")
+		}
+
+		if cfg.ExecutorStrictMode && cfg.DisableVirtualCounters {
+			panic("You cannot disable virtual counters when running in strict mode")
+		}
+
+		if len(cfg.ExecutorUrls) > 0 && cfg.ExecutorUrls[0] != "" && cfg.DisableVirtualCounters {
+			panic("You cannot disable virtual counters when running with executors")
 		}
 	}
 

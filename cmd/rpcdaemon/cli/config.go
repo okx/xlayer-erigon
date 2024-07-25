@@ -122,6 +122,7 @@ func RootCommand() (*cobra.Command, *httpcfg.HttpCfg) {
 	rootCmd.PersistentFlags().IntVar(&cfg.ReturnDataLimit, utils.RpcReturnDataLimit.Name, utils.RpcReturnDataLimit.Value, utils.RpcReturnDataLimit.Usage)
 
 	rootCmd.PersistentFlags().StringVar(&cfg.L2RpcUrl, utils.L2RpcUrlFlag.Name, utils.L2RpcUrlFlag.Value, utils.L2RpcUrlFlag.Usage)
+	// X Layer API Keys
 	rootCmd.PersistentFlags().StringVar(&cfg.HttpApiKeys, utils.HTTPApiKeysFlag.Name, utils.HTTPApiKeysFlag.Value, utils.HTTPApiKeysFlag.Usage)
 	rootCmd.PersistentFlags().StringVar(&cfg.MethodRateLimit, utils.MethodRateLimitFlag.Name, utils.MethodRateLimitFlag.Value, utils.MethodRateLimitFlag.Usage)
 

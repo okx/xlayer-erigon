@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-cmp/cmp"
 	"io"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func getBatchNumber(url string) (*big.Int, error) {

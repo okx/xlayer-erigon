@@ -21,7 +21,8 @@ var DefaultMode = Mode{
 	TxIndex:     Distance(math.MaxUint64),
 	CallTraces:  Distance(math.MaxUint64),
 	Experiments: Experiments{}, // all off
-	InnerTxs:    Distance(math.MaxUint64),
+
+	InnerTxs: Distance(math.MaxUint64), // X Layer inner txs
 }
 
 var (
@@ -176,7 +177,8 @@ type Mode struct {
 	TxIndex     BlockAmount
 	CallTraces  BlockAmount
 	Experiments Experiments
-	InnerTxs    BlockAmount
+
+	InnerTxs BlockAmount // X Layer inner txs
 }
 
 type BlockAmount interface {

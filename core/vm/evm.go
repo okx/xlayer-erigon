@@ -103,7 +103,7 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 		config:          vmConfig,
 		chainConfig:     chainConfig,
 		chainRules:      chainConfig.Rules(blockCtx.BlockNumber, blockCtx.Time),
-		innerTxMeta: &InnerTxMeta{
+		innerTxMeta: &InnerTxMeta{ // X Layer inner TX
 			index:     0,
 			lastDepth: 0,
 			indexMap:  map[int]int{0: 0},
@@ -122,6 +122,7 @@ func NewEVM(blockCtx evmtypes.BlockContext, txCtx evmtypes.TxContext, state evmt
 func (evm *EVM) Reset(txCtx evmtypes.TxContext, ibs evmtypes.IntraBlockState) {
 	evm.txContext = txCtx
 	evm.intraBlockState = ibs
+	// X Layer inner tx
 	evm.innerTxMeta = &InnerTxMeta{
 		index:     0,
 		lastDepth: 0,
@@ -139,7 +140,7 @@ func (evm *EVM) ResetBetweenBlocks(blockCtx evmtypes.BlockContext, txCtx evmtype
 	evm.intraBlockState = ibs
 	evm.config = vmConfig
 	evm.chainRules = chainRules
-	//XLayer
+	// X Layer inner tx
 	evm.innerTxMeta = &InnerTxMeta{
 		index:     0,
 		lastDepth: 0,
@@ -349,7 +350,7 @@ func (c *codeAndHash) Hash() libcommon.Hash {
 
 func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64, value *uint256.Int, address libcommon.Address, typ OpCode, incrementNonce bool, intrinsicGas uint64) ([]byte, libcommon.Address, uint64, error) {
 	// hack to support zkeVM
-	return evm.createZkEvm(caller, codeAndHash, gas, value, address, typ, incrementNonce, intrinsicGas, false)
+	return evm.createZkEvm(caller, codeAndHash, gas, value, address, typ, incrementNonce, intrinsicGas)
 }
 
 // create creates a new contract using code as deployment code.

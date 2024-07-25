@@ -3,7 +3,8 @@ package stages
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -38,7 +39,6 @@ func SpawnL1SequencerSyncStage(
 	tx kv.RwTx,
 	cfg L1SequencerSyncCfg,
 	ctx context.Context,
-	initialCycle bool,
 	quiet bool,
 ) (err error) {
 	logPrefix := s.LogPrefix()
@@ -91,10 +91,49 @@ Loop:
 					if err := HandleInitialSequenceBatches(cfg.syncer, hermezDb, l, header); err != nil {
 						return err
 					}
-					// we only ever handle a single injected batch as a sequencer currently so we can just
-					// exit early here
-					log.Info("Found injected batch , and break loop")
-					break Loop
+				case contracts.AddNewRollupTypeTopic:
+					rollupType := l.Topics[1].Big().Uint64()
+					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
+					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
+					if err := hermezDb.WriteRollupType(rollupType, forkId); err != nil {
+						return err
+					}
+				case contracts.CreateNewRollupTopic:
+					rollupId := l.Topics[1].Big().Uint64()
+					if rollupId != cfg.zkCfg.L1RollupId {
+						continue
+					}
+					rollupTypeBytes := l.Data[0:32]
+					rollupType := new(big.Int).SetBytes(rollupTypeBytes).Uint64()
+					fork, err := hermezDb.GetForkFromRollupType(rollupType)
+					if err != nil {
+						return err
+					}
+					if fork == 0 {
+						log.Error("received CreateNewRollupTopic for unknown rollup type", "rollupType", rollupType)
+					}
+					if err := hermezDb.WriteNewForkHistory(fork, 0); err != nil {
+						return err
+					}
+				case contracts.UpdateRollupTopic:
+					rollupId := l.Topics[1].Big().Uint64()
+					if rollupId != cfg.zkCfg.L1RollupId {
+						continue
+					}
+					newRollupBytes := l.Data[0:32]
+					newRollup := new(big.Int).SetBytes(newRollupBytes).Uint64()
+					fork, err := hermezDb.GetForkFromRollupType(newRollup)
+					if err != nil {
+						return err
+					}
+					if fork == 0 {
+						return fmt.Errorf("received UpdateRollupTopic for unknown rollup type: %v", newRollup)
+					}
+					latestVerifiedBytes := l.Data[32:64]
+					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
+					if err := hermezDb.WriteNewForkHistory(fork, latestVerified); err != nil {
+						return err
+					}
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
 				}
@@ -102,8 +141,9 @@ Loop:
 		case progMsg := <-progressChan:
 			log.Info(fmt.Sprintf("[%s] %s", logPrefix, progMsg))
 		default:
-			log.Info(fmt.Sprintf("[%s] Waiting for sequencer InitialSequenceBatchesTopic log...", logPrefix))
-			time.Sleep(1 * time.Second)
+			if !cfg.syncer.IsDownloading() {
+				break Loop
+			}
 		}
 	}
 
@@ -128,19 +168,14 @@ Loop:
 	return nil
 }
 
-func HandleL1InfoTreeUpdate(
-	syncer IL1Syncer,
-	hermezDb *hermez_db.HermezDb,
-	l ethTypes.Log,
-	latestUpdate *types.L1InfoTreeUpdate,
-	found bool,
-	header *ethTypes.Header,
-) (*types.L1InfoTreeUpdate, error) {
+func CreateL1InfoTreeUpdate(l ethTypes.Log, header *ethTypes.Header) (*types.L1InfoTreeUpdate, error) {
 	if len(l.Topics) != 3 {
-		log.Warn("Received log for info tree that did not have 3 topics")
-		return nil, nil
+		return nil, fmt.Errorf("received log for info tree that did not have 3 topics")
 	}
-	var err error
+
+	if l.BlockNumber != header.Number.Uint64() {
+		return nil, fmt.Errorf("received log for info tree that did not match the block number")
+	}
 
 	mainnetExitRoot := l.Topics[1]
 	rollupExitRoot := l.Topics[2]
@@ -150,35 +185,26 @@ func HandleL1InfoTreeUpdate(
 		GER:             common.BytesToHash(ger),
 		MainnetExitRoot: mainnetExitRoot,
 		RollupExitRoot:  rollupExitRoot,
+		BlockNumber:     l.BlockNumber,
+		Timestamp:       header.Time,
+		ParentHash:      header.ParentHash,
 	}
 
-	if !found {
-		// this is a special case, so we need to start at index 0
-		update.Index = 0
-	} else {
-		// increment the index from the previous entry
-		update.Index = latestUpdate.Index + 1
-	}
+	return update, nil
+}
 
-	// now we need the block timestamp and the parent hash information for the block tied
-	// to this event
-	if header == nil {
-		header, err = syncer.GetHeader(l.BlockNumber)
-		if err != nil {
-			return nil, err
-		}
-	}
-	update.ParentHash = header.ParentHash
-	update.Timestamp = header.Time
-	update.BlockNumber = l.BlockNumber
-
+func HandleL1InfoTreeUpdate(
+	hermezDb *hermez_db.HermezDb,
+	update *types.L1InfoTreeUpdate,
+) error {
+	var err error
 	if err = hermezDb.WriteL1InfoTreeUpdate(update); err != nil {
-		return nil, err
+		return err
 	}
 	if err = hermezDb.WriteL1InfoTreeUpdateToGer(update); err != nil {
-		return nil, err
+		return err
 	}
-	return update, nil
+	return nil
 }
 
 const (

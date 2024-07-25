@@ -474,11 +474,6 @@ var (
 		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
 		Value: false,
 	}
-	SequencerInitialForkId = cli.Uint64Flag{
-		Name:  "zkevm.sequencer-initial-fork-id",
-		Usage: "The initial fork id to launch the sequencer with",
-		Value: 8,
-	}
 	SequencerBlockSealTime = cli.StringFlag{
 		Name:  "zkevm.sequencer-block-seal-time",
 		Usage: "Block seal time. Defaults to 6s",
@@ -538,6 +533,16 @@ var (
 		Name:  "zkevm.data-stream-host",
 		Usage: "Define the host used for the zkevm data stream",
 		Value: "",
+	}
+	DataStreamWriteTimeout = cli.DurationFlag{
+		Name:  "zkevm.data-stream-writeTimeout",
+		Usage: "Define the TCP write timeout when sending data to a datastream client",
+		Value: 5 * time.Second,
+	}
+	Limbo = cli.BoolFlag{
+		Name:  "zkevm.limbo",
+		Usage: "Enable limbo processing on batches that failed verification",
+		Value: false,
 	}
 	AllowFreeTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-free-transactions",
@@ -622,6 +627,11 @@ var (
 	AllowInternalTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-internal-transactions",
 		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
+	DebugTimers = cli.BoolFlag{
+		Name:  "debug.timers",
+		Usage: "Enable debug timers",
 		Value: false,
 	}
 	DebugNoSync = cli.BoolFlag{
@@ -887,6 +897,7 @@ var (
 		Usage: "Maximum gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.MaxPrice.Int64(),
 	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",

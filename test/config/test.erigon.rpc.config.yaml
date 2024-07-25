@@ -27,7 +27,12 @@ log.console.verbosity: 4
 zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: true
-zkevm.sequencer-initial-fork-id: 9
+
+zkevm.sequencer-block-seal-time: "6s"
+zkevm.sequencer-batch-seal-time: "12s"
+zkevm.sequencer-non-empty-batch-seal-time: "3s"
+zkevm.sequencer-batch-sleep-duration: "0s"
+
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000

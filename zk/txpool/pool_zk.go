@@ -3,6 +3,8 @@ package txpool
 import (
 	"bytes"
 	"fmt"
+	core_types "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/rlp"
 	"math/big"
 	"strings"
 
@@ -72,11 +74,14 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				addrHex := "0x" + inputHex[10:74]
 				p.freeGasAddress[addrHex] = true
 			} else {
-				// todo: dex for okb, put 'to' addr into free gas cache
+				txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(mt.Tx.Rlp), uint64(len(mt.Tx.Rlp))))
+				to := txnDec.GetTo()
+				if err == nil && to != nil {
+					p.freeGasAddress[to.Hex()] = true
+				}
 
 			}
 		} else if claim && mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
-			// todo if the rlp is same with zknode
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
 			addrHex := "0x" + inputHex[4490:4554]
 			p.freeGasAddress[addrHex] = true

@@ -73,7 +73,7 @@ txpool.gaspricemultiple : 2
 txpool.blockedlist: ["0xdD2FD4581271e230360230F9337D5c0430Bf44C0"]
 
 gpo.type: "follower"
-gpo.update-period: "10s"
+gpo.update-period: "2s"
 gpo.factor: 0.01
 gpo.kafka-url: "0.0.0.0"
 gpo.topic: "explorer"

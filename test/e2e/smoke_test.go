@@ -215,7 +215,7 @@ func TestGasPrice(t *testing.T) {
 	gasPrice1, err := operations.GetGasPrice()
 	gasPrice2 := gasPrice1
 	require.NoError(t, err)
-	for i := 1; i < 15; i++ {
+	for i := 1; i < 10; i++ {
 		temp, err := operations.GetGasPrice()
 		require.NoError(t, err)
 		if temp > gasPrice2 {
@@ -234,18 +234,17 @@ func TestGasPrice(t *testing.T) {
 				Gas:   21000,
 				Value: uint256.NewInt(0),
 			},
-			GasPrice: uint256.NewInt(uint64(i) * 100 * encoding.Gwei),
+			GasPrice: uint256.NewInt(uint64(i) * 200 * encoding.Gwei),
 		}
 		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
 		require.NoError(t, err)
 		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
 		signedTx, err := types.SignTx(tx, *signer, privateKey)
 		require.NoError(t, err)
+		log.Infof("GP:%v", tx.GetPrice())
 		err = client.SendTransaction(ctx, signedTx)
-		if i%2 == 0 {
-			log.Infof("nonce: %d", nonce)
-			err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
-		}
+		err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+		require.NoError(t, err)
 	}
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)

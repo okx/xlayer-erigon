@@ -215,7 +215,14 @@ func TestGasPrice(t *testing.T) {
 	gasPrice1, err := operations.GetGasPrice()
 	gasPrice2 := gasPrice1
 	require.NoError(t, err)
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 15; i++ {
+		temp, err := operations.GetGasPrice()
+		require.NoError(t, err)
+		if temp > gasPrice2 {
+			gasPrice2 = temp
+		}
+		require.NoError(t, err)
+
 		from := common.HexToAddress(operations.DefaultL2AdminAddress)
 		to := common.HexToAddress(operations.DefaultSequencerAddress)
 		nonce, err := client.PendingNonceAt(ctx, from)
@@ -235,17 +242,10 @@ func TestGasPrice(t *testing.T) {
 		signedTx, err := types.SignTx(tx, *signer, privateKey)
 		require.NoError(t, err)
 		err = client.SendTransaction(ctx, signedTx)
-		if i%3 == 0 {
+		if i%2 == 0 {
 			log.Infof("nonce: %d", nonce)
 			err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 		}
-		temp, err := operations.GetGasPrice()
-		log.Infof("temp gasPrice: %d", temp)
-		require.NoError(t, err)
-		if temp > gasPrice2 {
-			gasPrice2 = temp
-		}
-		require.NoError(t, err)
 	}
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)

@@ -1,7 +1,7 @@
 name: Schedule CI
 on:
   schedule:
-    - cron: '0 0 * * *' # at the end of every day
+    - cron: '0 4,10 * * 1-5' # At 04:00 UTC (12:00 SGT) and 10:00 (18:00 SGT) UTC, Monday to Friday
 
 concurrency:
   group: ${{ github.ref }}

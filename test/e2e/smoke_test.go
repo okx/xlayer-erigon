@@ -213,6 +213,7 @@ func TestGasPrice(t *testing.T) {
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
 	log.Infof("Start TestGasPrice")
 	gasPrice1, err := operations.GetGasPrice()
+	gasPrice2 := gasPrice1
 	require.NoError(t, err)
 	for i := 1; i < 100; i++ {
 		from := common.HexToAddress(operations.DefaultL2AdminAddress)
@@ -237,11 +238,15 @@ func TestGasPrice(t *testing.T) {
 		if i%20 == 0 {
 			log.Infof("nonce: %d", nonce)
 			err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
-			require.NoError(t, err)
+		}
+		temp, err := operations.GetGasPrice()
+		log.Infof("temp gasPrice: %d", temp)
+		require.NoError(t, err)
+		if temp > gasPrice2 {
+			gasPrice2 = temp
 		}
 		require.NoError(t, err)
 	}
-	gasPrice2, err := operations.GetGasPrice()
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)
 	require.Greater(t, gasPrice2, gasPrice1)

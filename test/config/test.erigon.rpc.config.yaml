@@ -51,6 +51,5 @@ db.read.concurrency: 20000
 txpool.globalslots: 100000
 
 http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
-
-#http.methodratelimit: {"methods":["eth_syncing"],"count":10,"bucket":1}
-#http.apikeys: {"project":"project1","key":"apikey1","timeout":"2033-12-12"}
+#http.apikeys: |
+#  {"project":"project1","key":"944cd2a6939eb23053289d9b91d6c498","timeout":"2033-12-12","methods":["eth_syncing"],"count":5,"bucket":1}

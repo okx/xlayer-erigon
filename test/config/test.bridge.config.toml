@@ -31,7 +31,7 @@ AuthorizedClaimMessageAddresses = ["0x90F79bf6EB2c4f870365E785982E1f101E93b906"]
 
 [Etherman]
 L1URL = "http://erigon-mock-l1-network:8545"
-L2URLs = ["http://erigon-seq:8545"]
+L2URLs = ["http://erigon-rpc:8545"]
 L1ChainId = 1337
 L2ChainIds = [195]
 

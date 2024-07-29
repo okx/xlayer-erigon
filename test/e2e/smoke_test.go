@@ -142,7 +142,6 @@ func TestRPCAPI(t *testing.T) {
 	}
 	require.True(t, strings.Contains(err.Error(), "rate limit exceeded"))
 
-	// TODO fix it
 	//for i := 0; i < 1000; i++ {
 	//	_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL + "/apikey1")
 	//	require.NoError(t, err1)

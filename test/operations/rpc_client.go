@@ -55,6 +55,26 @@ func GetEthSyncing(url string) (bool, error) {
 	return result, nil
 }
 
+func GetNetVersion(url string) (uint64, error) {
+	response, err := client.JSONRPCCall(url, "net_version")
+	if err != nil {
+		return 0, err
+	}
+	if response.Error != nil {
+		return 0, fmt.Errorf("%d - %s", response.Error.Code, response.Error.Message)
+	}
+	var result string
+	err = json.Unmarshal(response.Result, &result)
+	if err != nil {
+		return 0, err
+	}
+	num, err := strconv.ParseUint(result, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
+}
+
 func GetBatchNumberByBlockNumber(l2Block *big.Int) (uint64, error) {
 	response, err := client.JSONRPCCall(DefaultL2NetworkURL, "zkevm_batchNumberByBlockNumber", hex.EncodeBig(l2Block))
 	if err != nil {

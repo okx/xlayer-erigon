@@ -49,6 +49,7 @@ http.corsdomain: any
 ws: true
 db.read.concurrency: 20000
 txpool.globalslots: 100000
+networkid: 195
 
 http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
 #http.apikeys: |

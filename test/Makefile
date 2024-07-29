@@ -83,11 +83,11 @@ all: ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_APPROVE)
 	sleep 3
+	$(RUN_DOCKER_RPC)
+	sleep 3
 	$(RUN_DOCKER_SEQ_SENDER)
 	sleep 3
 	$(RUN_DOCKER_AGGREGATOR)
-	sleep 3
-	$(RUN_DOCKER_RPC)
 
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_SERVICE)

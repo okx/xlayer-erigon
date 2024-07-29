@@ -148,6 +148,15 @@ func TestRPCAPI(t *testing.T) {
 	//}
 }
 
+func TestChainID(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+	chainID, err := operations.GetNetVersion(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+	require.Equal(t, chainID, operations.DefaultL2ChainID)
+}
+
 func TestInnerTx(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)

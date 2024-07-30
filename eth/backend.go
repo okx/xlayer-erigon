@@ -802,6 +802,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		}
 
 		seqVerSyncer := syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			seqAndVerifL1Contracts,
 			seqAndVerifTopics,
@@ -811,6 +812,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		)
 
 		backend.l1Syncer = syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			l1Contracts,
 			l1Topics,
@@ -820,6 +822,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		)
 
 		l1InfoTreeSyncer := syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			[]libcommon.Address{cfg.AddressGerManager},
 			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic}},
@@ -873,6 +876,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			backend.txPool2.ForceUpdateLatestBlock(executionProgress)
 
 			l1BlockSyncer := syncer.NewL1Syncer(
+				ctx,
 				ethermanClients,
 				[]libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup},
 				[][]libcommon.Hash{{
@@ -1086,7 +1090,7 @@ func (s *Ethereum) PreStart() error {
 		// so here we loop and take a brief pause waiting for it to be ready
 		attempts := 0
 		for {
-			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
+			_, err = zkStages.CatchupDatastream(s.sentryCtx, "stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
 			if err != nil {
 				if errors.Is(err, datastreamer.ErrAtomicOpNotAllowed) {
 					attempts++

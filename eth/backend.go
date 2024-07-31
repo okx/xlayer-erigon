@@ -1052,7 +1052,9 @@ func (backend *Ethereum) Init(stack *node.Node, config *ethconfig.Config) error 
 	}
 	apiList, gpCache := commands.APIList(chainKv, borDb, ethRpcClient, txPoolRpcClient, backend.txPool2, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config, backend.l1Syncer)
 	// For X Layer
-	backend.txPool2.SetGpCacheForXLayer(gpCache)
+	if backend.txPool2 != nil && gpCache != nil {
+		backend.txPool2.SetGpCacheForXLayer(gpCache)
+	}
 	authApiList := commands.AuthAPIList(chainKv, ethRpcClient, txPoolRpcClient, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config)
 	go func() {
 		if err := cli.StartRpcServer(ctx, httpRpcCfg, apiList, authApiList); err != nil {

@@ -164,10 +164,35 @@ jobs:
   #         kurtosis service logs cdk-v1 zkevm-agglayer-001 --all > zkevm-agglayer-001.log
   #         kurtosis service logs cdk-v1 zkevm-prover-001 --all > zkevm-prover-001.log
   #         kurtosis service logs cdk-v1 zkevm-executor-pless-001 --all > zkevm-executor-pless-001.log
-
   #     - name: Upload logs
   #       if: failure()
   #       uses: actions/upload-artifact@v3
   #       with:
   #         name: logs_${{ github.run_id }}
   #         path: ./kurtosis-cdk/ci_logs
+
+  test-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [ 1.20.x ]
+        goarch: [ "amd64" ]
+        e2e-group: [ 1 ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+        env:
+          GOARCH: ${{ matrix.goarch }}
+
+      - name: Build Docker
+        run: make build-docker
+
+      - name: Test
+        run: make test-${{ matrix.e2e-group }}
+        working-directory: test

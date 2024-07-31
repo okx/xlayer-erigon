@@ -6,7 +6,7 @@ Outputs = ["stderr"]
 [SequenceSender]
 WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
-MaxTxSizeForL1 = 13107
+MaxBatchesForL1 = 100
 L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 PrivateKey = {Path = "/pk/sequencer.keystore", Password = "testonly"}
 SequencesTxFileName = "sequencesender.json"
@@ -17,9 +17,9 @@ MaxPendingTx = 1
 		Server = "erigon-seq:6900"
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
-		WaitTxToBeMined = "2m"
-		ConsolidationL1ConfirmationBlocks = 5
-		FinalizationL1ConfirmationBlocks = 10
+		WaitTxToBeMined = "1m"
+		ConsolidationL1ConfirmationBlocks = 2
+		FinalizationL1ConfirmationBlocks = 4
 		WaitReceiptToBeGenerated = "8s"
 		PrivateKeys = [
 			{Path = "/pk/sequencer.keystore", Password = "testonly"},

@@ -794,12 +794,14 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
 		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
-		to := txnDec.GetTo()
-		if err == nil && to != nil {
+		if err == nil {
+			to := txnDec.GetTo()
 			if p.checkBlockedAddr(*to) {
 				log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
 				return ReceiverDisallowedReceiveTx
 			}
+		} else {
+			log.Error(fmt.Sprintf("DecodeTransaction error: %v, rlp=%s", err, hex.EncodeToString(txn.Rlp)))
 		}
 	}
 

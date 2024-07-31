@@ -1052,6 +1052,13 @@ func (backend *Ethereum) Init(stack *node.Node, config *ethconfig.Config) error 
 	}
 	apiList, gpCache := commands.APIList(chainKv, borDb, ethRpcClient, txPoolRpcClient, backend.txPool2, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config, backend.l1Syncer)
 	// For X Layer
+	if backend.txPool2 == nil {
+		log.Warn("txPool2 is nil")
+	}
+	if gpCache == nil {
+		log.Warn("gpCache is nil")
+	}
+
 	if backend.txPool2 != nil && gpCache != nil {
 		backend.txPool2.SetGpCacheForXLayer(gpCache)
 	}

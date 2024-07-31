@@ -197,6 +197,40 @@ services:
       - "-N"
       - "500"
 
+  erigon-pool-db:
+    container_name: erigon-pool-db
+    image: postgres:15
+    ports:
+      - 5440:5432
+    volumes:
+      - /var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=pool_user
+      - POSTGRES_PASSWORD=pool_password
+      - POSTGRES_DB=pool_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  erigon-pool-manager:
+    container_name: erigon-pool-manager
+    image: hermeznetwork/zkevm-pool-manager:v0.1.0-RC1
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    ports:
+      - 8125:8545
+    volumes:
+      - ./config/test.poolmanager.toml:/app/poolmanager.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-pool-manager run --cfg /app/poolmanager.toml"
+
   xlayer-bridge-db:
     container_name: xlayer-bridge-db
     image: postgres:15

@@ -8,8 +8,8 @@ TxProfitabilityCheckerType = "acceptall"
 TxProfitabilityMinReward = "1.1"
 ProofStatePollingInterval = "5s"
 SenderAddress = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
-CleanupLockedProofsInterval = "2m"
-GeneratingProofCleanupThreshold = "10m"
+CleanupLockedProofsInterval = "1m"
+GeneratingProofCleanupThreshold = "2m"
 BatchProofSanityCheckEnabled = true
 ForkId = 9
 WitnessURL = "http://erigon-seq:8545"
@@ -30,9 +30,9 @@ LERContract = "0xa40D5f56745a118D0906a34E69aeC8C0Db1cB8fA"
 		Server = "erigon-seq:6900"
 	[Aggregator.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
-		WaitTxToBeMined = "2m"
-		SafeStatusL1NumberOfBlocks = 5
-		FinalizedStatusL1NumberOfBlocks = 10
+		WaitTxToBeMined = "1m"
+		SafeStatusL1NumberOfBlocks = 2
+		FinalizedStatusL1NumberOfBlocks = 5
 		WaitReceiptToBeGenerated = "8s"
 		PrivateKeys = [
 			{Path = "/pk/aggregator.keystore", Password = "testonly"},

@@ -154,10 +154,9 @@ func (api *ZkEvmAPIImpl) IsBlockVirtualized(ctx context.Context, blockNumber rpc
 
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	latestSequencedBatch, err := hermezDb.GetLatestSequence()
-	if err != nil {
+	if err != nil || latestSequencedBatch == nil {
 		return false, err
 	}
-
 	// if the batch is lower than the latest sequenced then it must be virtualized
 	return batchNum <= latestSequencedBatch.BatchNo, nil
 }

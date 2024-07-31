@@ -38,7 +38,7 @@ zkevm.data-stream-port: 6900
 zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
-zkevm.gasless: true
+#zkevm.gasless: true
 
 zkevm.l1-highest-block-type: latest
 
@@ -70,9 +70,10 @@ txpool.globalbasefeeslots: 100000
 txpool.globalqueue: 100000
 txpool.packbatchspeciallist : ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"]
 txpool.gaspricemultiple : 2
+txpool.blockedlist: ["0xdD2FD4581271e230360230F9337D5c0430Bf44C0"]
 
 gpo.type: "follower"
-gpo.update-period: "10s"
+gpo.update-period: "2s"
 gpo.factor: 0.01
 gpo.kafka-url: "0.0.0.0"
 gpo.topic: "explorer"
@@ -82,3 +83,5 @@ gpo.default-l2-coin-price: 50
 gpo.gas-price-usdt: 0.000000476190476
 gpo.enable-follower-adjust: true
 gpo.congestion-threshold: 0
+
+networkid: 195

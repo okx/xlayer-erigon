@@ -26,9 +26,9 @@ import (
 	"math/big"
 	"strconv"
 
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/rpc"
@@ -379,6 +379,8 @@ func (ec *Client) TransactionByHash(ctx context.Context, hash common.Hash) (tx t
 		return nil, false, err
 	} else if json == nil {
 		return nil, false, ethereum.NotFound
+	} else if json.Tx() == nil {
+		return nil, false, fmt.Errorf("server returned transaction without type")
 	} else if _, r, _ := json.Tx().RawSignatureValues(); r == nil {
 		return nil, false, fmt.Errorf("server returned transaction without signature")
 	}
@@ -733,13 +735,12 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
 func (ec *Client) SendTransaction(ctx context.Context, tx types.Transaction) error {
-	var data []byte
-	writer := bytes.NewBuffer(data)
-	err := tx.MarshalBinary(writer)
+	var data bytes.Buffer
+	err := tx.MarshalBinary(&data)
 	if err != nil {
 		return err
 	}
-	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data))
+	return ec.c.CallContext(ctx, nil, "eth_sendRawTransaction", hexutil.Encode(data.Bytes()))
 }
 
 func toBlockNumArg(number *big.Int) string {

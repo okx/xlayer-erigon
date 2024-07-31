@@ -1,0 +1,43 @@
+name: Nightly - Ansible
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # run at midnight to stagger tests (take around 15m to pass)
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - name: "integration-5"
+            rpc_url: "http://34.175.214.161:8500"
+            eth_address: "0x41BB6960a5156aC29d6e9E04273837AD19d6691A"
+            secret_name: "NETWORK5_PRIVATE_KEY"
+          - name: "cdk-1"
+            rpc_url: "http://34.175.214.161:8020"
+            eth_address: "0x673df8221611aD1f714053b82c4F9E2b0867CcC6"
+            secret_name: "CDK_1_PRIVATE_KEY"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Run Docker Compose
+        env:
+          RPC_URL: ${{ matrix.rpc_url }}
+          PRIVATE_KEY: ${{ secrets[matrix.secret_name] }}
+          ETH_ADDRESS: ${{ matrix.eth_address }}
+        run: |
+          cd zk/tests/ansible/evm-rpc-tests && docker compose build --quiet && docker compose up --exit-code-from ansible
+
+      - name: Upload logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: evm-rpc-tests-logs-${{ matrix.nodes.name }}
+          path: ./logs/evm-rpc-tests.log

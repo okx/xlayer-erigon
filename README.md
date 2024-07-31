@@ -20,13 +20,13 @@ Current status of cdk-erigon's support for running various chains and fork ids:
 ## Dynamic Chain Configuration
 To use chains other than the defaults above, a set of configuration files can be supplied to run any chain.
 
-1. Create a directory `~/dynamic-configs` (in the user home directory)
-2. Ensure your chain name starts with the word `dynamic` e.g. `dynamic-mynetwork`
-3. Create 3 files in dynamic configs (examples for Cardona in `zk/examples/dynamic-configs`, copy these into your dynamic-configs folder and edit as required)
+1. Ensure your chain name starts with the word `dynamic` e.g. `dynamic-mynetwork`
+3. Create 3 files for dynamic configs (examples for Cardona in `zk/examples/dynamic-configs`, edit as required)
    - `dynamic-{network}-allocs.json` - the allocs file
    - `dynamic-{network}-chainspec.json` - the chainspec file
    - `dynamic-{network}-conf.json` - an additional configuration file
    - `dynamic-{network}.yaml` - the run config file for erigon.  You can use any of the example yaml files at the root of the repo as a base and edit as required, but ensure the `chain` field is in the format `dynamic-{network}` and matches the names of the config files above.
+4. Place the erigon config file along with the other files in the directory of your choice, for example `dynamic-mynetwork`.
 
 **Tip**: if you have allocs in the format from Polygon when originally launching the network you can save this file to the root of the cdk-erigon code
 base and run `go run cmd/hack/allocs/main.go [your-file-name]` to convert it to the format needed by erigon, this will form the `dynamic-{network}-allocs.json` file.
@@ -38,9 +38,9 @@ base and run `go run cmd/hack/allocs/main.go [your-file-name]` to convert it to 
 - zkevm.address-rollup => deploy_output.json => `polygonRollupManagerAddress`
 - zkevm.address-ger-manager => deploy_output.json => `polygonZkEVMGlobalExitRootAddress`
 
-Mount point for this folder on docker container: `~/dynamic-configs` (home directory of erigon user)
+Mount the directory containing the config files on docker container: `/dynamic-mynetwork` for example
 
-To use the new config when starting erigon use the `--config` flag with the path to the config file e.g. `--config="/path/to/home-dir/dynamic-networks/dynamic-mynetwork.yaml"`
+To use the new config when starting erigon use the `--cfg` flag with the path to the config file e.g. `--cfg="/dynamic-mynetwork/dynamic-mynetwork.yaml"`
 
 ## Prereqs
 In order to use the optimal vectorized poseidon hashing for the Sparse Merkle Tree, on x86 the following packages are required (for Apple silicon it will fall back to the iden3 library and as such these dependencies are not required in that case.
@@ -52,6 +52,11 @@ Please install:
 Using the Makefile command: `make build-libs` will install these for the relevant architecture.
 
 Due to dependency requirements Go 1.19 is required to build.
+
+## L1 Interaction
+In order to retrieve data from the L1, the L1 syncer must be configured to know how to request the highest block, this can be configured by flag:
+
+- `zkevm.l1-highest-block-type` which defaults to retrieving the 'finalized' block, however there are cases where you may wish to pass 'safe' or 'latest'.
 
 ## Sequencer (WIP)
 
@@ -83,6 +88,8 @@ In order to enable the zkevm_ namespace, please add 'zkevm' to the http.api flag
 - `zkevm_virtualBatchNumber`
 - `zkevm_getFullBlockByHash`
 - `zkevm_getFullBlockByNumber`
+- `zkevm_virtualCounters`
+- `zkevm_traceTransactionCounters`
 
 ### Supported (remote)
 - `zkevm_getBatchByNumber`
@@ -94,10 +101,13 @@ In order to enable the zkevm_ namespace, please add 'zkevm' to the http.api flag
 - `zkevm_getBroadcastURI` - it was removed by zkEvm
 ***
 
-## Limitations/Warnings
+## Limitations/Warnings/Performance
 
 - The golden poseidon hashing will be much faster on x86, so developers on Mac may experience slowness on Apple silicone
 - Falling behind the network significantly will cause a SMT rebuild - which will take some time for longer chains
+
+Initial SMT build performance can be increased if machine has enough RAM:
+- `zkevm.smt-regenerate-in-memory` - setting this to true will use RAM to build the SMT rather than disk which is faster, but requires enough RAM (OOM kill potential)
 
 ***
 
@@ -176,10 +186,13 @@ Sequencer specific config:
 - `zkevm.executor-urls`: A csv list of the executor URLs.  These will be used in a round robbin fashion by the sequencer
 - `zkevm.executor-strict`: Defaulted to true, but can be set to false when running the sequencer without verifications (use with extreme caution)
 - `zkevm.witness-full`: Defaulted to true.  Controls whether the full or partial witness is used with the executor.
-- `zkevm.sequencer-initial-fork-id`: The fork id to start the network with.
+
+Resource Utilisation config:
+- `zkevm.smt-regenerate-in-memory`: As documented above, allows SMT regeneration in memory if machine has enough RAM, for a speedup in initial sync.
 
 Useful config entries:
 - `zkevm.sync-limit`: This will ensure the network only syncs to a given block height.
+- `debug.timers`: This will enable debug timers in the logs to help with performance tuning. Recording timings of witness generation, etc. at INFO level.
 
 ***
 

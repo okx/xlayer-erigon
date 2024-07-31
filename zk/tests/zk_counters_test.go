@@ -66,9 +66,10 @@ type vector struct {
 	ExpectedNewRoot  string `json:"expectedNewRoot"`
 	SmtDepths        []int  `json:"smtDepths"`
 	Txs              [2]struct {
-		Type           int    `json:"type"`
-		DeltaTimestamp string `json:"deltaTimestamp"`
-		L1Info         *struct {
+		Type            int    `json:"type"`
+		DeltaTimestamp  string `json:"deltaTimestamp"`
+		IndexL1InfoTree int    `json:"indexL1InfoTree"`
+		L1Info          *struct {
 			GlobalExitRoot string `json:"globalExitRoot"`
 			BlockHash      string `json:"blockHash"`
 			Timestamp      string `json:"timestamp"`
@@ -208,6 +209,12 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 	chainConfig := params.ChainConfigByChainName("hermez-dev")
 	chainConfig.ChainID = big.NewInt(test.ChainId)
 
+	chainConfig.ForkID4Block = big.NewInt(0)
+	chainConfig.ForkID5DragonfruitBlock = big.NewInt(0)
+	chainConfig.ForkID6IncaBerryBlock = big.NewInt(0)
+	chainConfig.ForkID7EtrogBlock = big.NewInt(0)
+	chainConfig.ForkID88ElderberryBlock = big.NewInt(0)
+
 	ethashCfg := &ethashcfg.Config{
 		CachesInMem:      1,
 		CachesLockMmap:   true,
@@ -241,8 +248,12 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 
 	stateReader := state.NewPlainStateReader(tx)
 	ibs := state.New(stateReader)
+	verifyMerkleProof := false
 
 	if test.Txs[0].Type == 11 {
+		if test.Txs[0].IndexL1InfoTree != 0 {
+			verifyMerkleProof = true
+		}
 		parentRoot := common.Hash{}
 		deltaTimestamp, _ := strconv.ParseUint(test.Txs[0].DeltaTimestamp, 10, 64)
 		ibs.PreExecuteStateSet(chainConfig, 1, deltaTimestamp, &parentRoot)
@@ -270,7 +281,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 		}
 	}
 
-	batchCollector := vm.NewBatchCounterCollector(test.SmtDepths[0], uint16(test.ForkId), false)
+	batchCollector := vm.NewBatchCounterCollector(test.SmtDepths[0], uint16(test.ForkId), 0.6, false, nil)
 
 	blockStarted := false
 	for i, block := range decodedBlocks {
@@ -280,7 +291,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 			blockContext := core.NewEVMBlockContext(header, blockHashFunc, engine, &sequencer, big.NewInt(0))
 
 			if !blockStarted {
-				overflow, err := batchCollector.StartNewBlock()
+				overflow, err := batchCollector.StartNewBlock(false)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -289,7 +300,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 				}
 				blockStarted = true
 			}
-			txCounters := vm.NewTransactionCounter(transaction, test.SmtDepths[i], false)
+			txCounters := vm.NewTransactionCounter(transaction, test.SmtDepths[i], uint16(test.ForkId), 0.6, false)
 			overflow, err := batchCollector.AddNewTransactionCounters(txCounters)
 			if err != nil {
 				t.Fatal(err)
@@ -312,6 +323,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 				transaction,
 				&header.GasUsed,
 				zktypes.EFFECTIVE_GAS_PRICE_PERCENTAGE_MAXIMUM,
+				true,
 			)
 
 			if err != nil {
@@ -329,7 +341,7 @@ func runTest(t *testing.T, test vector, err error, fileName string, idx int) {
 		}
 	}
 
-	combined, err := batchCollector.CombineCollectors()
+	combined, err := batchCollector.CombineCollectors(verifyMerkleProof)
 	if err != nil {
 		t.Fatal(err)
 	}

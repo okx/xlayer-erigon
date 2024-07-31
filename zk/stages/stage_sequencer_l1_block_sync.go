@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"time"
 
+	"errors"
+
+	"encoding/binary"
+
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
 	"github.com/ledgerwatch/erigon/zk/syncer"
-	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/ledgerwatch/erigon/core/types"
 )
 
 type SequencerL1BlockSyncCfg struct {
@@ -40,7 +43,6 @@ func SpawnSequencerL1BlockSyncStage(
 	ctx context.Context,
 	tx kv.RwTx,
 	cfg SequencerL1BlockSyncCfg,
-	firstCycle bool,
 	quiet bool,
 ) error {
 	logPrefix := s.LogPrefix()
@@ -151,10 +153,19 @@ LOOP:
 				lastBatchSequenced := l.Topics[1].Big().Uint64()
 				latestBatch = lastBatchSequenced
 
-				batches, coinbase, err := l1_data.DecodeL1BatchData(transaction.GetData())
+				l1InfoRoot := l.Data
+				if len(l1InfoRoot) != 32 {
+					log.Error(fmt.Sprintf("[%s] L1 info root is not 32 bytes", logPrefix), "tx-hash", l.TxHash.String())
+					return errors.New("l1 info root is not 32 bytes")
+				}
+
+				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
 				if err != nil {
 					return err
 				}
+
+				limitTimestampBytes := make([]byte, 8)
+				binary.BigEndian.PutUint64(limitTimestampBytes, limitTimestamp)
 
 				// here we find the first batch number that was sequenced by working backwards
 				// from the latest batch in the original event
@@ -170,14 +181,15 @@ LOOP:
 				// this is important because the batches are written in reverse order
 				for idx, batch := range batches {
 					b := initBatch + uint64(idx)
-					data := append(coinbase.Bytes(), batch...)
+					data := make([]byte, 20+32+8+len(batch))
+					copy(data, coinbase.Bytes())
+					copy(data[20:], l1InfoRoot)
+					copy(data[52:], limitTimestampBytes)
+					copy(data[60:], batch)
+
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}
-
-					// disabled for now as it adds extra work into the process
-					// todo: find a way to only call this if debug logging is enabled
-					// debugLogProgress(batch, cfg, totalBlocks, logPrefix, b)
 
 					// check if we need to stop here based on config
 					if cfg.zkCfg.L1SyncStopBatch > 0 {
@@ -216,15 +228,6 @@ LOOP:
 	}
 
 	return nil
-}
-
-func debugLogProgress(batch []byte, cfg SequencerL1BlockSyncCfg, totalBlocks int, logPrefix string, b uint64) {
-	decoded, err := zktx.DecodeBatchL2Blocks(batch, cfg.zkCfg.SequencerInitialForkId)
-	if err != nil {
-		log.Error("Error decoding L1 batch", "batch", b, "err", err)
-	}
-	totalBlocks += len(decoded)
-	log.Debug(fmt.Sprintf("[%s] Wrote L1 batch", logPrefix), "batch", b, "blocks", len(decoded), "totalBlocks", totalBlocks)
 }
 
 func haveAllBatchesInDb(highestBatch uint64, cfg SequencerL1BlockSyncCfg, hermezDb *hermez_db.HermezDb) (bool, error) {

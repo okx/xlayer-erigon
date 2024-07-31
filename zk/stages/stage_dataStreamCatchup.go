@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+
 	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -10,20 +11,25 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/log/v3"
 )
 
 type DataStreamCatchupCfg struct {
-	db      kv.RwDB
-	stream  *datastreamer.StreamServer
-	chainId uint64
+	db            kv.RwDB
+	stream        *datastreamer.StreamServer
+	chainId       uint64
+	streamVersion int
+	hasExecutors  bool
 }
 
-func StageDataStreamCatchupCfg(stream *datastreamer.StreamServer, db kv.RwDB, chainId uint64) DataStreamCatchupCfg {
+func StageDataStreamCatchupCfg(stream *datastreamer.StreamServer, db kv.RwDB, chainId uint64, streamVersion int, hasExecutors bool) DataStreamCatchupCfg {
 	return DataStreamCatchupCfg{
-		stream:  stream,
-		db:      db,
-		chainId: chainId,
+		stream:        stream,
+		db:            db,
+		chainId:       chainId,
+		streamVersion: streamVersion,
+		hasExecutors:  hasExecutors,
 	}
 }
 
@@ -55,7 +61,7 @@ func SpawnStageDataStreamCatchup(
 		createdTx = true
 	}
 
-	finalBlockNumber, err := CatchupDatastream(logPrefix, tx, stream, cfg.chainId)
+	finalBlockNumber, err := CatchupDatastream(logPrefix, tx, stream, cfg.chainId, cfg.streamVersion, cfg.hasExecutors)
 	if err != nil {
 		return err
 	}
@@ -71,19 +77,43 @@ func SpawnStageDataStreamCatchup(
 	return err
 }
 
-func CatchupDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.StreamServer, chainId uint64) (uint64, error) {
-	srv := server.NewDataStreamServer(stream, chainId, server.StandardOperationMode)
+func CatchupDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.StreamServer, chainId uint64, streamVersion int, hasExecutors bool) (uint64, error) {
+	srv := server.NewDataStreamServer(stream, chainId)
 	reader := hermez_db.NewHermezDbReader(tx)
 
 	// get the latest verified batch number
-	latestBatch, err := stages.GetStageProgress(tx, stages.SequenceExecutorVerify)
-	if err != nil {
-		return 0, err
-	}
+	var err error
+	var latestBatch uint64
+	var finalBlockNumber uint64
+	if sequencer.IsSequencer() {
+		if hasExecutors {
+			latestBatch, err = stages.GetStageProgress(tx, stages.SequenceExecutorVerify)
+			if err != nil {
+				return 0, err
+			}
+			finalBlockNumber, err = reader.GetHighestBlockInBatch(latestBatch)
+			if err != nil {
+				return 0, err
+			}
+		} else {
+			// without execution we save progress block by block and can populate an unfinished batch to stream
+			// otherwise we get a batch gap in the stream because a few blocks don't get written to the stream
+			// and then execution continues from the middle of the batch
+			latestBatch, err = stages.GetStageProgress(tx, stages.HighestSeenBatchNumber)
+			if err != nil {
+				return 0, err
+			}
+			finalBlockNumber, err = stages.GetStageProgress(tx, stages.Execution)
+			if err != nil {
+				return 0, err
+			}
 
-	finalBlockNumber, err := reader.GetHighestBlockInBatch(latestBatch)
-	if err != nil {
-		return 0, err
+		}
+	} else {
+		finalBlockNumber, err = stages.GetStageProgress(tx, stages.Execution)
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	previousProgress, err := stages.GetStageProgress(tx, stages.DataStream)
@@ -96,19 +126,24 @@ func CatchupDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.Stream
 		"previousProgress", previousProgress,
 	)
 
-	// skip genesis if we have no data in the stream yet
+	// write genesis if we have no data in the stream yet
 	if previousProgress == 0 {
-		genesis, err := rawdb.ReadBlockByNumber(tx, 0)
-		if err != nil {
-			return 0, err
-		}
-		if err = server.WriteGenesisToStream(genesis, reader, stream, srv); err != nil {
-			return 0, err
+		// a quick check that we haven't written anything to the stream yet.  Stage progress is a little misleading
+		// for genesis as we are in fact at block 0 here!  Getting the header has some performance overhead, so
+		// we only want to do this when we know the previous progress is 0.
+		header := stream.GetHeader()
+		if header.TotalEntries == 0 {
+			genesis, err := rawdb.ReadBlockByNumber(tx, 0)
+			if err != nil {
+				return 0, err
+			}
+			if err = srv.WriteGenesisToStream(genesis, reader, tx); err != nil {
+				return 0, err
+			}
 		}
 	}
 
-	err = server.WriteBlocksToStream(tx, reader, srv, stream, previousProgress+1, finalBlockNumber, logPrefix)
-	if err != nil {
+	if err = srv.WriteBlocksToStream(tx, reader, previousProgress+1, finalBlockNumber, logPrefix); err != nil {
 		return 0, err
 	}
 

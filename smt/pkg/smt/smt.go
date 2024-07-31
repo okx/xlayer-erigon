@@ -18,29 +18,30 @@ import (
 )
 
 type DB interface {
-	Get(key utils.NodeKey) (utils.NodeValue12, error)
 	Insert(key utils.NodeKey, value utils.NodeValue12) error
-	GetAccountValue(key utils.NodeKey) (utils.NodeValue8, error)
 	InsertAccountValue(key utils.NodeKey, value utils.NodeValue8) error
 	InsertKeySource(key utils.NodeKey, value []byte) error
 	DeleteKeySource(key utils.NodeKey) error
-	GetKeySource(key utils.NodeKey) ([]byte, error)
 	InsertHashKey(key utils.NodeKey, value utils.NodeKey) error
 	DeleteHashKey(key utils.NodeKey) error
-	GetHashKey(key utils.NodeKey) (utils.NodeKey, error)
 	Delete(string) error
 	DeleteByNodeKey(key utils.NodeKey) error
-	GetCode(codeHash []byte) ([]byte, error)
-
 	SetLastRoot(lr *big.Int) error
-	GetLastRoot() (*big.Int, error)
-
 	SetDepth(uint8) error
-	GetDepth() (uint8, error)
-
-	OpenBatch(quitCh <-chan struct{})
 	CommitBatch() error
+	OpenBatch(quitCh <-chan struct{})
 	RollbackBatch()
+	RoDB
+}
+
+type RoDB interface {
+	GetDepth() (uint8, error)
+	GetLastRoot() (*big.Int, error)
+	GetCode(codeHash []byte) ([]byte, error)
+	GetHashKey(key utils.NodeKey) (utils.NodeKey, error)
+	GetKeySource(key utils.NodeKey) ([]byte, error)
+	Get(key utils.NodeKey) (utils.NodeValue12, error)
+	GetAccountValue(key utils.NodeKey) (utils.NodeValue8, error)
 }
 
 type DebuggableDB interface {
@@ -50,8 +51,13 @@ type DebuggableDB interface {
 }
 
 type SMT struct {
-	Db DB
+	noSaveOnInsert bool
+	Db             DB
+	*RoSMT
+}
 
+type RoSMT struct {
+	DbRo         RoDB
 	clearUpMutex sync.Mutex
 }
 
@@ -60,20 +66,32 @@ type SMTResponse struct {
 	Mode          string
 }
 
-func NewSMT(database DB) *SMT {
+func NewSMT(database DB, noSaveOnInsert bool) *SMT {
 	if database == nil {
 		database = db.NewMemDb()
 	}
 
 	return &SMT{
-		Db: database,
+		noSaveOnInsert: noSaveOnInsert,
+		Db:             database,
+		RoSMT:          NewRoSMT(database),
 	}
 }
 
-func (s *SMT) LastRoot() *big.Int {
+func NewRoSMT(database RoDB) *RoSMT {
+	if database == nil {
+		database = db.NewMemDb()
+	}
+
+	return &RoSMT{
+		DbRo: database,
+	}
+}
+
+func (s *RoSMT) LastRoot() *big.Int {
 	s.clearUpMutex.Lock()
 	defer s.clearUpMutex.Unlock()
-	lr, err := s.Db.GetLastRoot()
+	lr, err := s.DbRo.GetLastRoot()
 	if err != nil {
 		panic(err)
 	}
@@ -520,19 +538,23 @@ func (s *SMT) insert(k utils.NodeKey, v utils.NodeValue8, newValH [4]uint64, old
 }
 
 func (s *SMT) hashSave(in [8]uint64, capacity, h [4]uint64) ([4]uint64, error) {
-	var sl []uint64
-	sl = append(sl, in[:]...)
-	sl = append(sl, capacity[:]...)
+	if !s.noSaveOnInsert {
+		var sl []uint64
+		sl = append(sl, in[:]...)
+		sl = append(sl, capacity[:]...)
 
-	v := utils.NodeValue12{}
-	for i, val := range sl {
-		b := new(big.Int)
-		v[i] = b.SetUint64(val)
+		v := utils.NodeValue12{}
+		for i, val := range sl {
+			b := new(big.Int)
+			v[i] = b.SetUint64(val)
+		}
+
+		err := s.Db.Insert(h, v)
+		if err != nil {
+			return [4]uint64{}, err
+		}
 	}
-
-	err := s.Db.Insert(h, v)
-
-	return h, err
+	return h, nil
 }
 
 func (s *SMT) hashcalcAndSave(in [8]uint64, capacity [4]uint64) ([4]uint64, error) {
@@ -548,8 +570,8 @@ func (s *SMT) hashcalc(in [8]uint64, capacity [4]uint64) ([4]uint64, error) {
 	return utils.Hash(in, capacity)
 }
 
-func (s *SMT) getLastRoot() (utils.NodeKey, error) {
-	or, err := s.Db.GetLastRoot()
+func (s *RoSMT) getLastRoot() (utils.NodeKey, error) {
+	or, err := s.DbRo.GetLastRoot()
 	if err != nil {
 		return utils.NodeKey{}, err
 	}
@@ -562,14 +584,14 @@ func (s *SMT) setLastRoot(newRoot utils.NodeKey) error {
 
 // Utility functions for debugging
 
-func (s *SMT) PrintDb() {
-	if debugDB, ok := s.Db.(DebuggableDB); ok {
+func (s *RoSMT) PrintDb() {
+	if debugDB, ok := s.DbRo.(DebuggableDB); ok {
 		debugDB.PrintDb()
 	}
 }
 
-func (s *SMT) PrintTree() {
-	if debugDB, ok := s.Db.(DebuggableDB); ok {
+func (s *RoSMT) PrintTree() {
+	if debugDB, ok := s.DbRo.(DebuggableDB); ok {
 		data := debugDB.GetDb()
 		str, err := json.Marshal(data)
 		if err != nil {
@@ -650,8 +672,8 @@ func (s *SMT) updateDepth(newDepth int) {
 depths are 0 based
 0 means either only root leaf or empty tree
 */
-func (s *SMT) GetDepth() int {
-	depth, err := s.Db.GetDepth()
+func (s *RoSMT) GetDepth() int {
+	depth, err := s.DbRo.GetDepth()
 	if err != nil {
 		return 0
 	}
@@ -660,11 +682,11 @@ func (s *SMT) GetDepth() int {
 
 type TraverseAction func(prefix []byte, k utils.NodeKey, v utils.NodeValue12) (bool, error)
 
-func (s *SMT) Traverse(ctx context.Context, node *big.Int, action TraverseAction) error {
+func (s *RoSMT) Traverse(ctx context.Context, node *big.Int, action TraverseAction) error {
 	return s.traverse(ctx, node, action, []byte{})
 }
 
-func (s *SMT) traverse(ctx context.Context, node *big.Int, action TraverseAction, prefix []byte) error {
+func (s *RoSMT) traverse(ctx context.Context, node *big.Int, action TraverseAction, prefix []byte) error {
 	if node == nil || node.Cmp(big.NewInt(0)) == 0 {
 		return nil
 	}
@@ -677,7 +699,7 @@ func (s *SMT) traverse(ctx context.Context, node *big.Int, action TraverseAction
 
 	ky := utils.ScalarToRoot(node)
 
-	nodeValue, err := s.Db.Get(ky)
+	nodeValue, err := s.DbRo.Get(ky)
 
 	if err != nil {
 		return err
@@ -711,7 +733,7 @@ func (s *SMT) traverse(ctx context.Context, node *big.Int, action TraverseAction
 	return nil
 }
 
-func (s *SMT) traverseAndMark(ctx context.Context, node *big.Int, visited VisitedNodesMap) error {
+func (s *RoSMT) traverseAndMark(ctx context.Context, node *big.Int, visited VisitedNodesMap) error {
 	return s.Traverse(ctx, node, func(prefix []byte, k utils.NodeKey, v utils.NodeValue12) (bool, error) {
 		if visited[utils.ConvertBigIntToHex(k.ToBigInt())] {
 			return false, nil

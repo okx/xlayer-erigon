@@ -1,6 +1,3 @@
-//go:build notzkevm
-// +build notzkevm
-
 package vm
 
 import (
@@ -8,9 +5,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
@@ -125,6 +122,35 @@ func TestExtCodeHashV2(t *testing.T) {
 }
 
 type TestIntraBlockState struct{}
+
+func (ibs TestIntraBlockState) HasLiveAccount(addr libcommon.Address) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ibs TestIntraBlockState) HasLiveState(addr libcommon.Address, key *libcommon.Hash) bool {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ibs TestIntraBlockState) AddLog(log *types.Log) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ibs TestIntraBlockState) GetLogs(hash libcommon.Hash) []*types.Log {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (ibs TestIntraBlockState) GetBlockStateRoot(blockNum uint64) libcommon.Hash {
+	return libcommon.BigToHash(new(big.Int).SetUint64(blockNum))
+}
+
+func (ibs TestIntraBlockState) GetBlockNumber() *uint256.Int {
+	//TODO implement me
+	panic("implement me")
+}
 
 func (ibs TestIntraBlockState) CreateAccount(libcommon.Address, bool) {}
 func (ibs TestIntraBlockState) GetTxCount() (uint64, error)           { return 0, nil }

@@ -14,8 +14,8 @@ import (
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 
-	"github.com/stretchr/testify/require"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnwindBatches(t *testing.T) {
@@ -34,17 +34,16 @@ func TestUnwindBatches(t *testing.T) {
 			L1InfoTreeIndex: uint32(i) + 20,
 			GlobalExitRoot:  common.Hash{byte(i)},
 			Coinbase:        common.Address{byte(i)},
-			ForkId:          uint16(i) / 3,
-			ChainId:         uint32(1),
+			ForkId:          uint64(i) / 3,
+			ChainId:         uint64(1),
 			L1BlockHash:     common.Hash{byte(i)},
 			L2Blockhash:     common.Hash{byte(i)},
 			StateRoot:       common.Hash{byte(i)},
-			L2Txs: []types.L2Transaction{
+			L2Txs: []types.L2TransactionProto{
 				{
 					EffectiveGasPricePercentage: 255,
-					IsValid:                     1,
-					StateRoot:                   common.Hash{byte(i + 1)},
-					EncodedLength:               uint32(len(post155Bytes)),
+					IsValid:                     true,
+					IntermediateStateRoot:       common.Hash{byte(i + 1)},
 					Encoded:                     post155Bytes,
 				},
 			},
@@ -94,8 +93,9 @@ func TestUnwindBatches(t *testing.T) {
 	/////////
 	// ACT //
 	/////////
-	err = SpawnStageBatches(s, u, ctx, tx, cfg, true, true)
+	err = SpawnStageBatches(s, u, ctx, tx, cfg, true)
 	require.NoError(t, err)
+	tx.Commit()
 
 	tx2 := memdb.BeginRw(t, db1)
 

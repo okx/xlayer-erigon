@@ -14,6 +14,7 @@ func TestSetStorageModeIfNotExist(t *testing.T) {
 	_, tx := memdb.NewTestTx(t)
 	prune, err := Get(tx)
 	assert.NoError(t, err)
+	// X Layer inner TX
 	assert.Equal(t, Mode{true, Distance(math.MaxUint64), Distance(math.MaxUint64),
 		Distance(math.MaxUint64), Distance(math.MaxUint64), Experiments{}, Distance(math.MaxInt64)}, prune)
 

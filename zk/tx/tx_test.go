@@ -68,7 +68,7 @@ func TestDecodePre155Tx(t *testing.T) {
 	pre155 := "0xf86780843b9aca00826163941275fbb540c8efc58b812ba83b0d0b8b9917ae98808464fbb77c1ba0b7d2a666860f3c6b8f5ef96f86c7ec5562e97fd04c2e10f3755ff3a0456f9feba0246df95217bf9082f84f9e40adb0049c6664a5bb4c9cbe34ab1a73e77bab26ed"
 	pre155Bytes, err := hex.DecodeString(pre155[2:])
 	require.NoError(t, err)
-	tx, _, err := DecodeTx(pre155Bytes, 0, uint16(constants.ForkID5Dragonfruit))
+	tx, _, err := DecodeTx(pre155Bytes, 0, uint64(constants.ForkID5Dragonfruit))
 	require.NoError(t, err)
 	v, r, s := tx.RawSignatureValues()
 	assert.Equal(t, "0x1275fbb540c8efC58b812ba83B0D0B8b9917AE98", tx.GetTo().String())
@@ -85,7 +85,7 @@ func TestDecodePost155Tx(t *testing.T) {
 	post155 := "0xf86780843b9aca00826163941275fbb540c8efc58b812ba83b0d0b8b9917ae98808464fbb77c1ba0b7d2a666860f3c6b8f5ef96f86c7ec5562e97fd04c2e10f3755ff3a0456f9feba0246df95217bf9082f84f9e40adb0049c6664a5bb4c9cbe34ab1a73e77bab26ed"
 	post155Bytes, err := hex.DecodeString(post155[2:])
 	require.NoError(t, err)
-	tx, pct, err := DecodeTx(post155Bytes, 75, uint16(constants.ForkID5Dragonfruit))
+	tx, pct, err := DecodeTx(post155Bytes, 75, uint64(constants.ForkID5Dragonfruit))
 	require.NoError(t, err)
 	v, r, s := tx.RawSignatureValues()
 	assert.Equal(t, "0x1275fbb540c8efC58b812ba83B0D0B8b9917AE98", tx.GetTo().String())
@@ -318,6 +318,21 @@ func TestComputeL2TxHashScenarios(t *testing.T) {
 
 }
 
+func BenchmarkComputeL2TxHashSt(b *testing.B) {
+	chainId := big.NewInt(2440)
+	nonce := uint64(87)
+	gasPrice := uint256.NewInt(493000000)
+	gasLimit := uint64(100000)
+	value := uint256.NewInt(100)
+	data := []byte{}
+	to := common.HexToAddress("0x5751D5b29dA14d5C334A9453cF04181f417aBe4c")
+	from := common.HexToAddress("0x5751D5b29dA14d5C334A9453cF04181f417aBe4c")
+
+	for i := 0; i < b.N; i++ {
+		_, _ = ComputeL2TxHash(chainId, value, gasPrice, nonce, gasLimit, &to, &from, data)
+	}
+}
+
 type testCase struct {
 	param       interface{}
 	paramLength int
@@ -358,6 +373,12 @@ func TestFormatL2TxHashParam(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkFormatL2TxHashParam(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, _ = formatL2TxHashParam(uint256.NewInt(1000), 8)
 	}
 }
 
@@ -423,7 +444,7 @@ func Test_BlockBatchL2DataEncode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	batchL2Data, err := GenerateBlockBatchL2Data(7, 1, 2, []types.Transaction{tx})
+	batchL2Data, err := GenerateBlockBatchL2Data(7, 1, 2, []types.Transaction{tx}, map[common.Hash]uint8{tx.Hash(): 255})
 	if err != nil {
 		t.Fatal(err)
 	}

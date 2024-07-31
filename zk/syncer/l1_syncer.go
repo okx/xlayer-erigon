@@ -67,9 +67,11 @@ type L1Syncer struct {
 	logsChan            chan []ethTypes.Log
 	progressMessageChan chan string
 	quit                chan struct{}
+
+	highestBlockType string // finalized, latest, safe
 }
 
-func NewL1Syncer(etherMans []IEtherman, l1ContractAddresses []common.Address, topics [][]common.Hash, blockRange, queryDelay uint64) *L1Syncer {
+func NewL1Syncer(etherMans []IEtherman, l1ContractAddresses []common.Address, topics [][]common.Hash, blockRange, queryDelay uint64, highestBlockType string) *L1Syncer {
 	return &L1Syncer{
 		etherMans:           etherMans,
 		ethermanIndex:       0,
@@ -81,6 +83,7 @@ func NewL1Syncer(etherMans []IEtherman, l1ContractAddresses []common.Address, to
 		progressMessageChan: make(chan string),
 		logsChan:            make(chan []ethTypes.Log),
 		quit:                make(chan struct{}),
+		highestBlockType:    highestBlockType,
 	}
 }
 
@@ -144,7 +147,6 @@ func (s *L1Syncer) Run(lastCheckedBlock uint64) {
 		for {
 			select {
 			case <-s.quit:
-				log.Info("L1 syncer thread stopped")
 				return
 			default:
 			}
@@ -222,18 +224,19 @@ func (s *L1Syncer) GetOldAccInputHash(ctx context.Context, addr *common.Address,
 }
 
 func (s *L1Syncer) L1QueryHeaders(logs []ethTypes.Log) (map[uint64]*ethTypes.Header, error) {
-	// more thread causes error on remote rpc server
-	headers := make([]*ethTypes.Header, 0)
+	logsSize := len(logs)
 
 	// queue up all the logs
-	logQueue := make(chan ethTypes.Log, len(logs))
+	logQueue := make(chan *ethTypes.Log, logsSize)
 	defer close(logQueue)
-	for i := 0; i < len(logs); i++ {
-		logQueue <- logs[i]
+	for i := 0; i < logsSize; i++ {
+		logQueue <- &logs[i]
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(logs))
+	wg.Add(logsSize)
+
+	headersQueue := make(chan *ethTypes.Header, logsSize)
 
 	process := func(em IEtherman) {
 		ctx := context.Background()
@@ -250,7 +253,7 @@ func (s *L1Syncer) L1QueryHeaders(logs []ethTypes.Log) (map[uint64]*ethTypes.Hea
 				logQueue <- l
 				continue
 			}
-			headers = append(headers, header)
+			headersQueue <- header
 			wg.Done()
 		}
 	}
@@ -263,25 +266,31 @@ func (s *L1Syncer) L1QueryHeaders(logs []ethTypes.Log) (map[uint64]*ethTypes.Hea
 	}
 
 	wg.Wait()
+	close(headersQueue)
 
 	headersMap := map[uint64]*ethTypes.Header{}
-	for i := 0; i < len(headers); i++ {
-		headersMap[headers[i].Number.Uint64()] = headers[i]
+	for header := range headersQueue {
+		headersMap[header.Number.Uint64()] = header
 	}
 
 	return headersMap, nil
 }
 
-func tryToLogL1QueryBlocks(logPrefix string, current, total, threadNum int, durationTick *time.Time) {
-	if time.Since(*durationTick).Seconds() > 10 {
-		log.Info(fmt.Sprintf("[%s] %s %d/%d", logPrefix, "Query L1 blocks", current, total), "thread", threadNum)
-		*durationTick = time.Now()
-	}
-}
-
 func (s *L1Syncer) getLatestL1Block() (uint64, error) {
 	em := s.getNextEtherman()
-	latestBlock, err := em.BlockByNumber(context.Background(), big.NewInt(rpc.FinalizedBlockNumber.Int64()))
+
+	var blockNumber *big.Int
+
+	switch s.highestBlockType {
+	case "finalized":
+		blockNumber = big.NewInt(rpc.FinalizedBlockNumber.Int64())
+	case "safe":
+		blockNumber = big.NewInt(rpc.SafeBlockNumber.Int64())
+	case "latest":
+		blockNumber = nil
+	}
+
+	latestBlock, err := em.BlockByNumber(context.Background(), blockNumber)
 	if err != nil {
 		return 0, err
 	}

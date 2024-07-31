@@ -1,0 +1,24 @@
+{
+  "name": "modx-contract",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "mulmod:local": "npx hardhat compile && npx hardhat run scripts/mulmod.js --network local",
+    "bigloop:local": "npx hardhat compile && npx hardhat run scripts/bigloop.js --network local",
+    "counter:local": "npx hardhat compile && npx hardhat run scripts/counter.js --network local",
+    "counter:bali": "npx hardhat compile && npx hardhat run scripts/counter.js --network bali",
+    "counter:cardona": "npx hardhat compile && npx hardhat run scripts/counter.js --network cardona",
+    "counter:mainnet": "npx hardhat compile && npx hardhat run scripts/counter.js --network mainnet",
+    "emitlog:bali": "npx hardhat compile && npx hardhat run scripts/emitlog.js --network bali",
+    "emitlog:cardona": "npx hardhat compile && npx hardhat run scripts/emitlog.js --network cardona",
+    "emitlog:mainnet": "npx hardhat compile && npx hardhat run scripts/emitlog.js --network mainnet"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "hardhat": "^2.22.4"
+  }
+}

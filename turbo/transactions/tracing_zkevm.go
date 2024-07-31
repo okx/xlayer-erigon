@@ -63,7 +63,7 @@ func ComputeTxEnv_ZkEvm(ctx context.Context, engine consensus.EngineReader, bloc
 	hermezReader := hermez_db.NewHermezDbReader(dbtx)
 
 	vmConfig := vm.NewTraceVmConfig()
-
+	vmConfig.Debug = false
 	blockContext, excessDataGas, ger, l1BlockHash, err := core.PrepareBlockTxExecution(cfg, &vmConfig, core.GetHashFn(header, getHeader), nil, engine.(consensus.Engine), stagedsync.NewChainReaderImpl(cfg, dbtx, nil), block, statedb, hermezReader, block.GasLimit())
 	if err != nil {
 		return TxEnv{}, err
@@ -128,7 +128,7 @@ func ComputeTxEnv_ZkEvm(ctx context.Context, engine consensus.EngineReader, bloc
 			return txEnv, nil
 		}
 
-		if _, _, _, err := core.ApplyMessageWithTxContext(msg, txContext, gp, statedb, reader.(*state.PlainState), header.Number, txn, nil, vmenv); err != nil {
+		if _, _, _, err := core.ApplyMessageWithTxContext(msg, txContext, gp, statedb, reader.(*state.PlainState), header.Number, txn, nil, vmenv, true); err != nil {
 			return TxEnv{}, err
 		}
 

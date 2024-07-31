@@ -9,7 +9,6 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
-	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 )
 
@@ -31,8 +30,6 @@ func main() {
 	err := db.View(context.Background(), func(tx kv.Tx) error {
 		hermezDb := hermez_db.NewHermezDbReader(tx)
 
-		streamServer := server.NewDataStreamServer(nil, uint64(chainId), server.StandardOperationMode)
-
 		blocks, err := hermezDb.GetL2BlockNosByBatch(uint64(batchNum))
 		if err != nil {
 			return err
@@ -49,16 +46,18 @@ func main() {
 
 		previousBatch := batchNum - 1
 
-		for _, blockNumber := range blocks {
+		for idx, blockNumber := range blocks {
 			block, err := rawdb.ReadBlockByNumber(tx, blockNumber)
 			if err != nil {
 				return err
 			}
 
-			gerUpdates := []dstypes.GerUpdate{}
+			//gerUpdates := []dstypes.GerUpdate{}
 			var l1InfoTreeMinTimestamps map[uint64]uint64
-            
-			sBytes, err := streamServer.CreateAndBuildStreamEntryBytes(block, hermezDb, lastBlock, uint64(batchNum), uint64(previousBatch), true, &gerUpdates, l1InfoTreeMinTimestamps)
+
+			isBatchEnd := idx == len(blocks)-1
+
+			sBytes, err := server.CreateAndBuildStreamEntryBytesProto(uint64(chainId), block, hermezDb, tx, lastBlock, uint64(batchNum), uint64(previousBatch), l1InfoTreeMinTimestamps, isBatchEnd, nil)
 			if err != nil {
 				return err
 			}

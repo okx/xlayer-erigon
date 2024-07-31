@@ -35,6 +35,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/zk/nacos"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
+	"github.com/ledgerwatch/erigon/zk/txpool"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
@@ -728,7 +729,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				Outputs:     nil,
 			}
 			// todo [zkevm] read the stream version from config and figure out what system id is used for
-			backend.dataStream, err = datastreamer.NewServer(uint16(httpCfg.DataStreamPort), uint8(2), 1, datastreamer.StreamType(1), file, logConfig)
+			backend.dataStream, err = datastreamer.NewServer(uint16(httpCfg.DataStreamPort), uint8(backend.config.DatastreamVersion), 1, datastreamer.StreamType(1), file, httpCfg.DataStreamWriteTimeout, logConfig)
 			if err != nil {
 				return nil, err
 			}
@@ -749,9 +750,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		// entering ZK territory!
 		cfg := backend.config
 
-		// For Xlayer
-		if len(cfg.NacosURLs) > 0 {
-			nacos.StartNacosClient(cfg.NacosURLs, cfg.NacosNamespaceId, cfg.NacosApplicationName, cfg.NacosExternalListenAddr)
+		// For X Layer
+		if len(cfg.XLayer.Nacos.URLs) > 0 {
+			nacos.StartNacosClient(cfg.XLayer.Nacos.URLs, cfg.XLayer.Nacos.NamespaceId, cfg.XLayer.Nacos.ApplicationName, cfg.XLayer.Nacos.ExternalListenAddr)
 		}
 
 		// update the chain config with the zero gas from the flags
@@ -770,19 +771,29 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			panic("you cannot launch in l1 sync mode as an RPC node")
 		}
 
+		seqAndVerifTopics := [][]libcommon.Hash{{
+			contracts.SequencedBatchTopicPreEtrog,
+			contracts.SequencedBatchTopicEtrog,
+			contracts.VerificationTopicPreEtrog,
+			contracts.VerificationTopicEtrog,
+			contracts.VerificationValidiumTopicEtrog,
+		}}
+
+		seqAndVerifL1Contracts := []libcommon.Address{cfg.AddressRollup, cfg.AddressAdmin, cfg.AddressZkevm}
+
 		var l1Topics [][]libcommon.Hash
 		var l1Contracts []libcommon.Address
 		if isSequencer {
-			l1Topics = [][]libcommon.Hash{{contracts.InitialSequenceBatchesTopic}}
-			l1Contracts = []libcommon.Address{cfg.AddressZkevm}
-		} else {
 			l1Topics = [][]libcommon.Hash{{
-				contracts.SequencedBatchTopicPreEtrog,
-				contracts.SequencedBatchTopicEtrog,
-				contracts.VerificationTopicPreEtrog,
-				contracts.VerificationTopicEtrog,
+				contracts.InitialSequenceBatchesTopic,
+				contracts.AddNewRollupTypeTopic,
+				contracts.CreateNewRollupTopic,
+				contracts.UpdateRollupTopic,
 			}}
-			l1Contracts = []libcommon.Address{cfg.AddressRollup, cfg.AddressAdmin}
+			l1Contracts = []libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup}
+		} else {
+			l1Topics = seqAndVerifTopics
+			l1Contracts = seqAndVerifL1Contracts
 		}
 
 		ethermanClients := make([]syncer.IEtherman, len(backend.etherManClients))
@@ -790,12 +801,22 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			ethermanClients[i] = c.EthClient
 		}
 
+		seqVerSyncer := syncer.NewL1Syncer(
+			ethermanClients,
+			seqAndVerifL1Contracts,
+			seqAndVerifTopics,
+			cfg.L1BlockRange,
+			cfg.L1QueryDelay,
+			cfg.L1HighestBlockType,
+		)
+
 		backend.l1Syncer = syncer.NewL1Syncer(
 			ethermanClients,
 			l1Contracts,
 			l1Topics,
 			cfg.L1BlockRange,
 			cfg.L1QueryDelay,
+			cfg.L1HighestBlockType,
 		)
 
 		l1InfoTreeSyncer := syncer.NewL1Syncer(
@@ -804,6 +825,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic}},
 			cfg.L1BlockRange,
 			cfg.L1QueryDelay,
+			cfg.L1HighestBlockType,
 		)
 
 		if isSequencer {
@@ -841,16 +863,24 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				backend.dataStream,
 			)
 
+			if cfg.Zk.Limbo {
+				limboSubPoolProcessor := txpool.NewLimboSubPoolProcessor(ctx, cfg.Zk, backend.chainConfig, backend.chainDB, backend.txPool2, verifier)
+				limboSubPoolProcessor.StartWork()
+			}
+
 			// we need to make sure the pool is always aware of the latest block for when
 			// we switch context from being an RPC node to a sequencer
 			backend.txPool2.ForceUpdateLatestBlock(executionProgress)
 
 			l1BlockSyncer := syncer.NewL1Syncer(
 				ethermanClients,
-				[]libcommon.Address{cfg.AddressZkevm},
-				[][]libcommon.Hash{{contracts.SequenceBatchesTopic}},
+				[]libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup},
+				[][]libcommon.Hash{{
+					contracts.SequenceBatchesTopic,
+				}},
 				cfg.L1BlockRange,
 				cfg.L1QueryDelay,
+				cfg.L1HighestBlockType,
 			)
 
 			backend.syncStages = stages2.NewSequencerZkStages(
@@ -866,6 +896,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				backend.engine,
 				backend.dataStream,
 				backend.l1Syncer,
+				seqVerSyncer,
 				l1InfoTreeSyncer,
 				l1BlockSyncer,
 				backend.txPool2,
@@ -886,8 +917,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			  ZZZZZZZ  K   K  R   R   P       CCCC
 
 			*/
-
-			streamClient := initDataStreamClient(ctx, cfg.Zk)
+			latestForkId, err := stages.GetStageProgress(tx, stages.ForkId)
+			if err != nil {
+				return nil, err
+			}
+			streamClient := initDataStreamClient(ctx, cfg.Zk, uint16(latestForkId))
 
 			backend.syncStages = stages2.NewDefaultZkStages(
 				backend.sentryCtx,
@@ -944,12 +978,12 @@ func newEtherMan(cfg *ethconfig.Config, l2ChainName, url string) *etherman.Clien
 }
 
 // creates a datastream client with default parameters
-func initDataStreamClient(ctx context.Context, cfg *ethconfig.Zk) *client.StreamClient {
+func initDataStreamClient(ctx context.Context, cfg *ethconfig.Zk, latestForkId uint16) *client.StreamClient {
 	// datastream
 	// Create client
 	log.Info("Starting datastream client...")
 	// retry connection
-	datastreamClient := client.NewClient(ctx, cfg.L2DataStreamerUrl, cfg.DatastreamVersion, cfg.L2DataStreamerTimeout)
+	datastreamClient := client.NewClient(ctx, cfg.L2DataStreamerUrl, cfg.DatastreamVersion, cfg.L2DataStreamerTimeout, latestForkId)
 
 	for i := 0; i < 30; i++ {
 		// Start client (connect to the server)
@@ -1016,7 +1050,9 @@ func (backend *Ethereum) Init(stack *node.Node, config *ethconfig.Config) error 
 	if casted, ok := backend.engine.(*bor.Bor); ok {
 		borDb = casted.DB
 	}
-	apiList := commands.APIList(chainKv, borDb, ethRpcClient, txPoolRpcClient, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config, backend.l1Syncer)
+	apiList, gpCache := commands.APIList(chainKv, borDb, ethRpcClient, txPoolRpcClient, backend.txPool2, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config, backend.l1Syncer)
+	// For X Layer
+	backend.txPool2.SetGpCacheForXLayer(gpCache)
 	authApiList := commands.AuthAPIList(chainKv, ethRpcClient, txPoolRpcClient, miningRpcClient, ff, stateCache, blockReader, backend.agg, httpRpcCfg, backend.engine, config)
 	go func() {
 		if err := cli.StartRpcServer(ctx, httpRpcCfg, apiList, authApiList); err != nil {
@@ -1050,7 +1086,7 @@ func (s *Ethereum) PreStart() error {
 		// so here we loop and take a brief pause waiting for it to be ready
 		attempts := 0
 		for {
-			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64())
+			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
 			if err != nil {
 				if errors.Is(err, datastreamer.ErrAtomicOpNotAllowed) {
 					attempts++

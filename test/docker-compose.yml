@@ -13,9 +13,6 @@ services:
       - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-state-db:
     container_name: erigon-state-db
@@ -41,20 +38,19 @@ services:
 
   erigon-seqsender:
     container_name: erigon-seqsender
-    image: hermeznetwork/zkevm-seqsender:v0.1.1-RC1
+    image: zjg555543/zkevm-seqsender:93b8dab
     volumes:
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
       - ./config/seqsender.node.config.toml:/app/config.toml
       - ./config/test.genesis.config.json:/app/genesis.json
-    restart: always
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/zkevm-seqsender run --network custom --custom-network-file /app/genesis.json --cfg /app/config.toml --components sequence-sender"
+      - "/app/zkevm-seqsender run --cfg /app/config.toml --network custom --custom-network-file /app/genesis.json"
 
   erigon-aggregator:
     container_name: erigon-aggregator
-    image: hermeznetwork/zkevm-aggregator:v0.0.1-RC7
+    image: zjg555543/zkevm-aggregator:d267fda
     ports:
       - 50081:50081
     volumes:
@@ -94,14 +90,11 @@ services:
 
   erigon-prover:
     container_name: erigon-prover
-    image: hermeznetwork/zkevm-prover:v6.0.3-RC17
+    image: xzavier2048/zkevm-mock-prover
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      erigon-state-db:
-        condition: service_healthy
 
   erigon-approve:
     container_name: erigon-approve
@@ -125,9 +118,9 @@ services:
       - 6900:6900
     volumes:
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/root/dynamic-configs/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/root/dynamic-configs/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/root/dynamic-configs/dynamic-mynetwork-conf.json
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
@@ -141,15 +134,15 @@ services:
       - 6901:6900
     volumes:
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/root/dynamic-configs/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/root/dynamic-configs/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/root/dynamic-configs/dynamic-mynetwork-conf.json
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
   erigon-mock-l1-network:
     container_name: erigon-mock-l1-network
-    image: hermeznetwork/geth-zkevm-contracts:elderberry-fork.9-geth1.13.11
+    image: giskook/elderberry-v0.3.9-geth1.13.11
     ports:
       - 8545:8545
       - 8546:8546
@@ -176,3 +169,165 @@ services:
       - "--syncmode"
       - "full"
       - "--rpc.allow-unprotected-txs"
+
+  xlayer-data-availability:
+    container_name: xlayer-data-availability
+    image: okexchain/xlayer-data-availability:origin_release_v0.3.1_20240411102017_f84bdab
+    ports:
+      - 8444:8444
+    volumes:
+      - ./config/test.da.toml:/app/config.toml
+      - ./keystore/test-member.keystore:/pk/test-member.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-data-availability run --cfg /app/config.toml"
+
+  xlayer-data-availability-db:
+    container_name: xlayer-data-availability-db
+    image: postgres:15
+    ports:
+      - 5438:5432
+    environment:
+      - POSTGRES_USER=committee_user
+      - POSTGRES_PASSWORD=committee_password
+      - POSTGRES_DB=committee_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  erigon-pool-db:
+    container_name: erigon-pool-db
+    image: postgres:15
+    ports:
+      - 5440:5432
+    volumes:
+      - /var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=pool_user
+      - POSTGRES_PASSWORD=pool_password
+      - POSTGRES_DB=pool_db
+    command:
+      - "postgres"
+      - "-N"
+      - "500"
+
+  erigon-pool-manager:
+    container_name: erigon-pool-manager
+    image: hermeznetwork/zkevm-pool-manager:v0.1.0-RC1
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    ports:
+      - 8125:8545
+    volumes:
+      - ./config/test.poolmanager.toml:/app/poolmanager.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/zkevm-pool-manager run --cfg /app/poolmanager.toml"
+
+  xlayer-bridge-db:
+    container_name: xlayer-bridge-db
+    image: postgres:15
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    ports:
+      - 5439:5432
+    environment:
+      - POSTGRES_USER=test_user
+      - POSTGRES_PASSWORD=test_password
+      - POSTGRES_DB=test_db
+    command: [ "postgres", "-N", "500" ]
+
+  xlayer-bridge-redis:
+    container_name: xlayer-bridge-redis
+    image: redis
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    expose:
+      - 6379
+    ports:
+      - 6379:6379
+    environment:
+      - REDIS_PASSWORD=my_password
+      - REDIS_PORT=6379
+      - REDIS_DATABASES=8
+
+  kafka-zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: kafka-zookeeper
+    ports:
+      - "2181:2181"
+    expose:
+      - 2181
+
+  xlayer-bridge-coin-kafka:
+    image: wurstmeister/kafka
+    container_name: xlayer-bridge-coin-kafka
+    expose:
+      - 9092
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://:9092,OUTSIDE://localhost:9123
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_LISTENERS: INSIDE://0.0.0.0:9092,OUTSIDE://0.0.0.0:9123
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: kafka-zookeeper:2181
+      KAFKA_CREATE_TOPICS: "explorer_chainAddressPrice_push:1:1"
+
+  xlayer-bridge-service:
+    container_name: xlayer-bridge-service
+    image: zjg555543/xlayer-bridge-service:v0.3.1_17ef00f
+    ports:
+      - 8080:8080
+      - 9090:9090
+    environment:
+      - ZKEVM_BRIDGE_DATABASE_USER=test_user
+      - ZKEVM_BRIDGE_DATABASE_PASSWORD=test_password
+      - ZKEVM_BRIDGE_DATABASE_NAME=test_db
+      - ZKEVM_BRIDGE_DATABASE_HOST=xlayer-bridge-db
+      - ZKEVM_BRIDGE_DATABASE_PORT=5432
+    volumes:
+      - ./keystore/sequencer.keystore:/pk/keystore.claimtxmanager
+      - ./config/test.bridge.config.toml:/app/config.toml
+      - ./config/test.sentinel.config.json:/app/sentinel_config.json
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-bridge run --cfg /app/config.toml"
+
+  xlayer-bridge-ui:
+    container_name: xlayer-bridge-ui
+    image: hermeznetwork/zkevm-bridge-ui:latest
+    ports:
+      - 8090:80
+    environment:
+      - ETHEREUM_RPC_URL=http://127.0.0.1:8545
+      - ETHEREUM_EXPLORER_URL=http://127.0.0.1:4000
+      - ETHEREUM_ROLLUP_MANAGER_ADDRESS=0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x1089Af36bD72553008FAd0A1240B4D5641208494
+      - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
+      - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=0xeb173087729c88a47568AF87b17C653039377BA6
+      - POLYGON_ZK_EVM_RPC_URL=http://127.0.0.1:8123
+      - POLYGON_ZK_EVM_EXPLORER_URL=http://127.0.0.1:4001
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x1089Af36bD72553008FAd0A1240B4D5641208494
+      - POLYGON_ZK_EVM_NETWORK_ID=1
+      - BRIDGE_API_URL=http://127.0.0.1:8080
+      - ENABLE_FIAT_EXCHANGE_RATES=false
+      - ENABLE_OUTDATED_NETWORK_MODAL=false
+      - ENABLE_DEPOSIT_WARNING=true
+      - ENABLE_REPORT_FORM=false
+      - USE_FIAT_EXCHANGE_RATES=false
+      - SHOW_OUTDATED_NETWORK_MODAL=false

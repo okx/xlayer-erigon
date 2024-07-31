@@ -13,6 +13,7 @@ import (
 	db2 "github.com/ledgerwatch/erigon/smt/pkg/db"
 	"github.com/ledgerwatch/erigon/smt/pkg/smt"
 	"github.com/ledgerwatch/erigon/smt/pkg/utils"
+	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/log/v3"
 
 	"strings"
@@ -125,17 +126,29 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 	}
 
 	shouldRegenerate := to > s.BlockNumber && to-s.BlockNumber > cfg.zk.RebuildTreeAfter
+	shouldIncrementBecauseOfAFlag := cfg.zk.IncrementTreeAlways
+	shouldIncrementBecauseOfExecutionConditions := s.BlockNumber > 0 && !shouldRegenerate
+	shouldIncrement := shouldIncrementBecauseOfAFlag || shouldIncrementBecauseOfExecutionConditions
+
 	eridb := db2.NewEriDb(tx)
-	smt := smt.NewSMT(eridb)
+	smt := smt.NewSMT(eridb, false)
 
-	eridb.OpenBatch(quit)
+	if cfg.zk.SmtRegenerateInMemory {
+		log.Info(fmt.Sprintf("[%s] SMT using mapmutation", logPrefix))
+		eridb.OpenBatch(quit)
+	} else {
+		log.Info(fmt.Sprintf("[%s] SMT not using mapmutation", logPrefix))
+	}
 
-	if s.BlockNumber == 0 || shouldRegenerate {
-		if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt); err != nil {
+	if shouldIncrement {
+		if shouldIncrementBecauseOfAFlag {
+			log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
+		}
+		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 	} else {
-		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+		if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 	}
@@ -143,41 +156,30 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 	log.Info(fmt.Sprintf("[%s] Trie root", logPrefix), "hash", root.Hex())
 
 	if cfg.checkRoot {
-		var expectedRootHash common.Hash
-		var headerHash common.Hash
 		var syncHeadHeader *types.Header
-		syncHeadHeader, err = cfg.blockReader.HeaderByNumber(ctx, tx, to)
-		if err != nil {
+		if syncHeadHeader, err = cfg.blockReader.HeaderByNumber(ctx, tx, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 		if syncHeadHeader == nil {
 			return trie.EmptyRoot, fmt.Errorf("no header found with number %d", to)
 		}
-		expectedRootHash = syncHeadHeader.Root
-		headerHash = syncHeadHeader.Hash()
 
+		expectedRootHash := syncHeadHeader.Root
+		headerHash := syncHeadHeader.Hash()
 		if root != expectedRootHash {
-			eridb.RollbackBatch()
+			if cfg.zk.SmtRegenerateInMemory {
+				eridb.RollbackBatch()
+			}
 			panic(fmt.Sprintf("[%s] Wrong trie root of block %d: %x, expected (from header): %x. Block hash: %x", logPrefix, to, root, expectedRootHash, headerHash))
-
-			if cfg.badBlockHalt {
-				return trie.EmptyRoot, fmt.Errorf("wrong trie root")
-			}
-			if cfg.hd != nil {
-				cfg.hd.ReportBadHeaderPoS(headerHash, syncHeadHeader.ParentHash)
-			}
-			// if to > s.BlockNumber {
-			//unwindTo := (to + s.BlockNumber) / 2 // Binary search for the correct block, biased to the lower numbers
-			//log.Warn("Unwinding due to incorrect root hash", "to", unwindTo)
-			//u.UnwindTo(unwindTo, headerHash)
-			// }
-		} else {
-			log.Info(fmt.Sprintf("[%s] State root matches", logPrefix))
 		}
+
+		log.Info(fmt.Sprintf("[%s] State root matches", logPrefix))
 	}
 
-	if err := eridb.CommitBatch(); err != nil {
-		return trie.EmptyRoot, err
+	if cfg.zk.SmtRegenerateInMemory {
+		if err := eridb.CommitBatch(); err != nil {
+			return trie.EmptyRoot, err
+		}
 	}
 
 	if err = s.Update(tx, to); err != nil {
@@ -222,6 +224,11 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 	}
 	_ = root
 
+	hermezDb := hermez_db.NewHermezDb(tx)
+	if err := hermezDb.TruncateSmtDepths(u.UnwindPoint); err != nil {
+		return err
+	}
+
 	if err := u.Done(tx); err != nil {
 		return err
 	}
@@ -233,7 +240,7 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 	return nil
 }
 
-func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb, smtIn *smt.SMT) (common.Hash, error) {
+func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb, smtIn *smt.SMT, toBlock uint64) (common.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Regeneration trie hashes started", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Regeneration ended", logPrefix))
 
@@ -328,6 +335,12 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 
 	root := smtIn.LastRoot()
 
+	// save it here so we don't
+	hermezDb := hermez_db.NewHermezDb(db)
+	if err := hermezDb.WriteSmtDepth(toBlock, uint64(smtIn.GetDepth())); err != nil {
+		return trie.EmptyRoot, err
+	}
+
 	return common.BigToHash(root), nil
 }
 
@@ -360,11 +373,13 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 
 	// NB: changeset tables are zero indexed
 	// changeset tables contain historical value at N-1, so we look up values from plainstate
+	// i+1 to get state at the beginning of the next batch
+	psr := state2.NewPlainState(db, from+1, systemcontracts.SystemContractCodeLookup["Hermez"])
+	defer psr.Close()
+
 	for i := from; i <= to; i++ {
 		dupSortKey := dbutils.EncodeBlockNumber(i)
-
-		// i+1 to get state at the beginning of the next batch
-		psr := state2.NewPlainState(db, i+1, systemcontracts.SystemContractCodeLookup["Hermez"])
+		psr.SetBlockNr(i + 1)
 
 		// collect changes to accounts and code
 		for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
@@ -385,7 +400,7 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 
 			ach := hexutils.BytesToHex(cc)
 			if len(ach) > 0 {
-				hexcc := fmt.Sprintf("0x%s", ach)
+				hexcc := "0x" + ach
 				codeChanges[addr] = hexcc
 				if err != nil {
 					return trie.EmptyRoot, err
@@ -431,6 +446,13 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	lr := dbSmt.LastRoot()
 
 	hash := common.BigToHash(lr)
+
+	// do not put this outside, because sequencer uses this function to calculate root for each block
+	hermezDb := hermez_db.NewHermezDb(db)
+	if err := hermezDb.WriteSmtDepth(to, uint64(dbSmt.GetDepth())); err != nil {
+		return trie.EmptyRoot, err
+	}
+
 	return hash, nil
 }
 
@@ -439,7 +461,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 	defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))
 
 	eridb := db2.NewEriDb(db)
-	dbSmt := smt.NewSMT(eridb)
+	dbSmt := smt.NewSMT(eridb, false)
 
 	log.Info(fmt.Sprintf("[%s]", logPrefix), "last root", common.BigToHash(dbSmt.LastRoot()))
 
@@ -490,6 +512,9 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		accChanges[addr] = deletedAcc
 	}
 
+	psr := state2.NewPlainState(db, from, systemcontracts.SystemContractCodeLookup["Hermez"])
+	defer psr.Close()
+
 	for i := from; i >= to+1; i-- {
 		select {
 		case <-ctx.Done():
@@ -497,7 +522,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		default:
 		}
 
-		psr := state2.NewPlainState(db, i, systemcontracts.SystemContractCodeLookup["Hermez"])
+		psr.SetBlockNr(i)
 
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 
@@ -546,7 +571,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 				ach := hexutils.BytesToHex(cc)
 				hexcc := ""
 				if len(ach) > 0 {
-					hexcc = fmt.Sprintf("0x%s", ach)
+					hexcc = "0x" + ach
 				}
 				codeChanges[addr] = hexcc
 			}
@@ -581,7 +606,6 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		}
 
 		progressChan <- 1
-		psr.Close()
 	}
 
 	stopPrinter()
@@ -632,7 +656,7 @@ func processAccount(db smt.DB, a *accounts.Account, as map[string]string, inc ui
 
 	ach := hexutils.BytesToHex(cc)
 	if len(ach) > 0 {
-		hexcc := fmt.Sprintf("0x%s", ach)
+		hexcc := "0x" + ach
 		keys, err = insertContractBytecodeToKV(db, keys, addr.String(), hexcc)
 		if err != nil {
 			return []utils.NodeKey{}, err

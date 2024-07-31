@@ -122,6 +122,9 @@ func RootCommand() (*cobra.Command, *httpcfg.HttpCfg) {
 	rootCmd.PersistentFlags().IntVar(&cfg.ReturnDataLimit, utils.RpcReturnDataLimit.Name, utils.RpcReturnDataLimit.Value, utils.RpcReturnDataLimit.Usage)
 
 	rootCmd.PersistentFlags().StringVar(&cfg.L2RpcUrl, utils.L2RpcUrlFlag.Name, utils.L2RpcUrlFlag.Value, utils.L2RpcUrlFlag.Usage)
+	// X Layer API Keys
+	rootCmd.PersistentFlags().StringVar(&cfg.HttpApiKeys, utils.HTTPApiKeysFlag.Name, utils.HTTPApiKeysFlag.Value, utils.HTTPApiKeysFlag.Usage)
+	rootCmd.PersistentFlags().StringVar(&cfg.MethodRateLimit, utils.MethodRateLimitFlag.Name, utils.MethodRateLimitFlag.Value, utils.MethodRateLimitFlag.Usage)
 
 	if err := rootCmd.MarkPersistentFlagFilename("rpc.accessList", "json"); err != nil {
 		panic(err)
@@ -505,6 +508,9 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	log.Trace("TraceRequests = %t\n", cfg.TraceRequests)
 	srv := rpc.NewServer(cfg.RpcBatchConcurrency, cfg.TraceRequests, cfg.RpcStreamingDisable)
 
+	// For X Layer
+	rpc.InitRateLimit(cfg.MethodRateLimit)
+
 	allowListForRPC, err := parseAllowListForRPC(cfg.RpcAllowListFilePath)
 	if err != nil {
 		return err
@@ -544,6 +550,9 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	if err != nil {
 		return err
 	}
+
+	// For X Layer
+	apiHandler = rpc.ApiAuthHandler(cfg.HttpApiKeys, apiHandler)
 
 	listener, httpAddr, err := node.StartHTTPEndpoint(httpEndpoint, cfg.HTTPTimeouts, apiHandler)
 	if err != nil {

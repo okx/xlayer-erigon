@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"math/big"
 
@@ -144,6 +145,7 @@ Loop:
 			if !cfg.syncer.IsDownloading() {
 				break Loop
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
@@ -235,6 +237,7 @@ func HandleInitialSequenceBatches(
 	injectedBatchLogTrailingBytes := getTrailingCutoffLen(l.Data)
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
 	log.Debug(fmt.Sprintf("Handle initial sequence batches, trail len:%v, log data: %v", injectedBatchLogTrailingBytes, l.Data))
+
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
 
 	ib := &types.L1InjectedBatch{

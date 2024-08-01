@@ -33,9 +33,9 @@ MaxPendingTx = 1
 				MultiGasProvider = false
 				L1ChainID = 1337
 				HTTPHeaders = []
-			    PolygonZkEVMAddress="0xeb173087729c88a47568AF87b17C653039377BA6"
-			    PolygonRollupManagerAddress="0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
-            [Aggregator.EthTxManager.CustodialAssets]
+			   PolygonZkEVMAddress="0xeb173087729c88a47568AF87b17C653039377BA6"
+			   PolygonRollupManagerAddress="0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
+         [SequenceSender.EthTxManager.CustodialAssets]
 				Enable = false
 				URL = "http://xlayer-signer:7001"
 				Symbol = 2882

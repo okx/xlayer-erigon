@@ -77,6 +77,16 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
+	TxPoolOkPayAccountList = cli.StringFlag{
+		Name:  "txpool.okpay-account-list",
+		Usage: "Comma separated list of addresses, who send ok pay tx",
+		Value: "",
+	}
+	TxPoolOkPayGasLimitPercentage = cli.StringFlag{
+		Name:  "txpool.okpay-gaslimit-percentage",
+		Usage: "the percentage of block max gas limit for ok pay tx",
+		Value: "",
+	}
 	// Gas Price
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
@@ -264,5 +274,20 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
+	}
+	if ctx.IsSet(TxPoolOkPayAccountList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolOkPayAccountList.Name))
+		cfg.OkPayAccountList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.OkPayAccountList[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolOkPayGasLimitPercentage.Name) {
+		cfg.OkPayGasLimitPercentage = ctx.Uint64(TxPoolOkPayGasLimitPercentage.Name)
+		if cfg.OkPayGasLimitPercentage > 100 {
+			cfg.OkPayGasLimitPercentage = 100
+		}
 	}
 }

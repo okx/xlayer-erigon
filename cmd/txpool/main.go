@@ -57,11 +57,13 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList  bool
-	whiteList        []string
-	blockList        []string
-	freeClaimGasAddr []string
-	gasPriceMultiple uint64
+	enableWhiteList         bool
+	whiteList               []string
+	blockList               []string
+	freeClaimGasAddr        []string
+	gasPriceMultiple        uint64
+	okPayAccountList        []string
+	okPayGasLimitPercentage uint64
 )
 
 func init() {
@@ -91,6 +93,8 @@ func init() {
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)
+	rootCmd.Flags().Uint64Var(&okPayGasLimitPercentage, utils.TxPoolOkPayGasLimitPercentage.Name, 50, utils.TxPoolOkPayGasLimitPercentage.Usage)
+	rootCmd.Flags().StringSliceVar(&okPayAccountList, utils.TxPoolOkPayAccountList.Name, []string{}, utils.TxPoolOkPayAccountList.Usage)
 }
 
 var rootCmd = &cobra.Command{
@@ -190,6 +194,15 @@ func doTxpool(ctx context.Context) error {
 		ethCfg.DeprecatedTxPool.FreeClaimGasAddr = []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}
 	}
 	ethCfg.DeprecatedTxPool.GasPriceMultiple = gasPriceMultiple
+	ethCfg.DeprecatedTxPool.OkPayAccountList = make([]string, len(okPayAccountList))
+	for i, addrHex := range okPayAccountList {
+		addr := common.HexToAddress(addrHex)
+		ethCfg.DeprecatedTxPool.OkPayAccountList[i] = addr.String()
+	}
+	if okPayGasLimitPercentage > 100 {
+		okPayGasLimitPercentage = 100
+	}
+	ethCfg.DeprecatedTxPool.OkPayGasLimitPercentage = okPayGasLimitPercentage
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)

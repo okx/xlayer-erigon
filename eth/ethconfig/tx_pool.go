@@ -55,6 +55,10 @@ type DeprecatedTxPoolConfig struct {
 	FreeClaimGasAddr []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
+	// okPayAccountList is the ok pay bundler accounts address
+	OkPayAccountList []string
+	// okPayGasLimitPercentage is the percentage of block max gas limit
+	OkPayGasLimitPercentage uint64
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

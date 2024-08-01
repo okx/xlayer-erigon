@@ -329,7 +329,7 @@ type TxPool struct {
 	ethCfg                  *ethconfig.Config
 	aclDB                   kv.RwDB
 
-	wbCfg WBConfig // XLayer config
+	xLayerCfg XLayerConfig // XLayer config
 
 	// For X Layer
 	// gpCache will only work in sequencer node, without rpc node
@@ -388,12 +388,14 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		flushMtx:                &sync.Mutex{},
 		aclDB:                   aclDB,
 		limbo:                   newLimbo(),
-		wbCfg: WBConfig{ // XLayer config
-			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
-			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
+		xLayerCfg: XLayerConfig{ // XLayer config
+			EnableWhitelist:         ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:               ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:             ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddr:        ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
+			GasPriceMultiple:        ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			OkPayAccountList:        ethCfg.DeprecatedTxPool.OkPayAccountList,
+			OkPayGasLimitPercentage: ethCfg.DeprecatedTxPool.OkPayGasLimitPercentage,
 		},
 	}, nil
 }
@@ -804,7 +806,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.xLayerCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}

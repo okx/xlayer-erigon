@@ -77,8 +77,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
-				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
-				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.xLayerCfg.GasPriceMultiple)))
+				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.xLayerCfg.GasPriceMultiple)))
 				mt.minTip = newGp.Uint64()
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}
@@ -183,6 +183,17 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
 	var toRemove []*metaTx
 	count := 0
+
+	// xLayer
+	okPayTxAvailableGas := availableGas * p.xLayerCfg.OkPayGasLimitPercentage / 100
+	okPayTxGasRemain, count, okPayTxRemove, err := p.bestOkPay(n, txs, tx, isLondon, isShanghai, okPayTxAvailableGas, toSkip)
+	if err != nil {
+		return false, count, err
+	}
+	availableGas = availableGas - okPayTxAvailableGas + okPayTxGasRemain
+	if len(okPayTxRemove) > 0 {
+		toRemove = append(toRemove, okPayTxRemove...)
+	}
 
 	for i := 0; count < int(n) && i < len(best.ms); i++ {
 		// if we wouldn't have enough gas for a standard transaction then quit out early

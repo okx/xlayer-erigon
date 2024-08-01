@@ -6,8 +6,8 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 )
 
-// WBConfig white and block config
-type WBConfig struct {
+// XLayerConfig contains the X Layer configs for the txpool
+type XLayerConfig struct {
 	// BlockedList is the blocked address list
 	BlockedList []string
 	// EnableWhitelist is a flag to enable/disable the whitelist
@@ -27,7 +27,7 @@ type GPCache interface {
 
 func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
 	// check from config
-	for _, e := range p.wbCfg.BlockedList {
+	for _, e := range p.xlayerCfg.BlockedList {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
@@ -37,7 +37,7 @@ func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
 
 func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	// check from config
-	for _, e := range p.wbCfg.WhiteList {
+	for _, e := range p.xlayerCfg.WhiteList {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
@@ -50,7 +50,7 @@ func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
 	if !ok {
 		return false
 	}
-	for _, e := range p.wbCfg.FreeClaimGasAddrs {
+	for _, e := range p.xlayerCfg.FreeClaimGasAddrs {
 		if common.HexToAddress(e) == addr {
 			return true
 		}

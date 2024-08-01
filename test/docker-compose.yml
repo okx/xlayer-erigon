@@ -331,3 +331,18 @@ services:
       - ENABLE_REPORT_FORM=false
       - USE_FIAT_EXCHANGE_RATES=false
       - SHOW_OUTDATED_NETWORK_MODAL=false
+
+  xlayer-signer:
+    container_name: xlayer-signer
+    restart: unless-stopped
+    image: xlayer-signer
+    ports:
+      - 7001:7001
+    volumes:
+      - ./config/signer.config.toml:/app/config.toml
+      - ./keystore/sequencer.keystore:/pk/sequencer.keystore
+      - ./keystore/aggregator.keystore:/pk/aggregator.keystore
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/xlayer-signer http -cfg /app/config.toml"

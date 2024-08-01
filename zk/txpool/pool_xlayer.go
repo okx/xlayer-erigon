@@ -14,8 +14,8 @@ type WBConfig struct {
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
-	// FreeClaimGasAddr is the address list for free claimTx
-	FreeClaimGasAddr []string
+	// FreeClaimGasAddrs is the address list for free claimTx
+	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
 }
@@ -50,7 +50,7 @@ func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
 	if !ok {
 		return false
 	}
-	for _, e := range p.wbCfg.FreeClaimGasAddr {
+	for _, e := range p.wbCfg.FreeClaimGasAddrs {
 		if common.HexToAddress(e) == addr {
 			return true
 		}

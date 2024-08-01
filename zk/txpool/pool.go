@@ -24,7 +24,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/ledgerwatch/erigon/rlp"
 	"math"
 	"math/big"
 	"runtime"
@@ -32,6 +31,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/ledgerwatch/erigon/rlp"
 
 	"github.com/VictoriaMetrics/metrics"
 	mapset "github.com/deckarep/golang-set/v2"
@@ -388,12 +389,12 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		flushMtx:                &sync.Mutex{},
 		aclDB:                   aclDB,
 		limbo:                   newLimbo(),
-		wbCfg: WBConfig{ // XLayer config
-			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
-			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
+		wbCfg: WBConfig{ // X Layer config
+			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
 		},
 	}, nil
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-// XLayerConfig xLayer custom config
+// XLayerConfig contains the X Layer configs for the txpool
 type XLayerConfig struct {
 	// BlockedList is the blocked address list
 	BlockedList []string
@@ -19,8 +19,8 @@ type XLayerConfig struct {
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
-	// FreeClaimGasAddr is the address list for free claimTx
-	FreeClaimGasAddr []string
+	// FreeClaimGasAddrs is the address list for free claimTx
+	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
 	// okPayAccountList is the ok pay bundler accounts address
@@ -36,7 +36,7 @@ type GPCache interface {
 
 func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
 	// check from config
-	for _, e := range p.xLayerCfg.BlockedList {
+	for _, e := range p.xlayerCfg.BlockedList {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
@@ -46,7 +46,7 @@ func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
 
 func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	// check from config
-	for _, e := range p.xLayerCfg.WhiteList {
+	for _, e := range p.xlayerCfg.WhiteList {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
@@ -59,7 +59,7 @@ func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
 	if !ok {
 		return false
 	}
-	for _, e := range p.xLayerCfg.FreeClaimGasAddr {
+	for _, e := range p.xlayerCfg.FreeClaimGasAddrs {
 		if common.HexToAddress(e) == addr {
 			return true
 		}
@@ -72,7 +72,7 @@ func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 }
 
 func (p *TxPool) isOkPayAddr(addr common.Address) bool {
-	for _, e := range p.xLayerCfg.OkPayAccountList {
+	for _, e := range p.xlayerCfg.OkPayAccountList {
 		if common.HexToAddress(e) == addr {
 			return true
 		}

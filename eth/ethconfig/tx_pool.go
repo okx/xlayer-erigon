@@ -44,15 +44,15 @@ type DeprecatedTxPoolConfig struct {
 	TracedSenders []string // List of senders for which tx pool should print out debugging info
 	CommitEvery   time.Duration
 
-	// XLayer config
+	// X Layer config
 	// BlockedList is the blocked address list
 	BlockedList []string
 	// EnableWhitelist is a flag to enable/disable the whitelist
 	EnableWhitelist bool
 	// WhiteList is the white address list
 	WhiteList []string
-	// FreeClaimGasAddr is the address list for claim
-	FreeClaimGasAddr []string
+	// FreeClaimGasAddrs is the address list for claim
+	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
 	// okPayAccountList is the ok pay bundler accounts address
@@ -74,6 +74,13 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 	GlobalQueue:        30_000,
 
 	Lifetime: 3 * time.Hour,
+
+	// X Layer config
+	BlockedList:       []string{},
+	EnableWhitelist:   false,
+	WhiteList:         []string{},
+	FreeClaimGasAddrs: []string{},
+	GasPriceMultiple:  2,
 }
 
 var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Config {

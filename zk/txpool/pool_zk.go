@@ -77,8 +77,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
-				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.xLayerCfg.GasPriceMultiple)))
-				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.xLayerCfg.GasPriceMultiple)))
+				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
 				mt.minTip = newGp.Uint64()
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}
@@ -185,7 +185,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	count := 0
 
 	// xLayer
-	okPayTxAvailableGas := availableGas * p.xLayerCfg.OkPayGasLimitPercentage / 100
+	okPayTxAvailableGas := availableGas * p.xlayerCfg.OkPayGasLimitPercentage / 100
 	okPayTxGasRemain, count, okPayTxRemove, err := p.bestOkPay(n, txs, tx, isLondon, isShanghai, okPayTxAvailableGas, toSkip)
 	if err != nil {
 		return false, count, err

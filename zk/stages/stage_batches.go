@@ -23,19 +23,17 @@ import (
 
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 )
 
 const (
-	preForkId7BlockGasLimit = 30_000_000
-	forkId7BlockGasLimit    = 18446744073709551615 // 0xffffffffffffffff
-	forkId8BlockGasLimit    = 1125899906842624     // 0x4000000000000
-	HIGHEST_KNOWN_FORK      = 9
+	HIGHEST_KNOWN_FORK  = 11
+	STAGE_PROGRESS_SAVE = 3000000
 )
 
 type ErigonDb interface {
-	WriteHeader(batchNo *big.Int, stateRoot, txHash, parentHash common.Hash, coinbase common.Address, ts, gasLimit uint64) (*ethTypes.Header, error)
+	WriteHeader(batchNo *big.Int, blockHash common.Hash, stateRoot, txHash, parentHash common.Hash, coinbase common.Address, ts, gasLimit uint64) (*ethTypes.Header, error)
 	WriteBody(batchNo *big.Int, headerHash common.Hash, txs []ethTypes.Transaction) error
 }
 
@@ -74,12 +72,13 @@ type HermezDb interface {
 }
 
 type DatastreamClient interface {
-	ReadAllEntriesToChannel(bookmark *types.BookmarkProto) error
+	ReadAllEntriesToChannel() error
 	GetL2BlockChan() chan types.FullL2Block
 	GetBatchStartChan() chan types.BatchStart
 	GetGerUpdatesChan() chan types.GerUpdate
 	GetLastWrittenTimeAtomic() *atomic.Int64
 	GetStreamingAtomic() *atomic.Bool
+	GetProgressAtomic() *atomic.Uint64
 }
 
 type BatchesCfg struct {
@@ -106,7 +105,6 @@ func SpawnStageBatches(
 	ctx context.Context,
 	tx kv.RwTx,
 	cfg BatchesCfg,
-	firstCycle bool,
 	quiet bool,
 ) error {
 	logPrefix := s.LogPrefix()
@@ -154,27 +152,26 @@ func SpawnStageBatches(
 	}
 
 	startSyncTime := time.Now()
-	stopChan := make(chan struct{}, 1)
+	dsClientProgress := cfg.dsClient.GetProgressAtomic()
+	dsClientProgress.Store(stageProgressBlockNo)
 	// start routine to download blocks and push them in a channel
 	if !cfg.dsClient.GetStreamingAtomic().Load() {
 		log.Info(fmt.Sprintf("[%s] Starting stream", logPrefix), "startBlock", stageProgressBlockNo)
 		// this will download all blocks from datastream and push them in a channel
 		// if no error, break, else continue trying to get them
 		// Create bookmark
-		var bookmark *types.BookmarkProto
-		if stageProgressBlockNo == 0 {
-			bookmark = types.NewBookmarkProto(0, datastream.BookmarkType_BOOKMARK_TYPE_BATCH)
-		} else {
-			bookmark = types.NewBookmarkProto(stageProgressBlockNo, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
-		}
 
 		go func() {
 			log.Info(fmt.Sprintf("[%s] Started downloading L2Blocks routine", logPrefix))
 			defer log.Info(fmt.Sprintf("[%s] Finished downloading L2Blocks routine", logPrefix))
 
-			if err := cfg.dsClient.ReadAllEntriesToChannel(bookmark); err != nil {
-				log.Error(fmt.Sprintf("[%s] Error downloading blocks from datastream", logPrefix), "error", err)
-				stopChan <- struct{}{}
+			for i := 0; i < 5; i++ {
+				if err := cfg.dsClient.ReadAllEntriesToChannel(); err != nil {
+					log.Error("[datastream_client] Error downloading blocks from datastream", "error", err)
+					continue
+				}
+				// if it was overnot because of an error, don't try to reconnect
+				break
 			}
 		}()
 	}
@@ -222,6 +219,7 @@ func SpawnStageBatches(
 	lastWrittenTimeAtomic := cfg.dsClient.GetLastWrittenTimeAtomic()
 	streamingAtomic := cfg.dsClient.GetStreamingAtomic()
 
+	prevAmountBlocksWritten := blocksWritten
 LOOP:
 	for {
 		// get batch start and use to update forkid
@@ -230,8 +228,6 @@ LOOP:
 		// if download routine finished, should continue to read from channel until it's empty
 		// if both download routine stopped and channel empty - stop loop
 		select {
-		case <-stopChan:
-			break LOOP
 		case batchStart := <-batchStartChan:
 			// check if the batch is invalid so that we can replicate this over in the stream
 			// when we re-populate it
@@ -347,6 +343,7 @@ LOOP:
 			if err := writeL2Block(eriDb, hermezDb, &l2Block, highestL1InfoTreeIndex); err != nil {
 				return fmt.Errorf("writeL2Block error: %v", err)
 			}
+			dsClientProgress.Store(l2Block.L2BlockNumber)
 
 			// make sure to capture the l1 info tree index changes so we can store progress
 			if uint64(l2Block.L1InfoTreeIndex) > highestL1InfoTreeIndex {
@@ -384,7 +381,7 @@ LOOP:
 				// stop the current iteration of the stage
 				lastWrittenTs := lastWrittenTimeAtomic.Load()
 				timePassedAfterlastBlock := time.Since(time.Unix(0, lastWrittenTs))
-				if streamingAtomic.Load() && timePassedAfterlastBlock > cfg.zkCfg.DatastreamNewBlockTimeout {
+				if timePassedAfterlastBlock > cfg.zkCfg.DatastreamNewBlockTimeout {
 					log.Info(fmt.Sprintf("[%s] No new blocks in %d miliseconds. Ending the stage.", logPrefix, timePassedAfterlastBlock.Milliseconds()), "lastBlockHeight", lastBlockHeight)
 					endLoop = true
 				}
@@ -398,7 +395,7 @@ LOOP:
 					// 	break
 					// }
 
-					if !cfg.dsClient.GetStreamingAtomic().Load() {
+					if !streamingAtomic.Load() {
 						log.Info(fmt.Sprintf("[%s] Datastream disconnected. Ending the stage.", logPrefix))
 						break LOOP
 					}
@@ -407,6 +404,24 @@ LOOP:
 					startTime = time.Now()
 				}
 			}
+		}
+
+		if blocksWritten != prevAmountBlocksWritten && blocksWritten%STAGE_PROGRESS_SAVE == 0 {
+			if err = saveStageProgress(tx, logPrefix, highestHashableL2BlockNo, highestSeenBatchNo, highestL1InfoTreeIndex, lastBlockHeight, lastForkId); err != nil {
+				return err
+			}
+
+			if err := tx.Commit(); err != nil {
+				return fmt.Errorf("failed to commit tx, %w", err)
+			}
+
+			tx, err = cfg.db.BeginRw(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to open tx, %w", err)
+			}
+			hermezDb = hermez_db.NewHermezDb(tx)
+			eriDb = erigon_db.NewErigonDb(tx)
+			prevAmountBlocksWritten = blocksWritten
 		}
 
 		if endLoop {
@@ -419,6 +434,25 @@ LOOP:
 		return nil
 	}
 
+	if err = saveStageProgress(tx, logPrefix, highestHashableL2BlockNo, highestSeenBatchNo, highestL1InfoTreeIndex, lastBlockHeight, lastForkId); err != nil {
+		return err
+	}
+
+	// stop printing blocks written progress routine
+	elapsed := time.Since(startSyncTime)
+	log.Info(fmt.Sprintf("[%s] Finished writing blocks", logPrefix), "blocksWritten", blocksWritten, "elapsed", elapsed)
+
+	if freshTx {
+		if err := tx.Commit(); err != nil {
+			return fmt.Errorf("failed to commit tx, %w", err)
+		}
+	}
+
+	return nil
+}
+
+func saveStageProgress(tx kv.RwTx, logPrefix string, highestHashableL2BlockNo, highestSeenBatchNo, highestL1InfoTreeIndex, lastBlockHeight, lastForkId uint64) error {
+	var err error
 	// store the highest hashable block number
 	if err := stages.SaveStageProgress(tx, stages.HighestHashableL2BlockNo, highestHashableL2BlockNo); err != nil {
 		return fmt.Errorf("save stage progress error: %v", err)
@@ -429,7 +463,7 @@ LOOP:
 	}
 
 	// store the highest seen forkid
-	if err := stages.SaveStageProgress(tx, stages.ForkId, uint64(lastForkId)); err != nil {
+	if err := stages.SaveStageProgress(tx, stages.ForkId, lastForkId); err != nil {
 		return fmt.Errorf("save stage progress error: %v", err)
 	}
 
@@ -443,19 +477,9 @@ LOOP:
 		return fmt.Errorf("save stage progress error: %w", err)
 	}
 
-	// stop printing blocks written progress routine
-	elapsed := time.Since(startSyncTime)
-	log.Info(fmt.Sprintf("[%s] Finished writing blocks", logPrefix), "blocksWritten", blocksWritten, "elapsed", elapsed)
-
 	log.Info(fmt.Sprintf("[%s] Saving stage progress", logPrefix), "lastBlockHeight", lastBlockHeight)
 	if err := stages.SaveStageProgress(tx, stages.Batches, lastBlockHeight); err != nil {
 		return fmt.Errorf("save stage progress error: %v", err)
-	}
-
-	if freshTx {
-		if err := tx.Commit(); err != nil {
-			return fmt.Errorf("failed to commit tx, %w", err)
-		}
 	}
 
 	return nil
@@ -730,20 +754,6 @@ func PruneBatchesStage(s *stagedsync.PruneState, tx kv.RwTx, cfg BatchesCfg, ctx
 	return nil
 }
 
-func getGasLimit(forkId uint64) uint64 {
-	if forkId >= 8 {
-		return forkId8BlockGasLimit
-	}
-
-	// [hack] the rpc returns forkid8 value, but forkid7 is used in execution
-	if forkId == 7 {
-		return forkId8BlockGasLimit
-		// return forkId7BlockGasLimit
-	}
-
-	return preForkId7BlockGasLimit
-}
-
 // writeL2Block writes L2Block to ErigonDb and HermezDb
 // writes header, body, forkId and blockBatch
 func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block, highestL1InfoTreeIndex uint64) error {
@@ -771,9 +781,9 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block,
 	txCollection := ethTypes.Transactions(txs)
 	txHash := ethTypes.DeriveSha(txCollection)
 
-	gasLimit := getGasLimit(l2Block.ForkId)
+	gasLimit := utils.GetBlockGasLimitForFork(l2Block.ForkId)
 
-	h, err := eriDb.WriteHeader(bn, l2Block.StateRoot, txHash, l2Block.ParentHash, l2Block.Coinbase, uint64(l2Block.Timestamp), gasLimit)
+	_, err := eriDb.WriteHeader(bn, l2Block.L2Blockhash, l2Block.StateRoot, txHash, l2Block.ParentHash, l2Block.Coinbase, uint64(l2Block.Timestamp), gasLimit)
 	if err != nil {
 		return fmt.Errorf("write header error: %v", err)
 	}
@@ -862,7 +872,7 @@ func writeL2Block(eriDb ErigonDb, hermezDb HermezDb, l2Block *types.FullL2Block,
 		}
 	}
 
-	if err := eriDb.WriteBody(bn, h.Hash(), txs); err != nil {
+	if err := eriDb.WriteBody(bn, l2Block.L2Blockhash, txs); err != nil {
 		return fmt.Errorf("write body error: %v", err)
 	}
 

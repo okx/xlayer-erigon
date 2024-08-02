@@ -37,6 +37,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
+	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 type EphemeralExecResultZk struct {
@@ -67,9 +68,8 @@ func ExecuteBlockEphemerallyZk(
 	blockTransactions := block.Transactions()
 	blockGasLimit := block.GasLimit()
 
-	//[hack] - on forkid7 this gas limit was used for execution but rpc is now returning forkid8 gas limit
 	if !chainConfig.IsForkID8Elderberry(block.NumberU64()) {
-		blockGasLimit = 18446744073709551615
+		blockGasLimit = utils.ForkId7BlockGasLimit
 	}
 
 	gp := new(GasPool).AddGas(blockGasLimit)
@@ -107,7 +107,7 @@ func ExecuteBlockEphemerallyZk(
 			return nil, err
 		}
 
-		receipt, execResult, innerTxs, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage)
+		receipt, execResult, innerTxs, err := ApplyTransaction_zkevm(chainConfig, engine, evm, gp, ibs, state.NewNoopWriter(), header, tx, usedGas, effectiveGasPricePercentage, true)
 		if err != nil {
 			return nil, err
 		}
@@ -119,41 +119,8 @@ func ExecuteBlockEphemerallyZk(
 			vmConfig.Tracer = nil
 		}
 
-		//[hack]TODO: remove this after bug is fixed
-		localReceipt := *receipt
-		if !chainConfig.IsForkID8Elderberry(blockNum) && errors.Is(execResult.Err, vm.ErrUnsupportedPrecompile) {
-			localReceipt.Status = 1
-		}
-
-		// forkid8 the poststate is empty
-		// forkid8 also fixed the bugs with logs and cumulative gas used
-		if !chainConfig.IsForkID8Elderberry(blockNum) {
-			// the stateroot in the transactions that comes from the datastream
-			// is the one after smart contract writes so it can't be used
-			// but since pre forkid7 blocks have 1 tx only, we can use the block root
-			if chainConfig.IsForkID7Etrog(blockNum) {
-				// receipt root holds the intermediate stateroot after the tx
-				intermediateState, err := roHermezDb.GetIntermediateTxStateRoot(blockNum, tx.Hash())
-				if err != nil {
-					return nil, err
-				}
-				receipt.PostState = intermediateState.Bytes()
-			} else {
-				receipt.PostState = header.Root.Bytes()
-			}
-
-			//[hack] log0 pre forkid8 are not included in the rpc logs
-			// also pre forkid8 comulative gas used is same as gas used
-			var fixedLogs types.Logs
-			for _, l := range receipt.Logs {
-				if len(l.Topics) == 0 && len(l.Data) == 0 {
-					continue
-				}
-				fixedLogs = append(fixedLogs, l)
-			}
-			receipt.Logs = fixedLogs
-			receipt.CumulativeGasUsed = receipt.GasUsed
-		}
+		localReceipt := CreateReceiptForBlockInfoTree(receipt, chainConfig, blockNum, execResult)
+		ProcessReceiptForBlockExecution(receipt, roHermezDb, chainConfig, blockNum, header, tx)
 
 		if err != nil {
 			if !vmConfig.StatelessExec {
@@ -187,11 +154,10 @@ func ExecuteBlockEphemerallyZk(
 
 		txInfos = append(txInfos, blockinfo.ExecutedTxInfo{
 			Tx:                tx,
-			Receipt:           &localReceipt,
+			Receipt:           localReceipt,
 			EffectiveGasPrice: effectiveGasPricePercentage,
 			Signer:            &txSender,
 		})
-
 	}
 
 	var l2InfoRoot *common.Hash
@@ -367,4 +333,52 @@ func FinalizeBlockExecutionWithHistoryWrite(
 	}
 
 	return newBlock, newTxs, newReceipt, nil
+}
+
+func CreateReceiptForBlockInfoTree(receipt *types.Receipt, chainConfig *chain.Config, blockNum uint64, execResult *ExecutionResult) *types.Receipt {
+	// [hack]TODO: remove this after bug is fixed
+	localReceipt := receipt.Clone()
+	if !chainConfig.IsForkID8Elderberry(blockNum) && errors.Is(execResult.Err, vm.ErrUnsupportedPrecompile) {
+		localReceipt.Status = 1
+	}
+
+	return localReceipt
+}
+
+func ProcessReceiptForBlockExecution(receipt *types.Receipt, roHermezDb state.ReadOnlyHermezDb, chainConfig *chain.Config, blockNum uint64, header *types.Header, tx types.Transaction) error {
+	// forkid8 the poststate is empty
+	// forkid8 also fixed the bugs with logs and cumulative gas used
+	if !chainConfig.IsForkID8Elderberry(blockNum) {
+		// the stateroot in the transactions that comes from the datastream
+		// is the one after smart contract writes so it can't be used
+		// but since pre forkid7 blocks have 1 tx only, we can use the block root
+		if chainConfig.IsForkID7Etrog(blockNum) {
+			// receipt root holds the intermediate stateroot after the tx
+			intermediateState, err := roHermezDb.GetIntermediateTxStateRoot(blockNum, tx.Hash())
+			if err != nil {
+				return err
+			}
+			receipt.PostState = intermediateState.Bytes()
+		} else {
+			receipt.PostState = header.Root.Bytes()
+		}
+
+		//[hack] log0 pre forkid8 are not included in the rpc logs
+		// also pre forkid8 comulative gas used is same as gas used
+		var fixedLogs types.Logs
+		for _, l := range receipt.Logs {
+			if len(l.Topics) == 0 && len(l.Data) == 0 {
+				continue
+			}
+			fixedLogs = append(fixedLogs, l)
+		}
+		receipt.Logs = fixedLogs
+		receipt.CumulativeGasUsed = receipt.GasUsed
+	}
+
+	for _, l := range receipt.Logs {
+		l.ApplyPaddingToLogsData(chainConfig.IsForkID8Elderberry(blockNum), chainConfig.IsForkID12Banana(blockNum))
+	}
+
+	return nil
 }

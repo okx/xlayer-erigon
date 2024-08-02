@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -64,7 +65,8 @@ func (s *Server) WebsocketHandler(allowedOrigins []string, jwtSecret []byte, com
 			return
 		}
 		codec := newWebsocketCodec(conn)
-		s.ServeCodec(codec, 0)
+		// X Layer API Key
+		s.ServeCodecWithAPIKey(codec, 0, strings.TrimPrefix(path.Base(r.URL.Path), "/"))
 	})
 }
 

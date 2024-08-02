@@ -3,19 +3,21 @@ package txpool
 import (
 	"bytes"
 	"fmt"
-	core_types "github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/rlp"
 	"math/big"
 	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
 	"github.com/gateway-fm/cdk-erigon-lib/common/fixedgas"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/types"
+	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
+	core_types "github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/rlp"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/log/v3"
 )
@@ -26,7 +28,7 @@ hard compilation fail when rebasing from upstream further down the line.
 */
 
 const (
-	transactionGasLimit = 30_000_000
+	transactionGasLimit = utils.PreForkId7BlockGasLimit
 )
 
 func calcProtocolBaseFee(baseFee uint64) uint64 {
@@ -81,7 +83,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				}
 
 			}
-		} else if claim && mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr {
+		} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
 			addrHex := "0x" + inputHex[4490:4554]
 			p.freeGasAddress[addrHex] = true
@@ -97,7 +99,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		// For X Layer
 		// free case: 1. is claim tx; 2. new bridge account with the first few tx
 		if claim ||
-			(isfreeGasAddr && mt.Tx.Nonce < p.wbCfg.FreeGasCountPerAddr) {
+			(isfreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
 			// get dynamic gp
 			newGp := new(big.Int).SetInt64(int64(minTip))
 			_, dGp := p.gpCache.GetLatest()
@@ -105,8 +107,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				newGp = newGp.Set(dGp)
 			}
 			if claim {
-				newGp = newGp.Mul(newGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
-				log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.wbCfg.GasPriceMultiple, newGp))
+				newGp = newGp.Mul(newGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+				log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGp))
 			} else {
 				log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%v", mt.Tx.Nonce, dGp, newGp))
 			}
@@ -194,6 +196,10 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	if p.isDeniedYieldingTransactions() {
+		return false, 0, nil
+	}
+
 	// First wait for the corresponding block to arrive
 	if p.lastSeenBlock.Load() < onTopOf {
 		return false, 0, nil // Too early
@@ -203,7 +209,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isLondon := p.isLondon()
 	_ = isLondon
 
-	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
+	p.pending.EnforceBestInvariants() // X Layer it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
@@ -281,7 +287,7 @@ func (p *TxPool) ForceUpdateLatestBlock(blockNumber uint64) {
 // This function is invoked if a single tx overflow entire zk-counters.
 // In this case there is nothing we can do but to mark is as such
 // and on next "pool iteration" it will be discard
-func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
+func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -290,8 +296,14 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
+			// X Layer optimize pool
 			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
+	}
+}
+func markAsLocal(txSlots *types2.TxSlots) {
+	for i := range txSlots.IsLocal {
+		txSlots.IsLocal[i] = true
 	}
 }

@@ -367,6 +367,19 @@ var (
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "eth,erigon,engine",
 	}
+	HTTPApiKeysFlag = cli.StringFlag{
+		Name: "http.apikeys",
+		Usage: `API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: 
+				{"project":"project1","key":"apikey1","timeout":"2023-12-12"}
+				{"project":"project2","key":"apikey2","timeout":"2023-12-12"}
+				{"project":"project3","key":"apikey3","timeout":"2023-12-12","methods":["method1","method2"],"count":1,"bucket":1}`,
+		Value: "",
+	}
+	MethodRateLimitFlag = cli.StringFlag{
+		Name:  "http.methodratelimit",
+		Usage: "Method rate limit in requests per second, format: {\"method\":[\"method1\",\"method2\"],\"count\":1,\"bucket\":1}, eg. {\"methods\":[\"eth_call\",\"eth_blockNumber\"],\"count\":10,\"bucket\":1}",
+		Value: "",
+	}
 	L2ChainIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l2-chain-id",
 		Usage: "L2 chain ID",
@@ -478,11 +491,6 @@ var (
 		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
 		Value: false,
 	}
-	SequencerInitialForkId = cli.Uint64Flag{
-		Name:  "zkevm.sequencer-initial-fork-id",
-		Usage: "The initial fork id to launch the sequencer with",
-		Value: 8,
-	}
 	SequencerBlockSealTime = cli.StringFlag{
 		Name:  "zkevm.sequencer-block-seal-time",
 		Usage: "Block seal time. Defaults to 6s",
@@ -542,6 +550,16 @@ var (
 		Name:  "zkevm.data-stream-host",
 		Usage: "Define the host used for the zkevm data stream",
 		Value: "",
+	}
+	DataStreamWriteTimeout = cli.DurationFlag{
+		Name:  "zkevm.data-stream-writeTimeout",
+		Usage: "Define the TCP write timeout when sending data to a datastream client",
+		Value: 5 * time.Second,
+	}
+	Limbo = cli.BoolFlag{
+		Name:  "zkevm.limbo",
+		Usage: "Enable limbo processing on batches that failed verification",
+		Value: false,
 	}
 	AllowFreeTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-free-transactions",
@@ -626,6 +644,11 @@ var (
 	AllowInternalTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-internal-transactions",
 		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
+	DebugTimers = cli.BoolFlag{
+		Name:  "debug.timers",
+		Usage: "Enable debug timers",
 		Value: false,
 	}
 	DebugNoSync = cli.BoolFlag{
@@ -891,6 +914,7 @@ var (
 		Usage: "Maximum gas price will be recommended by gpo",
 		Value: ethconfig.Defaults.GPO.MaxPrice.Int64(),
 	}
+
 	// Metrics flags
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  "metrics",

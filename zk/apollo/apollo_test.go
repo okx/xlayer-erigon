@@ -62,7 +62,6 @@ func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
 	t.Log("zkevm.l1-first-block: ", ethCfg.Zk.L1FirstBlock)
 	t.Log("zkevm.l1-block-range: ", ethCfg.Zk.L1BlockRange)
 	t.Log("zkevm.l1-query-delay: ", ethCfg.Zk.L1QueryDelay)
-	t.Log("zkevm.sequencer-initial-fork-id: ", ethCfg.Zk.SequencerInitialForkId)
 	t.Log("zkevm.sequencer-block-seal-time: ", ethCfg.Zk.SequencerBlockSealTime)
 	t.Log("zkevm.sequencer-batch-seal-time: ", ethCfg.Zk.SequencerBatchSealTime)
 	t.Log("zkevm.sequencer-non-empty-batch-seal-time: ", ethCfg.Zk.SequencerNonEmptyBatchSealTime)

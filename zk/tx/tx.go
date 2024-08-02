@@ -322,7 +322,7 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 		removeLeadingZeroesFromBytes(gas),
 		to, // don't remove leading 0s from addr
 		removeLeadingZeroesFromBytes(valueBytes),
-		removeLeadingZeroesFromBytes(tx.GetData()),
+		tx.GetData(),
 	}
 
 	if !tx.GetChainID().Eq(uint256.NewInt(0)) || !(v.Eq(uint256.NewInt(27)) || v.Eq(uint256.NewInt(28))) {
@@ -334,10 +334,6 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	encoded, err := rlp.EncodeToBytes(toEncode)
 	if err != nil {
 		return nil, err
-	}
-
-	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
-		log.Debug("break me!")
 	}
 
 	// reverse the eip-155 changes for the V value for transport
@@ -355,11 +351,6 @@ func TransactionToL2Data(tx types.Transaction, forkId uint16, efficiencyPercenta
 	if forkId >= uint16(constants.ForkID5Dragonfruit) {
 		ep := hermez_db.Uint8ToBytes(efficiencyPercentage)
 		encoded = append(encoded, ep...)
-	}
-
-	// break if encoded contains 937c4
-	if strings.Contains(hex.EncodeToString(encoded), "937c4") {
-		log.Debug("break me!")
 	}
 
 	return encoded, nil
@@ -392,12 +383,8 @@ func GetDecodedV(tx types.Transaction, v *uint256.Int) *uint256.Int {
 }
 
 func GenerateBlockBatchL2Data(forkId uint16, deltaTimestamp uint32, l1InfoTreeIndex uint32, transactions []types.Transaction, egTx map[common.Hash]uint8) ([]byte, error) {
-	var result []byte
-
 	// add in the changeL2Block transaction
-	result = append(result, changeL2BlockTxType)
-	result = binary.BigEndian.AppendUint32(result, deltaTimestamp)
-	result = binary.BigEndian.AppendUint32(result, l1InfoTreeIndex)
+	result := GenerateStartBlockBatchL2Data(deltaTimestamp, l1InfoTreeIndex)
 
 	for _, transaction := range transactions {
 		encoded, err := TransactionToL2Data(transaction, forkId, egTx[transaction.Hash()])
@@ -408,6 +395,21 @@ func GenerateBlockBatchL2Data(forkId uint16, deltaTimestamp uint32, l1InfoTreeIn
 	}
 
 	return result, nil
+}
+
+var (
+	START_BLOCK_BATCH_L2_DATA_SIZE = uint64(65) // change this if GenerateStartBlockBatchL2Data changes
+)
+
+func GenerateStartBlockBatchL2Data(deltaTimestamp uint32, l1InfoTreeIndex uint32) []byte {
+	var result []byte
+
+	// add in the changeL2Block transaction
+	result = append(result, changeL2BlockTxType)
+	result = binary.BigEndian.AppendUint32(result, deltaTimestamp)
+	result = binary.BigEndian.AppendUint32(result, l1InfoTreeIndex)
+
+	return result
 }
 
 func ComputeL2TxHash(
@@ -502,6 +504,8 @@ func ComputeL2TxHash(
 	return common.HexToHash(hashed), nil
 }
 
+var re = regexp.MustCompile("^[0-9a-fA-F]*$")
+
 func formatL2TxHashParam(param interface{}, paramLength int) (string, error) {
 	var paramStr string
 
@@ -558,11 +562,7 @@ func formatL2TxHashParam(param interface{}, paramLength int) (string, error) {
 		paramStr = "0" + paramStr
 	}
 
-	matched, err := regexp.MatchString("^[0-9a-fA-F]+$", paramStr)
-	if err != nil {
-		return "", err
-	}
-	if !matched {
+	if !re.MatchString(paramStr) {
 		return "", fmt.Errorf("invalid hex string")
 	}
 

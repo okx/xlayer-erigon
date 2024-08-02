@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"math/big"
+
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/datadir"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -27,6 +29,7 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/trie"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/l1_data"
 	zkStages "github.com/ledgerwatch/erigon/zk/stages"
 	zkUtils "github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
@@ -66,15 +69,114 @@ func NewGenerator(
 	}
 }
 
-func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, endBlock uint64, debug, witnessFull bool) ([]byte, error) {
+func (g *Generator) GetWitnessByBatch(tx kv.Tx, ctx context.Context, batchNum uint64, debug, witnessFull bool) ([]byte, error) {
+	t := zkUtils.StartTimer("witness", "getwitnessbybatch")
+	defer t.LogTimer()
+
+	reader := hermez_db.NewHermezDbReader(tx)
+	badBatch, err := reader.GetInvalidBatch(batchNum)
+	if err != nil {
+		return nil, err
+	}
+	var witness []byte
+	if badBatch {
+		// we need the header of the block prior to this batch to build up the blocks
+		previousHeight, err := reader.GetHighestBlockInBatch(batchNum - 1)
+		previousHeader := rawdb.ReadHeaderByNumber(tx, previousHeight)
+		if previousHeader == nil {
+			return nil, fmt.Errorf("failed to get header for block %d", previousHeight)
+		}
+
+		// 1. get l1 batch data for the bad batch
+		fork, err := reader.GetForkId(batchNum)
+		if err != nil {
+			return nil, err
+		}
+
+		decoded, err := l1_data.BreakDownL1DataByBatch(batchNum, fork, reader)
+		if err != nil {
+			return nil, err
+		}
+
+		nextNum := previousHeader.Number.Uint64()
+		parentHash := previousHeader.Hash()
+		timestamp := previousHeader.Time
+		blocks := make([]*eritypes.Block, len(decoded.DecodedData))
+		for i, d := range decoded.DecodedData {
+			timestamp += uint64(d.DeltaTimestamp)
+			nextNum++
+			newHeader := &eritypes.Header{
+				ParentHash: parentHash,
+				Coinbase:   decoded.Coinbase,
+				Difficulty: new(big.Int).SetUint64(0),
+				Number:     new(big.Int).SetUint64(nextNum),
+				GasLimit:   zkUtils.GetBlockGasLimitForFork(fork),
+				Time:       timestamp,
+			}
+
+			parentHash = newHeader.Hash()
+			transactions := d.Transactions
+			block := eritypes.NewBlock(newHeader, transactions, nil, nil, nil)
+			blocks[i] = block
+		}
+
+		witness, err = g.generateWitness(tx, ctx, blocks, debug, witnessFull)
+
+	} else {
+		blockNumbers, err := reader.GetL2BlockNosByBatch(batchNum)
+		if err != nil {
+			return nil, err
+		}
+		if len(blockNumbers) == 0 {
+			return nil, fmt.Errorf("no blocks found for batch %d", batchNum)
+		}
+		blocks := make([]*eritypes.Block, len(blockNumbers))
+		idx := 0
+		for _, blockNum := range blockNumbers {
+			block, err := rawdb.ReadBlockByNumber(tx, blockNum)
+			if err != nil {
+				return nil, err
+			}
+			blocks[idx] = block
+			idx++
+		}
+		witness, err = g.generateWitness(tx, ctx, blocks, debug, witnessFull)
+	}
+
+	return witness, nil
+}
+
+func (g *Generator) GetWitnessByBlockRange(tx kv.Tx, ctx context.Context, startBlock, endBlock uint64, debug, witnessFull bool) ([]byte, error) {
+	t := zkUtils.StartTimer("witness", "getwitnessbyblockrange")
+	defer t.LogTimer()
+
 	if startBlock > endBlock {
 		return nil, ErrEndBeforeStart
 	}
-
 	if endBlock == 0 {
 		witness := trie.NewWitness([]trie.WitnessOperator{})
 		return getWitnessBytes(witness, debug)
 	}
+	idx := 0
+	blocks := make([]*eritypes.Block, endBlock-startBlock+1)
+	for blockNum := startBlock; blockNum <= endBlock; blockNum++ {
+		block, err := rawdb.ReadBlockByNumber(tx, blockNum)
+		if err != nil {
+			return nil, err
+		}
+		blocks[idx] = block
+		idx++
+	}
+
+	return g.generateWitness(tx, ctx, blocks, debug, witnessFull)
+}
+
+func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, blocks []*eritypes.Block, debug, witnessFull bool) ([]byte, error) {
+	t := zkUtils.StartTimer("witness", "generatewitness")
+	defer t.LogTimer()
+
+	endBlock := blocks[len(blocks)-1].NumberU64()
+	startBlock := blocks[0].NumberU64()
 
 	latestBlock, err := stages.GetStageProgress(tx, stages.Execution)
 	if err != nil {
@@ -91,10 +193,7 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 		return nil, err
 	}
 
-	sBlock, err := rawdb.ReadBlockByNumber(tx, startBlock)
-	if err != nil {
-		return nil, err
-	}
+	sBlock := blocks[0]
 	if sBlock == nil {
 		return nil, nil
 	}
@@ -143,13 +242,12 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 
 	prevStateRoot := prevHeader.Root
 
-	for blockNum := startBlock; blockNum <= endBlock; blockNum++ {
-		block, err := rawdb.ReadBlockByNumber(tx, blockNum)
-		if err != nil {
-			return nil, err
-		}
+	reader := state.NewPlainState(tx, blocks[0].NumberU64(), systemcontracts.SystemContractCodeLookup[g.chainCfg.ChainName])
+	defer reader.Close()
 
-		reader := state.NewPlainState(tx, blockNum, systemcontracts.SystemContractCodeLookup[g.chainCfg.ChainName])
+	for _, block := range blocks {
+		blockNum := block.NumberU64()
+		reader.SetBlockNr(blockNum)
 
 		tds.SetStateReader(reader)
 
@@ -218,7 +316,6 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 		}
 
 		prevStateRoot = block.Root()
-		reader.Close() // close the cursors created by the plainstate
 	}
 
 	var rl trie.RetainDecider
@@ -233,7 +330,7 @@ func (g *Generator) GenerateWitness(tx kv.Tx, ctx context.Context, startBlock, e
 	}
 
 	eridb := db2.NewEriDb(batch)
-	smtTrie := smt.NewSMT(eridb)
+	smtTrie := smt.NewSMT(eridb, false)
 
 	witness, err := smt.BuildWitness(smtTrie, rl, ctx)
 	if err != nil {

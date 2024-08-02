@@ -253,14 +253,11 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolPackBatchSpecialList.Name) {
 		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpecialList.Name))
 
-		cfg.FreeClaimGasAddr = make([]string, len(addrHexes))
+		cfg.FreeClaimGasAddrs = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)
-			cfg.FreeClaimGasAddr[i] = sender.String()
+			cfg.FreeClaimGasAddrs[i] = sender.String()
 		}
-	}
-	if len(cfg.FreeClaimGasAddr) == 0 {
-		cfg.FreeClaimGasAddr = []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}
 	}
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)

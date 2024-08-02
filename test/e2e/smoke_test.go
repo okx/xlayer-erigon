@@ -2,6 +2,10 @@ package e2e
 
 import (
 	"context"
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
@@ -12,9 +16,6 @@ import (
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/erigon/zkevm/log"
 	"github.com/stretchr/testify/require"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 const (
@@ -63,7 +64,7 @@ func TestClaimTx(t *testing.T) {
 	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From:  from,
 		To:    &to,
-		Value: uint256.NewInt(10),
+		Value: uint256.NewInt(10000000000),
 	})
 	require.NoError(t, err)
 	var tx types.Transaction = &types.LegacyTx{

@@ -11,5 +11,6 @@ func (apii *APIImpl) GetGPCache() *GasPriceCache {
 func (apii *APIImpl) runL2GasPricerForXLayer() {
 	// set default gas price
 	apii.gasCache.SetLatest(common.Hash{}, apii.L2GasPricer.GetConfig().Default)
+	apii.gasCache.SetLatestRawGP(apii.L2GasPricer.GetConfig().Default)
 	go apii.runL2GasPriceSuggester()
 }

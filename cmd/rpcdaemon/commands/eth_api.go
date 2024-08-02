@@ -350,7 +350,7 @@ type APIImpl struct {
 	GasPriceFactor              float64
 	L1GasPrice                  L1GasPrice
 	VirtualCountersSmtReduction float64
-	
+
 	// For X Layer
 	L2GasPricer   gasprice.L2GasPricer
 	EnableInnerTx bool
@@ -363,23 +363,23 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	}
 
 	apii := &APIImpl{
-		BaseAPI:                    base,
-		db:                         db,
-		ethBackend:                 eth,
-		txPool:                     txPool,
-		mining:                     mining,
-		gasCache:                   NewGasPriceCache(),
-		GasCap:                     gascap,
-		ReturnDataLimit:            returnDataLimit,
-		ZkRpcUrl:                   ethCfg.L2RpcUrl,
-		PoolManagerUrl:             ethCfg.PoolManagerUrl,
-		AllowFreeTransactions:      ethCfg.AllowFreeTransactions,
-		AllowPreEIP155Transactions: ethCfg.AllowPreEIP155Transactions,
-		L1RpcUrl:                   ethCfg.L1RpcUrl,
-		DefaultGasPrice:            ethCfg.DefaultGasPrice,
-		MaxGasPrice:                ethCfg.MaxGasPrice,
-		GasPriceFactor:             ethCfg.GasPriceFactor,
-		L1GasPrice:                 L1GasPrice{},
+		BaseAPI:                     base,
+		db:                          db,
+		ethBackend:                  eth,
+		txPool:                      txPool,
+		mining:                      mining,
+		gasCache:                    NewGasPriceCache(),
+		GasCap:                      gascap,
+		ReturnDataLimit:             returnDataLimit,
+		ZkRpcUrl:                    ethCfg.L2RpcUrl,
+		PoolManagerUrl:              ethCfg.PoolManagerUrl,
+		AllowFreeTransactions:       ethCfg.AllowFreeTransactions,
+		AllowPreEIP155Transactions:  ethCfg.AllowPreEIP155Transactions,
+		L1RpcUrl:                    ethCfg.L1RpcUrl,
+		DefaultGasPrice:             ethCfg.DefaultGasPrice,
+		MaxGasPrice:                 ethCfg.MaxGasPrice,
+		GasPriceFactor:              ethCfg.GasPriceFactor,
+		L1GasPrice:                  L1GasPrice{},
 		VirtualCountersSmtReduction: ethCfg.VirtualCountersSmtReduction,
 		// For X Layer
 		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
@@ -535,12 +535,15 @@ type GasPriceCache struct {
 	latestPrice *big.Int
 	latestHash  common.Hash
 	mtx         sync.Mutex
+	rawGP       *big.Int
+	rgpMtx      sync.RWMutex
 }
 
 func NewGasPriceCache() *GasPriceCache {
 	return &GasPriceCache{
 		latestPrice: big.NewInt(0),
 		latestHash:  common.Hash{},
+		rawGP:       big.NewInt(0),
 	}
 }
 
@@ -557,4 +560,17 @@ func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {
 	c.latestPrice = price
 	c.latestHash = hash
 	c.mtx.Unlock()
+}
+
+func (c *GasPriceCache) GetLatestRawGP() *big.Int {
+	c.rgpMtx.RLock()
+	defer c.rgpMtx.RUnlock()
+	rgp := new(big.Int).Set(c.rawGP) // deep copy
+	return rgp
+}
+
+func (c *GasPriceCache) SetLatestRawGP(rgp *big.Int) {
+	c.rgpMtx.Lock()
+	c.rawGP = rgp
+	c.rgpMtx.Unlock()
 }

@@ -116,6 +116,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
+				api.gasCache.SetLatestRawGP(api.L2GasPricer.GetLastRawGP())
 			}
 			api.updateDynamicGP(ctx)
 			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
@@ -166,4 +167,11 @@ func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
 	avg := new(big.Int).Add(low, high)
 	avg = avg.Quo(avg, big.NewInt(2)) //nolint:gomnd
 	return avg
+}
+
+func (api *APIImpl) MinGasPrice(ctx context.Context) (*hexutil.Big, error) {
+	mingp := api.gasCache.GetLatestRawGP()
+	//todo: get mgp from sequencer
+
+	return (*hexutil.Big)(mingp), nil
 }

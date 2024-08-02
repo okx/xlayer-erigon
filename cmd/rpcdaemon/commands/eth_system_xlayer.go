@@ -25,7 +25,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 		return api.gasPriceNonRedirectedXL(ctx)
 	}
 
-	price, err := api.getGPFromTrustedNode()
+	price, err := api.getGPFromTrustedNode("eth_gasPrice")
 	if err != nil {
 		log.Error(fmt.Sprintf("eth_gasPrice error: %v", err))
 		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
@@ -71,8 +71,8 @@ func (api *APIImpl) getLatestBlockTxNum(ctx context.Context) (int, error) {
 	return len(b.Transactions()), nil
 }
 
-func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
-	res, err := client.JSONRPCCall(api.l2RpcUrl, "eth_gasPrice")
+func (api *APIImpl) getGPFromTrustedNode(method string) (*big.Int, error) {
+	res, err := client.JSONRPCCall(api.l2RpcUrl, method)
 	if err != nil {
 		return nil, errors.New("failed to get gas price from trusted node")
 	}
@@ -170,8 +170,17 @@ func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
 }
 
 func (api *APIImpl) MinGasPrice(ctx context.Context) (*hexutil.Big, error) {
-	mingp := api.gasCache.GetLatestRawGP()
-	//todo: get mgp from sequencer
+	var minGP *big.Int
+	if sequencer.IsSequencer() {
+		minGP = api.gasCache.GetLatestRawGP()
+		return (*hexutil.Big)(minGP), nil
+	}
 
-	return (*hexutil.Big)(mingp), nil
+	minGP, err := api.getGPFromTrustedNode("eth_minGasPrice")
+	if err != nil {
+		log.Error(fmt.Sprintf("eth_minGasPrice error: %v", err))
+		return nil, err
+	}
+
+	return (*hexutil.Big)(minGP), nil
 }

@@ -184,7 +184,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	var toRemove []*metaTx
 	count := 0
 
-	// xLayer
+	// X Layer
 	okPayTxAvailableGas := availableGas * p.xlayerCfg.OkPayGasLimitPercentage / 100
 	okPayTxGasRemain, count, okPayTxRemove, err := p.bestOkPay(n, txs, tx, isLondon, isShanghai, okPayTxAvailableGas, toSkip)
 	if err != nil {

@@ -485,7 +485,6 @@ func saveStageProgress(tx kv.RwTx, logPrefix string, highestHashableL2BlockNo, h
 	}
 
 	log.Info(fmt.Sprintf("[%s] Saving stage progress", logPrefix), "lastBlockHeight", lastBlockHeight)
-
 	if err := stages.SaveStageProgress(tx, stages.Batches, lastBlockHeight); err != nil {
 		return fmt.Errorf("save stage progress error: %v", err)
 	}

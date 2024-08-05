@@ -20,7 +20,7 @@ type L1GasPrice struct {
 }
 
 func (api *APIImpl) GasPrice(ctx context.Context) (*hexutil.Big, error) {
-	// X Layer handler
+	// For X Layer
 	if api.L2GasPricer.GetConfig().XLayer.Type != "" {
 		return api.gasPriceXL(ctx)
 	}

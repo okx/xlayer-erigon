@@ -63,3 +63,7 @@ func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }
+
+func (p *TxPool) isFreeGas(senderID uint64) bool {
+	return p.isFreeClaimAddr(senderID)
+}

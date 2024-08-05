@@ -64,7 +64,7 @@ func TestClaimTx(t *testing.T) {
 	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From:  from,
 		To:    &to,
-		Value: uint256.NewInt(10000000000),
+		Value: uint256.NewInt(10),
 	})
 	require.NoError(t, err)
 	var tx types.Transaction = &types.LegacyTx{

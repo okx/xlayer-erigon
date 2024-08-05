@@ -1,4 +1,3 @@
-
 # How to run
 ```shell
 make build-docker;

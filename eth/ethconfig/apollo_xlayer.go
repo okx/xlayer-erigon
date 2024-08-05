@@ -49,7 +49,7 @@ func UnsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 
-// Enable returns true if apollo is enabled
+// enable returns true if apollo is enabled
 func (c *ApolloConfig) enable() bool {
 	if c == nil || !c.EnableApollo {
 		return false

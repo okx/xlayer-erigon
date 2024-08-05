@@ -12,7 +12,10 @@ type ApolloConfig struct {
 	sync.RWMutex
 }
 
-var apolloConfig = &ApolloConfig{}
+var apolloConfig = &ApolloConfig{
+	EnableApollo: false,
+	Conf:         Config{},
+}
 
 // GetApolloConfig returns a copy of the singleton instance apollo config
 func GetApolloConfig() (Config, error) {

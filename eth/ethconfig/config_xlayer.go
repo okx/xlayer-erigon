@@ -11,7 +11,7 @@ type XLayerConfig struct {
 	SequencerBatchSleepDuration time.Duration
 }
 
-var DefaultXLayerConfig = &XLayerConfig{}
+var DefaultXLayerConfig = XLayerConfig{}
 
 // NacosConfig is the config for nacos
 type NacosConfig struct {

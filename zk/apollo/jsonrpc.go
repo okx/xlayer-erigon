@@ -48,6 +48,7 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	ethconfig.UnsafeGetApolloConfig().Unlock()
 }
 
+// loadNodeJsonRPCConfig loads the dynamic json rpc apollo node configurations
 func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	// Load jsonrpc config
 	if ctx.IsSet(utils.HTTPEnabledFlag.Name) {
@@ -76,8 +77,9 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	}
 }
 
+// loadEthJsonRPCConfig loads the dynamic json rpc apollo eth configurations
 func loadEthJsonRPCConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
-	// Load ZK config
+	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
 	// Load jsonrpc config

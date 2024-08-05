@@ -47,12 +47,14 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	ethconfig.UnsafeGetApolloConfig().Unlock()
 }
 
+// loadNodeL2GasPricerConfig loads the dynamic gas pricer apollo node configurations
 func loadNodeL2GasPricerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	// Load l2gaspricer config
 }
 
+// loadEthL2GasPricerConfig loads the dynamic gas pricer apollo eth configurations
 func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
-	// Load ZK config
+	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
 	// Load l2gaspricer config

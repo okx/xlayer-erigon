@@ -70,10 +70,10 @@ type Zk struct {
 	ExecutorPayloadOutput       string
 
 	// For X Layer
-	XLayer *XLayerConfig
+	XLayer XLayerConfig
 }
 
-var DefaultZkConfig = &Zk{
+var DefaultZkConfig = Zk{
 	// For X Layer
 	XLayer: DefaultXLayerConfig,
 }

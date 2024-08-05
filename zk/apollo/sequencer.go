@@ -47,12 +47,14 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 	ethconfig.UnsafeGetApolloConfig().Unlock()
 }
 
+// loadNodeSequencerConfig loads the dynamic sequencer apollo node configurations
 func loadNodeSequencerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	// Load sequencer config
 }
 
+// loadEthSequencerConfig loads the dynamic sequencer apollo eth configurations
 func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
-	// Load ZK config
+	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
 	// Load sequencer config

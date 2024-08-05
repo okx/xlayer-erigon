@@ -22,6 +22,7 @@ func createMockContext(flags []cli.Flag) *cli.Context {
 	return context
 }
 
+// loadZkConfig loads the generic zkEVM eth apollo configurations
 func loadZkConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ethCfg.Zk == nil {
 		ethCfg.Zk = &ethconfig.Zk{}

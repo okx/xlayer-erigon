@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-// TryClone is the helper method to return a deep copy of the ethconfig instance
+// TryClone is the helper method to return a deep copy of the nodecfg instance
 func (c *Config) TryClone() (Config, error) {
 	clone, err := copystructure.Copy(*c)
 	if err != nil {

@@ -1,4 +1,4 @@
-DOCKER_COMPOSE := docker-compose -f docker-compose.yml
+DOCKER_COMPOSE := docker-compose -f $(CURDIR)/docker-compose.yml
 DOCKER_STATELESS_EXECUTOR := erigon-stateless-executor
 DOCKER_STATE_DB := erigon-state-db
 DOCKER_SEQ_SENDER := erigon-seqsender

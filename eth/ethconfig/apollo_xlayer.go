@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 )
 
 // ApolloConfig is the apollo eth backend dynamic config
@@ -57,11 +59,27 @@ func (c *ApolloConfig) enable() bool {
 	return c.EnableApollo
 }
 
+// ----------------------------------------------------------------
+// Apollo sequencer configurations
+// ----------------------------------------------------------------
+// GetFullBatchSleepDuration gets the sequencer batch sleep duration
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	conf, err := GetApolloConfig()
 	if err != nil {
 		return localDuration
 	} else {
 		return conf.Zk.XLayer.SequencerBatchSleepDuration
+	}
+}
+
+// ----------------------------------------------------------------
+// Apollo gaspricer configurations
+// ----------------------------------------------------------------
+func GetGasPricerConfig() (gaspricecfg.Config, error) {
+	conf, err := GetApolloConfig()
+	if err != nil {
+		return gaspricecfg.Config{}, err
+	} else {
+		return conf.GPO, nil
 	}
 }

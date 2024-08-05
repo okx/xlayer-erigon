@@ -78,8 +78,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		if isClaimAddr {
 			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
-				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
-				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
 				mt.minTip = newGp.Uint64()
 				mt.minFeeCap = *uint256.NewInt(mt.minTip)
 			}

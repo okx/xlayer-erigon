@@ -264,7 +264,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 }
 
-// SetApolloGPOXLayer is a public wrapper function to set GPO configurations
+// SetApolloGPOXLayer is a public wrapper function to internally call setGPO
 func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	setGPO(ctx, cfg)
 }

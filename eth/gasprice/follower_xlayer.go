@@ -40,8 +40,6 @@ func newFollowerGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *
 
 // UpdateGasPriceAvg updates the gas price.
 func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
-	//todo: apollo
-
 	if big.NewInt(0).Cmp(l1GasPrice) == 0 {
 		log.Warn("gas price 0 received. Skipping update...")
 		return
@@ -96,6 +94,10 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	} else {
 		log.Error("nil value detected. Skipping...")
 	}
+}
+
+func (f *FollowerGasPrice) UpdateConfig(c gaspricecfg.Config) {
+	f.cfg = c
 }
 
 func (f *FollowerGasPrice) GetLastRawGP() *big.Int {

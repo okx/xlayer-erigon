@@ -100,7 +100,12 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 	cfg := api.L2GasPricer.GetConfig()
 	ctx := api.L2GasPricer.GetCtx()
 
-	// TODO: apollo
+	if ethconfig.IsApolloConfigEnable() {
+		apolloConf, err := ethconfig.GetGasPricerConfig()
+		if err == nil {
+			api.L2GasPricer.UpdateConfig(apolloConf)
+		}
+	}
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
 	if err == nil {
@@ -113,6 +118,12 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			log.Info("Finishing l2 gas price suggester...")
 			return
 		case <-updateTimer.C:
+			if ethconfig.IsApolloConfigEnable() {
+				apolloConf, err := ethconfig.GetGasPricerConfig()
+				if err == nil {
+					api.L2GasPricer.UpdateConfig(apolloConf)
+				}
+			}
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)

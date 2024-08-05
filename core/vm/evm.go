@@ -90,7 +90,9 @@ type EVM struct {
 	// applied in opCall*.
 	callGasTemp uint64
 	zkConfig    *ZkConfig
-	innerTxMeta *InnerTxMeta // XLayer: inner tx meta
+
+	// For X Layer
+	innerTxMeta *InnerTxMeta
 }
 
 // NewEVM returns a new EVM. The returned EVM is not thread safe and should

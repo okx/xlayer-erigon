@@ -75,6 +75,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		// For X Layer
 		isClaimAddr := p.isFreeClaimAddr(senderID)
 		if isClaimAddr {
+			// here for the case when restart gpCache has not init
+			// use the max uint64 as default because the remain claimTx should handle first
 			newGp := uint64(math.MaxUint64)
 			if p.gpCache != nil {
 				_, dGp := p.gpCache.GetLatest()

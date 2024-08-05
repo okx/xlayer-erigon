@@ -77,7 +77,7 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
-	// Gas Price
+	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
 		Usage: "raw gas price strategy type: default, follower, fixed",
@@ -162,6 +162,32 @@ var (
 		Name:  "zkevm.sequencer-batch-sleep-duration",
 		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
 		Value: 0 * time.Second,
+	}
+	// Sequencer
+	AllowInternalTransactions = cli.BoolFlag{
+		Name:  "zkevm.allow-internal-transactions",
+		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
+	// RPC
+	HTTPApiKeysFlag = cli.StringFlag{
+		Name: "http.apikeys",
+		Usage: `API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: 
+				{"project":"project1","key":"apikey1","timeout":"2023-12-12"}
+				{"project":"project2","key":"apikey2","timeout":"2023-12-12"}
+				{"project":"project3","key":"apikey3","timeout":"2023-12-12","methods":["method1","method2"],"count":1,"bucket":1}`,
+		Value: "",
+	}
+	MethodRateLimitFlag = cli.StringFlag{
+		Name:  "http.methodratelimit",
+		Usage: "Method rate limit in requests per second, format: {\"method\":[\"method1\",\"method2\"],\"count\":1,\"bucket\":1}, eg. {\"methods\":[\"eth_call\",\"eth_blockNumber\"],\"count\":10,\"bucket\":1}",
+		Value: "",
+	}
+	// DS
+	DataStreamWriteTimeout = cli.DurationFlag{
+		Name:  "zkevm.data-stream-write-timeout",
+		Usage: "Define the TCP write timeout when sending data to a datastream client",
+		Value: 5 * time.Second,
 	}
 )
 

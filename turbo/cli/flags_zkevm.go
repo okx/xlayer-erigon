@@ -12,8 +12,8 @@ import (
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
-	"github.com/urfave/cli/v2"
 	utils2 "github.com/ledgerwatch/erigon/zk/utils"
+	"github.com/urfave/cli/v2"
 )
 
 func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
@@ -160,7 +160,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 
 	// For X Layer
-	ApplyFlagsForXLayerConfig(ctx, cfg)
+	ApplyFlagsForEthXLayerConfig(ctx, cfg)
 	utils2.EnableTimer(cfg.DebugTimers)
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.L2ChainId)

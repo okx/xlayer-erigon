@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"sync"
 	"time"
-
-	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 // ApolloConfig is the apollo eth backend dynamic config
@@ -29,7 +27,6 @@ func GetApolloConfig() (Config, error) {
 		defer UnsafeGetApolloConfig().RUnlock()
 		conf, err := UnsafeGetApolloConfig().Conf.TryClone()
 		if err != nil {
-			log.Debug(fmt.Sprintf("GetApolloConfig error: %v", err))
 			return Config{}, err
 		}
 		return conf, nil

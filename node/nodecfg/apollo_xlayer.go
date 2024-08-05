@@ -3,6 +3,8 @@ package nodecfg
 import (
 	"fmt"
 	"sync"
+
+	"github.com/ledgerwatch/erigon/zkevm/log"
 )
 
 // ApolloConfig is the apollo eth backend dynamic config
@@ -22,7 +24,12 @@ func GetApolloConfig() (Config, error) {
 	if UnsafeGetApolloConfig().Enable() {
 		UnsafeGetApolloConfig().RLock()
 		defer UnsafeGetApolloConfig().RUnlock()
-		return UnsafeGetApolloConfig().Conf, nil
+		conf, err := UnsafeGetApolloConfig().Conf.TryClone()
+		if err != nil {
+			log.Debug(fmt.Sprintf("GetApolloConfig error: %v", err))
+			return Config{}, err
+		}
+		return conf, nil
 	} else {
 		return Config{}, fmt.Errorf("apollo config disabled")
 	}

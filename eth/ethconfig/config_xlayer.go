@@ -1,6 +1,11 @@
 package ethconfig
 
-import "time"
+import (
+	"fmt"
+	"time"
+
+	"github.com/mitchellh/copystructure"
+)
 
 // XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
@@ -27,4 +32,17 @@ type ApolloClientConfig struct {
 	IP            string
 	AppID         string
 	NamespaceName string
+}
+
+// TryClone is the helper method to return a deep copy of the ethconfig instance
+func (c *Config) TryClone() (Config, error) {
+	clone, err := copystructure.Copy(*c)
+	if err != nil {
+		return Config{}, err
+	}
+	ret, ok := clone.(Config)
+	if !ok {
+		return Config{}, fmt.Errorf("type assertion failed")
+	}
+	return ret, nil
 }

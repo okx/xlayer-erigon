@@ -24,16 +24,21 @@ func TestLoadJsonRPCConfig(t *testing.T) {
 				Apollo: ethconfig.ApolloClientConfig{
 					IP:            "0.0.0.0",
 					AppID:         "xlayer-devnet",
-					NamespaceName: "jsonrpc-ro.txt,jsonrpc-roHalt.properties",
+					NamespaceName: "jsonrpc-ro.txt, sequencer-roHalt.properties",
 					Enable:        true,
 				},
 			},
 		},
 	}
-	nc := &nodecfg.Config{}
-	client := NewClient(c, nc)
+	client := NewClient(c)
 	client.loadJsonRPC(value)
 	require.NoError(t, err)
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
+
+	apolloNodeCfg, err := nodecfg.GetApolloConfig()
+	require.NoError(t, err)
+	apolloEthCfg, err := ethconfig.GetApolloConfig()
+	require.NoError(t, err)
+
+	logTestNodeConfig(t, &apolloNodeCfg)
+	logTestEthConfig(t, &apolloEthCfg)
 }

@@ -19,8 +19,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 	}
 
 	// Load jsonrpc config changes
-	loadNodeJsonRPCConfig(ctx, c.nodeCfg)
-	loadEthJsonRPCConfig(ctx, c.ethCfg)
+	loadJsonRPCConfig(ctx)
 	log.Info(fmt.Sprintf("loaded jsonrpc from apollo config: %+v", value.(string)))
 }
 
@@ -32,9 +31,13 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 		return
 	}
 
+	loadJsonRPCConfig(ctx)
 	log.Info(fmt.Sprintf("apollo jsonrpc old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo jsonrpc config changed: %+v", value.NewValue.(string)))
+}
 
+// loadJsonRPCConfig loads the dynamic json rpc apollo configurations
+func loadJsonRPCConfig(ctx *cli.Context) {
 	// Update jsonrpc node config changes
 	nodecfg.UnsafeGetApolloConfig().Lock()
 	nodecfg.UnsafeGetApolloConfig().EnableApollo = true

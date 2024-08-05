@@ -97,7 +97,6 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {
-	cfg := api.L2GasPricer.GetConfig()
 	ctx := api.L2GasPricer.GetCtx()
 
 	if ethconfig.IsApolloConfigEnable() {
@@ -111,7 +110,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 	if err == nil {
 		api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 	}
-	updateTimer := time.NewTimer(cfg.XLayer.UpdatePeriod)
+	updateTimer := time.NewTimer(api.L2GasPricer.GetConfig().XLayer.UpdatePeriod)
 	for {
 		select {
 		case <-ctx.Done():
@@ -129,7 +128,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 			}
 			api.updateDynamicGP(ctx)
-			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
+			updateTimer.Reset(api.L2GasPricer.GetConfig().XLayer.UpdatePeriod)
 		}
 	}
 }

@@ -22,6 +22,7 @@ import (
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/secp256k1"
+	"github.com/ledgerwatch/log/v3"
 )
 
 func handleStateForNewBlockStarting(
@@ -85,6 +86,7 @@ func finaliseBlock(
 	effectiveGases []uint8,
 	l1Recovery bool,
 ) (*types.Block, error) {
+	log.Info(fmt.Sprintf("finaliseBlock Started"))
 	stateWriter := state.NewPlainStateWriter(sdb.tx, sdb.tx, newHeader.Number.Uint64()).SetAccumulator(accumulator)
 	chainReader := stagedsync.ChainReader{
 		Cfg: *cfg.chainConfig,
@@ -119,6 +121,7 @@ func finaliseBlock(
 		})
 	}
 
+	log.Info(fmt.Sprintf("postBlockStateHandling Started"))
 	if err := postBlockStateHandling(cfg, ibs, sdb.hermezDb, newHeader, ger, l1BlockHash, parentBlock.Root(), txInfos); err != nil {
 		return nil, err
 	}
@@ -148,11 +151,13 @@ func finaliseBlock(
 		return nil, err
 	}
 
+	log.Info(fmt.Sprintf("zkIncrementIntermediateHashes Started"))
 	newRoot, err := zkIncrementIntermediateHashes(ctx, s.LogPrefix(), s, sdb.tx, sdb.eridb, sdb.smt, newHeader.Number.Uint64()-1, newHeader.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
+	log.Info(fmt.Sprintf("FinalizeWrite Started"))
 	finalHeader := finalBlock.HeaderNoCopy()
 	finalHeader.Root = newRoot
 	finalHeader.Coinbase = cfg.zk.AddressSequencer

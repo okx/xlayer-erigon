@@ -276,6 +276,9 @@ func SpawnSequencingStage(
 
 	var block *types.Block
 	for blockNumber := executionAt + 1; runLoopBlocks; blockNumber++ {
+
+		log.Info(fmt.Sprintf("[%s] Starting new block for loop, block %s", logPrefix, blockNumber))
+
 		if l1Recovery {
 			decodedBlocksIndex := blockNumber - (executionAt + 1)
 			if decodedBlocksIndex == decodedBlocksSize {
@@ -395,6 +398,7 @@ func SpawnSequencingStage(
 					}
 					cfg.txPool.UnlockFlusher()
 				} else if !l1Recovery {
+					log.Info(fmt.Sprintf("[%s] getNextPoolTransactions Started", logPrefix))
 					cfg.txPool.LockFlusher()
 					blockTransactions, err = getNextPoolTransactions(ctx, cfg, executionAt, forkId, yielded)
 					if err != nil {
@@ -412,6 +416,7 @@ func SpawnSequencingStage(
 
 				var receipt *types.Receipt
 				var execResult *core.ExecutionResult
+				log.Info(fmt.Sprintf("[%s] attemptAddTransaction Started", logPrefix))
 				for i, transaction := range blockTransactions {
 					txHash := transaction.Hash()
 
@@ -497,6 +502,7 @@ func SpawnSequencingStage(
 			}
 		}
 
+		log.Info(fmt.Sprintf("[%s] WriteBlockL1InfoTreeIndex Started", logPrefix))
 		if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(blockNumber, l1TreeUpdateIndex); err != nil {
 			return err
 		}
@@ -505,7 +511,7 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
-
+		log.Info(fmt.Sprintf("[%s] doFinishBlockAndUpdateState Ended", logPrefix))
 		t.LogTimer()
 		gasPerSecond := float64(0)
 		elapsedSeconds := t.Elapsed().Seconds()
@@ -533,18 +539,22 @@ func SpawnSequencingStage(
 			// because it would be later added twice
 			counters := batchCounters.CombineCollectorsNoChanges(l1InfoIndex != 0)
 
+			log.Info(fmt.Sprintf("[%s] WriteBatchCounters Started", logPrefix))
 			if err = sdb.hermezDb.WriteBatchCounters(thisBatch, counters.UsedAsMap()); err != nil {
 				return err
 			}
 
+			log.Info(fmt.Sprintf("[%s] WriteIsBatchPartiallyProcessed Started", logPrefix))
 			if err = sdb.hermezDb.WriteIsBatchPartiallyProcessed(thisBatch); err != nil {
 				return err
 			}
 
+			log.Info(fmt.Sprintf("[%s] WriteBlockWithBatchStartToStream Started", logPrefix))
 			if err = cfg.datastreamServer.WriteBlockWithBatchStartToStream(logPrefix, tx, sdb.hermezDb, forkId, thisBatch, lastBatch, *parentBlock, *block); err != nil {
 				return err
 			}
 
+			log.Info(fmt.Sprintf("[%s] Commit Started", logPrefix))
 			if err = tx.Commit(); err != nil {
 				return err
 			}

@@ -391,6 +391,7 @@ func doFinishBlockAndUpdateState(
 		return nil, err
 	}
 
+	log.Info(fmt.Sprintf("finaliseBlock Ended"))
 	if err := updateSequencerProgress(sdb.tx, thisBlockNumber, thisBatch, l1InfoIndex); err != nil {
 		return nil, err
 	}

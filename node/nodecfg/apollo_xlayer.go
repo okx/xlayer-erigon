@@ -17,9 +17,14 @@ var apolloConfig = &ApolloConfig{
 	Conf:         Config{},
 }
 
+// IsApolloConfigEnable returns true if the singleton instnace apollo config is enabled
+func IsApolloConfigEnable() bool {
+	return UnsafeGetApolloConfig().enable()
+}
+
 // GetApolloConfig returns a copy of the singleton instance apollo config
 func GetApolloConfig() (Config, error) {
-	if UnsafeGetApolloConfig().Enable() {
+	if IsApolloConfigEnable() {
 		UnsafeGetApolloConfig().RLock()
 		defer UnsafeGetApolloConfig().RUnlock()
 		conf, err := UnsafeGetApolloConfig().Conf.TryClone()
@@ -32,15 +37,15 @@ func GetApolloConfig() (Config, error) {
 	}
 }
 
-// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton
-// instance without locking the sync mutex
+// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
+// without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead
 func UnsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 
 // Enable returns true if apollo is enabled
-func (c *ApolloConfig) Enable() bool {
+func (c *ApolloConfig) enable() bool {
 	if c == nil || !c.EnableApollo {
 		return false
 	}

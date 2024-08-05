@@ -81,7 +81,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			if p.gpCache != nil {
 				_, dGp := p.gpCache.GetLatest()
 				if dGp != nil {
-					newGpBig := new(big.Int).Mul(dGp, big.NewInt(int64(p.wbCfg.GasPriceMultiple)))
+					newGpBig := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
 					newGp = newGpBig.Uint64()
 				}
 			}

@@ -158,7 +158,7 @@ func Get(db kv.Getter) (Mode, error) {
 		prune.CallTraces = blockAmount
 	}
 
-	// XLayer operations
+	// X Layer operations
 	blockAmount, err = get(db, kv.PruneReceipts)
 	if err != nil {
 		return prune, err

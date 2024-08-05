@@ -145,7 +145,7 @@ func (api *APIImpl) updateDynamicGP(ctx context.Context) {
 		log.Error(fmt.Sprintf("error chainConfig: %v", err))
 		return
 	}
-	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
+	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), api.L2GasPricer.GetConfig(), api.gasCache)
 	tipcap, err := oracle.SuggestTipCap(ctx)
 	if err != nil {
 		log.Error(fmt.Sprintf("error SuggestTipCap: %v", err))

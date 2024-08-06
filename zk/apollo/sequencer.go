@@ -18,8 +18,7 @@ func (c *Client) loadSequencer(value interface{}) {
 	}
 
 	// Load sequencer config changes
-	loadNodeSequencerConfig(ctx, c.nodeCfg)
-	loadEthSequencerConfig(ctx, c.ethCfg)
+	loadSequencerConfig(ctx)
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
 }
 
@@ -31,9 +30,13 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 		return
 	}
 
+	loadSequencerConfig(ctx)
 	log.Info(fmt.Sprintf("apollo sequencer old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo sequencer config changed: %+v", value.NewValue.(string)))
+}
 
+// loadSequencerConfig loads the dynamic sequencer apollo configurations
+func loadSequencerConfig(ctx *cli.Context) {
 	// Update sequencer node config changes
 	nodecfg.UnsafeGetApolloConfig().Lock()
 	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
@@ -47,12 +50,14 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 	ethconfig.UnsafeGetApolloConfig().Unlock()
 }
 
+// loadNodeSequencerConfig loads the dynamic sequencer apollo node configurations
 func loadNodeSequencerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	// Load sequencer config
 }
 
+// loadEthSequencerConfig loads the dynamic sequencer apollo eth configurations
 func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
-	// Load ZK config
+	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
 	// Load sequencer config

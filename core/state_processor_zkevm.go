@@ -124,7 +124,7 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 		}
 	}
 
-	// XLayer, inner tx
+	// For X Layer
 	var innerTxs []*zktypes.InnerTx
 	if !evm.Config().NoInnerTxs {
 		innerTxs = afterApplyTransaction(evm, result.Failed())

@@ -149,10 +149,11 @@ const (
 	SenderDisallowedSendTx DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 
-	ReceiverDisallowedReceiveTx DiscardReason = 127 // XLayer receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 128 // XLayer the transaction is sent by a no whitelisted account
-
 	DiscardByLimbo DiscardReason = 27
+
+	// For X Layer
+	ReceiverDisallowedReceiveTx DiscardReason = 127 // receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 128 // the transaction is sent by a non-whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -1084,7 +1085,8 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
-	// XLayer Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
+	// For X Layer
+	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
 	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)

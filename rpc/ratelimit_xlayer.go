@@ -33,8 +33,8 @@ var gRateLimiter = &RateLimit{
 	rlm: make(map[string]*rate.Limiter),
 }
 
-// InitRateLimit initializes the rate limiter singleton instance
-func InitRateLimit(cfg string) {
+// SetRateLimit sets the rate limiter singleton instance
+func SetRateLimit(cfg string) {
 	if cfg == "" {
 		return
 	}
@@ -44,11 +44,11 @@ func InitRateLimit(cfg string) {
 		log.Warn(fmt.Sprintf("invalid rate limit config: %s", cfg))
 		return
 	}
-	SetRateLimit(rlc)
+	setRateLimiter(rlc)
 }
 
-// SetRateLimit sets the rate limiter singleton instance
-func SetRateLimit(cfg RateLimitConfig) {
+// setRateLimiter sets the rate limiter in the singleton instance map
+func setRateLimiter(cfg RateLimitConfig) {
 	gRateLimiter.Lock()
 	defer gRateLimiter.Unlock()
 

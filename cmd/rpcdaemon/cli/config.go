@@ -509,7 +509,7 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	srv := rpc.NewServer(cfg.RpcBatchConcurrency, cfg.TraceRequests, cfg.RpcStreamingDisable)
 
 	// For X Layer
-	rpc.InitRateLimit(cfg.MethodRateLimit)
+	rpc.SetRateLimit(cfg.MethodRateLimit)
 
 	allowListForRPC, err := parseAllowListForRPC(cfg.RpcAllowListFilePath)
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
+	"github.com/ledgerwatch/erigon/rpc"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
@@ -77,6 +78,14 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	}
 	if ctx.IsSet(utils.WSEnabledFlag.Name) {
 		nodeCfg.Http.WebsocketEnabled = true
+	}
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		nodeCfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
+		rpc.SetApiAuth(nodeCfg.Http.HttpApiKeys)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		nodeCfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
+		rpc.SetRateLimit(nodeCfg.Http.MethodRateLimit)
 	}
 }
 

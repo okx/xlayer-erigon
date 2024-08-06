@@ -46,6 +46,11 @@ func SetApiAuth(cfg string) {
 	log.Info(fmt.Sprintf("Setting API keys auth, config: %v", cfg))
 	keyItems := strings.Split(cfg, "\n")
 
+	// Clear API auth key map
+	gApikeyAuthMap.AllowKeys = make(map[string]ApiKeyItem)
+	clearApikeyRateLimitMap()
+
+	// Set API auth key map
 	for _, item := range keyItems {
 		var keyCfg = struct {
 			// Name defines the name of the key

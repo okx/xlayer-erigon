@@ -11,7 +11,6 @@ import (
 
 // RateLimitConfig contains the config of the rate limiter
 type RateLimitConfig struct {
-
 	// RateLimitApis defines the apis that need to be rate limited
 	RateLimitApis []string `json:"methods"`
 
@@ -52,11 +51,15 @@ func setRateLimiter(cfg RateLimitConfig) {
 	gRateLimiter.Lock()
 	defer gRateLimiter.Unlock()
 
-	log.Info(fmt.Sprintf("Setting node rate limiter, cfg: %v", cfg))
+	// Clear rate limiter map
+	gRateLimiter.rlm = make(map[string]*rate.Limiter)
+
+	// Set API rate limiter map
 	for _, api := range cfg.RateLimitApis {
 		gRateLimiter.rlm[api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
 		log.Info(fmt.Sprintf("Rate limiter enabled for api method: %v with count: %v and bucket: %v", cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
 	}
+	log.Info(fmt.Sprintf("Set node rate limiter, cfg: %v", cfg))
 }
 
 // ApikeyRateLimit is the struct definition for the API key rate limiter
@@ -70,6 +73,11 @@ var gApikeyRateLimiter = &ApikeyRateLimit{
 	rlm: make(map[string]map[string]*rate.Limiter),
 }
 
+// clearApikeyRateLimitMap clears the API key rate limiter map
+func clearApikeyRateLimitMap() {
+	gApikeyRateLimiter.rlm = make(map[string]map[string]*rate.Limiter)
+}
+
 // setApiKeyRateLimit sets the global API key rate limiter
 func setApikeyRateLimit(key string, cfg RateLimitConfig) {
 	gApikeyRateLimiter.Lock()
@@ -80,12 +88,13 @@ func setApikeyRateLimit(key string, cfg RateLimitConfig) {
 		return
 	}
 
-	log.Info(fmt.Sprintf("Setting API key rate limiter for key: %v, cfg: %v", key, cfg))
+	// Set API key rate limiter map
 	gApikeyRateLimiter.rlm[key] = make(map[string]*rate.Limiter)
 	for _, api := range cfg.RateLimitApis {
 		gApikeyRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
 		log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
 	}
+	log.Info(fmt.Sprintf("Set API key rate limiter for key: %v, cfg: %v", key, cfg))
 }
 
 // checkMethodRateLimit returns true if the method API is allowed by the rate limiter

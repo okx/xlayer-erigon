@@ -8,47 +8,50 @@ import (
 	"net/http"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 	"github.com/ledgerwatch/log/v3"
 )
 
-// ApiKeyItem is the api key item
+// ApikeyAllowMap is the struct definition for the allowed API keys
+type ApikeyAllowMap struct {
+	Enable    bool
+	AllowKeys map[string]ApiKeyItem
+	sync.RWMutex
+}
+
+// ApiKeyItem is the struct containing the the API key data
 type ApiKeyItem struct {
-	// Name defines the name of the key
-	Project string `json:"project"`
-	// Key defines the key
-	Key string `json:"key"`
-	// Timeout defines the timeout
-	Timeout string `json:"timeout"`
-	// Methods defines the methods
-	rateLimitConfig *RateLimitConfig
+	Project string
+	Timeout time.Time
 }
 
-type apiAllow struct {
-	allowKeys map[string]keyItem
-	enable    bool
+// gApikeyAllowMap is the node's singleton instance for the allowed API keys
+var gApikeyAllowMap = &ApikeyAllowMap{
+	Enable:    false,
+	AllowKeys: make(map[string]ApiKeyItem),
 }
 
-type keyItem struct {
-	project string
-	timeout time.Time
+// InitApiAuth initializes the node API auth with the API key configs
+func InitApiAuth(cfg string) {
+	setApiAuth(cfg)
 }
 
-var al apiAllow
+// setApiAuth sets the node API auth with the API key configs
+func setApiAuth(cfg string) {
+	gApikeyAllowMap.Lock()
+	defer gApikeyAllowMap.Unlock()
 
-// InitApiAuth initializes the api authentication
-func InitApiAuth(apikeysconfig string) {
-	if apikeysconfig == "" {
+	if cfg == "" {
 		return
 	}
-	log.Info("api auth enabled", "apikeysconfig", apikeysconfig)
-	keyItems := strings.Split(apikeysconfig, "\n")
-	var keys []ApiKeyItem
+	log.Info(fmt.Sprintf("API keys auth enabled, config: %v", cfg))
+	keyItems := strings.Split(cfg, "\n")
 
 	for _, item := range keyItems {
-		var itemins = struct {
+		var keyCfg = struct {
 			// Name defines the name of the key
 			Project string   `json:"project"`
 			Key     string   `json:"key"`
@@ -57,57 +60,51 @@ func InitApiAuth(apikeysconfig string) {
 			Count   int      `json:"count"`
 			Bucket  int      `json:"bucket"`
 		}{}
-		err := json.Unmarshal([]byte(item), &itemins)
+		err := json.Unmarshal([]byte(item), &keyCfg)
 		if err != nil {
-			log.Warn("invalid key item: %s", item)
+			log.Warn(fmt.Sprintf("invalid key item: %s", item))
 			continue
 		}
-		apiKeyItem := ApiKeyItem{Project: itemins.Project, Key: itemins.Key, Timeout: itemins.Timeout}
-		if len(itemins.Methods) > 0 {
-			rlc := RateLimitConfig{
-				RateLimitApis:   itemins.Methods,
-				RateLimitCount:  itemins.Count,
-				RateLimitBucket: itemins.Bucket,
-			}
-			apiKeyItem.rateLimitConfig = &rlc
+
+		// Validate API key cfg inputs
+		parse, err := time.Parse("2006-01-02", keyCfg.Timeout)
+		if err != nil {
+			log.Warn(fmt.Sprintf("failed to parse API key timeout cfg: %v, err: %v", keyCfg.Timeout, err))
+			continue
 		}
-		keys = append(keys, apiKeyItem)
+		if strings.ToLower(fmt.Sprintf("%x", md5.Sum([]byte(keyCfg.Project+keyCfg.Timeout)))) != keyCfg.Key {
+			log.Warn(fmt.Sprintf("project [%s], key [%s] is invalid, key = md5(Project+Timeout)", keyCfg.Project, keyCfg.Key))
+			continue
+		}
+		// Set API key authentication
+		key := strings.ToLower(keyCfg.Key)
+		gApikeyAllowMap.AllowKeys[key] = ApiKeyItem{
+			Project: keyCfg.Project,
+			Timeout: parse,
+		}
+		// Set API key rate limiter
+		rlCfg := RateLimitConfig{
+			RateLimitApis:   keyCfg.Methods,
+			RateLimitCount:  keyCfg.Count,
+			RateLimitBucket: keyCfg.Bucket,
+		}
+		setApikeyRateLimit(key, rlCfg)
+		gApikeyAllowMap.Enable = true
 	}
-	setApiAuth(keys)
+
 }
 
-// setApiAuth sets the api authentication
-func setApiAuth(kis []ApiKeyItem) {
-	al.enable = len(kis) > 0
-	var tmp = make(map[string]keyItem)
-	var rateLimitConfig = make(map[string]*RateLimitConfig)
-	for _, k := range kis {
-		k.Key = strings.ToLower(k.Key)
-		parse, err := time.Parse("2006-01-02", k.Timeout)
-		if err != nil {
-			log.Warn("parse key [%+v], error parsing timeout: %v", k, err)
-			continue
-		}
-		if strings.ToLower(fmt.Sprintf("%x", md5.Sum([]byte(k.Project+k.Timeout)))) != k.Key {
-			log.Warn("project [%s], key [%s] is invalid, key = md5(Project+Timeout)", k.Project, k.Key)
-			continue
-		}
-		tmp[k.Key] = keyItem{project: k.Project, timeout: parse}
-		if k.rateLimitConfig != nil {
-			rateLimitConfig[k.Key] = k.rateLimitConfig
-		}
-	}
-	al.allowKeys = tmp
-	initApikeyRateLimit(rateLimitConfig)
-}
-
+// check returns the API key authentication check result
 func check(key string) error {
+	gApikeyAllowMap.RLock()
+	defer gApikeyAllowMap.RUnlock()
+
 	key = strings.ToLower(key)
-	if item, ok := al.allowKeys[key]; ok && time.Now().Before(item.timeout) {
+	if item, ok := gApikeyAllowMap.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
 		//metrics.RequestAuthCount(al.allowKeys[key].project)
 		return nil
-	} else if ok && time.Now().After(item.timeout) {
-		log.Warn("project [%s], key [%s] has expired, ", item.project, key)
+	} else if ok && time.Now().After(item.Timeout) {
+		log.Warn(fmt.Sprintf("project [%s], key [%s] has expired, ", item.Project, key))
 		//metrics.RequestAuthErrorCount(metrics.RequestAuthErrorTypeKeyExpired)
 		return errors.New("key has expired")
 	}
@@ -115,10 +112,9 @@ func check(key string) error {
 	return errors.New("no authentication")
 }
 
-func apiAuthHandlerFunc(cfg string, handlerFunc http.HandlerFunc) http.HandlerFunc {
-	InitApiAuth(cfg)
+func apiAuthHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if al.enable {
+		if gApikeyAllowMap.Enable {
 			if er := check(path.Base(r.URL.Path)); er != nil {
 				err := handleNoAuthErr(w, er)
 				if err != nil {
@@ -131,8 +127,8 @@ func apiAuthHandlerFunc(cfg string, handlerFunc http.HandlerFunc) http.HandlerFu
 	}
 }
 
-func ApiAuthHandler(cfg string, next http.Handler) http.Handler {
-	return apiAuthHandlerFunc(cfg, next.ServeHTTP)
+func ApiAuthHandler(next http.Handler) http.Handler {
+	return apiAuthHandlerFunc(next.ServeHTTP)
 }
 
 func handleNoAuthErr(w http.ResponseWriter, err error) error {

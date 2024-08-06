@@ -29,5 +29,4 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 func ApplyFlagsForNodeXLayerConfig(ctx *cli.Context, cfg *nodecfg.Config) {
 	cfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
 	cfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
-	cfg.Http.DataStreamWriteTimeout = ctx.Duration(utils.DataStreamWriteTimeout.Name)
 }

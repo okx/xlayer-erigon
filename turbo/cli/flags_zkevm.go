@@ -12,8 +12,8 @@ import (
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
-	utils2 "github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/urfave/cli/v2"
+	utils2 "github.com/ledgerwatch/erigon/zk/utils"
 )
 
 func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {

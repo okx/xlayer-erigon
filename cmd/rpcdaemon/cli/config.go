@@ -552,7 +552,7 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	}
 
 	// For X Layer
-	rpc.InitApiAuth(cfg.HttpApiKeys)
+	rpc.SetApiAuth(cfg.HttpApiKeys)
 	apiHandler = rpc.ApiAuthHandler(apiHandler)
 
 	listener, httpAddr, err := node.StartHTTPEndpoint(httpEndpoint, cfg.HTTPTimeouts, apiHandler)

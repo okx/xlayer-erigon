@@ -44,11 +44,11 @@ func InitRateLimit(cfg string) {
 		log.Warn(fmt.Sprintf("invalid rate limit config: %s", cfg))
 		return
 	}
-	setRateLimit(rlc)
+	SetRateLimit(rlc)
 }
 
-// setRateLimit sets the global rate limiter
-func setRateLimit(cfg RateLimitConfig) {
+// SetRateLimit sets the rate limiter singleton instance
+func SetRateLimit(cfg RateLimitConfig) {
 	gRateLimiter.Lock()
 	defer gRateLimiter.Unlock()
 

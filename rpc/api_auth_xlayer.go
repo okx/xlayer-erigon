@@ -34,14 +34,9 @@ var gApikeyAuthMap = &ApiKeyAuthMap{
 	AllowKeys: make(map[string]ApiKeyItem),
 }
 
-// InitApiAuth initializes the gApikeyAuthMap singleton instance with the API
+// SetApiAuth sets the gApikeyAuthMap singleton instance with the API
 // auth key configs
-func InitApiAuth(cfg string) {
-	setApiAuth(cfg)
-}
-
-// setApiAuth sets the node API auth with the API key configs
-func setApiAuth(cfg string) {
+func SetApiAuth(cfg string) {
 	gApikeyAuthMap.Lock()
 	defer gApikeyAuthMap.Unlock()
 

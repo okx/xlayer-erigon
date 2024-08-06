@@ -8,7 +8,7 @@ import (
 )
 
 func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
-	cfg.XLayer = &ethconfig.XLayerConfig{
+	cfg.XLayer = ethconfig.XLayerConfig{
 		Apollo: ethconfig.ApolloClientConfig{
 			Enable:        ctx.Bool(utils.ApolloEnableFlag.Name),
 			IP:            ctx.String(utils.ApolloIPAddr.Name),

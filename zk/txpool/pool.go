@@ -149,10 +149,11 @@ const (
 	SenderDisallowedSendTx DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 
-	ReceiverDisallowedReceiveTx DiscardReason = 127 // XLayer receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 128 // XLayer the transaction is sent by a no whitelisted account
-
 	DiscardByLimbo DiscardReason = 27
+
+	// For X Layer
+	ReceiverDisallowedReceiveTx DiscardReason = 127 // receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 128 // the transaction is sent by a non-whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -330,11 +331,9 @@ type TxPool struct {
 	ethCfg                  *ethconfig.Config
 	aclDB                   kv.RwDB
 
-	wbCfg WBConfig // XLayer config
-
 	// For X Layer
-	// gpCache will only work in sequencer node, without rpc node
-	gpCache GPCache
+	xlayerCfg XLayerConfig
+	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -389,12 +388,13 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		flushMtx:                &sync.Mutex{},
 		aclDB:                   aclDB,
 		limbo:                   newLimbo(),
-		wbCfg: WBConfig{ // XLayer config
-			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
-			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
+		// X Layer config
+		xlayerCfg: XLayerConfig{
+			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
 		},
 	}, nil
 }
@@ -809,7 +809,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.xlayerCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}
@@ -1087,7 +1087,8 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
-	// XLayer Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
+	// For X Layer
+	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
 	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)

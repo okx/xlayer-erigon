@@ -57,11 +57,11 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList  bool
-	whiteList        []string
-	blockList        []string
-	freeClaimGasAddr []string
-	gasPriceMultiple uint64
+	enableWhiteList   bool
+	whiteList         []string
+	blockList         []string
+	freeClaimGasAddrs []string
+	gasPriceMultiple  uint64
 )
 
 func init() {
@@ -86,11 +86,11 @@ func init() {
 	rootCmd.PersistentFlags().DurationVar(&commitEvery, utils.TxPoolCommitEveryFlag.Name, utils.TxPoolCommitEveryFlag.Value, utils.TxPoolCommitEveryFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&traceSenders, utils.TxPoolTraceSendersFlag.Name, []string{}, utils.TxPoolTraceSendersFlag.Usage)
 	// For X Layer
-	rootCmd.Flags().StringSliceVar(&freeClaimGasAddr, utils.TxPoolPackBatchSpecialList.Name, []string{"0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}, utils.TxPoolPackBatchSpecialList.Usage)
-	rootCmd.Flags().Uint64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, 2, utils.TxPoolGasPriceMultiple.Usage)
-	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, false, utils.TxPoolEnableWhitelistFlag.Usage)
-	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, []string{}, utils.TxPoolWhiteList.Usage)
-	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, []string{}, utils.TxPoolBlockedList.Usage)
+	rootCmd.Flags().StringSliceVar(&freeClaimGasAddrs, utils.TxPoolPackBatchSpecialList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeClaimGasAddrs, utils.TxPoolPackBatchSpecialList.Usage)
+	rootCmd.Flags().Uint64Var(&gasPriceMultiple, utils.TxPoolGasPriceMultiple.Name, ethconfig.DeprecatedDefaultTxPoolConfig.GasPriceMultiple, utils.TxPoolGasPriceMultiple.Usage)
+	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, ethconfig.DeprecatedDefaultTxPoolConfig.EnableWhitelist, utils.TxPoolEnableWhitelistFlag.Usage)
+	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.WhiteList, utils.TxPoolWhiteList.Usage)
+	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.BlockedList, utils.TxPoolBlockedList.Usage)
 }
 
 var rootCmd = &cobra.Command{
@@ -181,10 +181,10 @@ func doTxpool(ctx context.Context) error {
 		addr := common.HexToAddress(addrHex)
 		ethCfg.DeprecatedTxPool.BlockedList[i] = addr.String()
 	}
-	ethCfg.DeprecatedTxPool.FreeClaimGasAddr = make([]string, len(freeClaimGasAddr))
-	for i, addrHex := range freeClaimGasAddr {
+	ethCfg.DeprecatedTxPool.FreeClaimGasAddrs = make([]string, len(freeClaimGasAddrs))
+	for i, addrHex := range freeClaimGasAddrs {
 		addr := common.HexToAddress(addrHex)
-		ethCfg.DeprecatedTxPool.FreeClaimGasAddr[i] = addr.String()
+		ethCfg.DeprecatedTxPool.FreeClaimGasAddrs[i] = addr.String()
 	}
 	ethCfg.DeprecatedTxPool.GasPriceMultiple = gasPriceMultiple
 

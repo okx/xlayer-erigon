@@ -47,7 +47,7 @@ func setApiAuth(cfg string) {
 	if cfg == "" {
 		return
 	}
-	log.Info(fmt.Sprintf("API keys auth enabled, config: %v", cfg))
+	log.Info(fmt.Sprintf("Setting API keys auth, config: %v", cfg))
 	keyItems := strings.Split(cfg, "\n")
 
 	for _, item := range keyItems {
@@ -62,18 +62,18 @@ func setApiAuth(cfg string) {
 		}{}
 		err := json.Unmarshal([]byte(item), &keyCfg)
 		if err != nil {
-			log.Warn(fmt.Sprintf("invalid key item: %s", item))
+			log.Warn(fmt.Sprintf("Invalid key item: %s", item))
 			continue
 		}
 
 		// Validate API key cfg inputs
 		parse, err := time.Parse("2006-01-02", keyCfg.Timeout)
 		if err != nil {
-			log.Warn(fmt.Sprintf("failed to parse API key timeout cfg: %v, err: %v", keyCfg.Timeout, err))
+			log.Warn(fmt.Sprintf("Failed to parse API key timeout cfg: %v, err: %v", keyCfg.Timeout, err))
 			continue
 		}
 		if strings.ToLower(fmt.Sprintf("%x", md5.Sum([]byte(keyCfg.Project+keyCfg.Timeout)))) != keyCfg.Key {
-			log.Warn(fmt.Sprintf("project [%s], key [%s] is invalid, key = md5(Project+Timeout)", keyCfg.Project, keyCfg.Key))
+			log.Warn(fmt.Sprintf("Project [%s], key [%s] is invalid, key = md5(Project+Timeout)", keyCfg.Project, keyCfg.Key))
 			continue
 		}
 		// Set API key authentication
@@ -104,7 +104,7 @@ func check(key string) error {
 		//metrics.RequestAuthCount(al.allowKeys[key].project)
 		return nil
 	} else if ok && time.Now().After(item.Timeout) {
-		log.Warn(fmt.Sprintf("project [%s], key [%s] has expired, ", item.Project, key))
+		log.Warn(fmt.Sprintf("Project [%s], key [%s] has expired, ", item.Project, key))
 		//metrics.RequestAuthErrorCount(metrics.RequestAuthErrorTypeKeyExpired)
 		return errors.New("key has expired")
 	}

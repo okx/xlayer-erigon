@@ -87,7 +87,7 @@ func setApikeyRateLimit(key string, cfg RateLimitConfig) {
 	defer gApikeyRateLimiter.Unlock()
 
 	if _, ok := gApikeyRateLimiter.rlm[key]; ok {
-		log.Warn(fmt.Sprintf("API key rate limiter already set, skipping."))
+		log.Warn("API key rate limiter already set, skipping")
 		return
 	}
 

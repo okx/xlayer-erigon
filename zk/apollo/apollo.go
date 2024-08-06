@@ -11,7 +11,6 @@ import (
 
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/node/nodecfg"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/erigon/turbo/debug"
 	"github.com/ledgerwatch/log/v3"
@@ -21,13 +20,11 @@ import (
 type Client struct {
 	*agollo.Client
 	namespaceMap map[string]string
-	ethCfg       *ethconfig.Config
-	nodeCfg      *nodecfg.Config
 	flags        []cli.Flag
 }
 
 // NewClient creates a new apollo client
-func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
+func NewClient(ethCfg *ethconfig.Config) *Client {
 	if ethCfg == nil || !ethCfg.Zk.XLayer.Apollo.Enable || ethCfg.Zk.XLayer.Apollo.IP == "" || ethCfg.Zk.XLayer.Apollo.AppID == "" || ethCfg.Zk.XLayer.Apollo.NamespaceName == "" {
 		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", ethCfg.Zk.XLayer.Apollo))
 		return nil
@@ -65,8 +62,6 @@ func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	apc := &Client{
 		Client:       client,
 		namespaceMap: nsMap,
-		ethCfg:       ethCfg,
-		nodeCfg:      nodeCfg,
 		flags:        append(erigoncli.DefaultFlags, debug.Flags...),
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})

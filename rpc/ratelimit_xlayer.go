@@ -59,17 +59,6 @@ func setRateLimit(cfg RateLimitConfig) {
 	}
 }
 
-// checkMethodRateLimit returns true if the method API is allowed by the rate limiter
-func checkMethodRateLimit(method string) bool {
-	gRateLimiter.RLock()
-	defer gRateLimiter.RUnlock()
-
-	if rl, ok := gRateLimiter.rlm[method]; ok {
-		return rl.Allow()
-	}
-	return true
-}
-
 // ApikeyRateLimit is the struct definition for the API key rate limiter
 type ApikeyRateLimit struct {
 	rlm map[string]map[string]*rate.Limiter
@@ -97,6 +86,17 @@ func setApikeyRateLimit(key string, cfg RateLimitConfig) {
 		gApikeyRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
 		log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
 	}
+}
+
+// checkMethodRateLimit returns true if the method API is allowed by the rate limiter
+func checkMethodRateLimit(method string) bool {
+	gRateLimiter.RLock()
+	defer gRateLimiter.RUnlock()
+
+	if rl, ok := gRateLimiter.rlm[method]; ok {
+		return rl.Allow()
+	}
+	return true
 }
 
 // checkApikeyMethodRateLimit returns true if the key and the method API is allowed

@@ -15,8 +15,8 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-// ApikeyAllowMap is the struct definition for the allowed API keys
-type ApikeyAllowMap struct {
+// ApiKeyAuthMap is the struct definition for the allowed API auth keys
+type ApiKeyAuthMap struct {
 	Enable    bool
 	AllowKeys map[string]ApiKeyItem
 	sync.RWMutex
@@ -28,21 +28,22 @@ type ApiKeyItem struct {
 	Timeout time.Time
 }
 
-// gApikeyAllowMap is the node's singleton instance for the allowed API keys
-var gApikeyAllowMap = &ApikeyAllowMap{
+// gApikeyAuthMap is the node's singleton instance for the allowed API auth keys
+var gApikeyAuthMap = &ApiKeyAuthMap{
 	Enable:    false,
 	AllowKeys: make(map[string]ApiKeyItem),
 }
 
-// InitApiAuth initializes the node API auth with the API key configs
+// InitApiAuth initializes the gApikeyAuthMap singleton instance with the API
+// auth key configs
 func InitApiAuth(cfg string) {
 	setApiAuth(cfg)
 }
 
 // setApiAuth sets the node API auth with the API key configs
 func setApiAuth(cfg string) {
-	gApikeyAllowMap.Lock()
-	defer gApikeyAllowMap.Unlock()
+	gApikeyAuthMap.Lock()
+	defer gApikeyAuthMap.Unlock()
 
 	if cfg == "" {
 		return
@@ -78,7 +79,7 @@ func setApiAuth(cfg string) {
 		}
 		// Set API key authentication
 		key := strings.ToLower(keyCfg.Key)
-		gApikeyAllowMap.AllowKeys[key] = ApiKeyItem{
+		gApikeyAuthMap.AllowKeys[key] = ApiKeyItem{
 			Project: keyCfg.Project,
 			Timeout: parse,
 		}
@@ -89,18 +90,18 @@ func setApiAuth(cfg string) {
 			RateLimitBucket: keyCfg.Bucket,
 		}
 		setApikeyRateLimit(key, rlCfg)
-		gApikeyAllowMap.Enable = true
+		gApikeyAuthMap.Enable = true
 	}
 
 }
 
 // check returns the API key authentication check result
 func check(key string) error {
-	gApikeyAllowMap.RLock()
-	defer gApikeyAllowMap.RUnlock()
+	gApikeyAuthMap.RLock()
+	defer gApikeyAuthMap.RUnlock()
 
 	key = strings.ToLower(key)
-	if item, ok := gApikeyAllowMap.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
+	if item, ok := gApikeyAuthMap.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
 		//metrics.RequestAuthCount(al.allowKeys[key].project)
 		return nil
 	} else if ok && time.Now().After(item.Timeout) {
@@ -114,7 +115,7 @@ func check(key string) error {
 
 func apiAuthHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if gApikeyAllowMap.Enable {
+		if gApikeyAuthMap.Enable {
 			if er := check(path.Base(r.URL.Path)); er != nil {
 				err := handleNoAuthErr(w, er)
 				if err != nil {

@@ -38,7 +38,7 @@ services:
 
   erigon-seqsender:
     container_name: erigon-seqsender
-    image: zkevm-seqsender
+    image: zjg555543/zkevm-seqsender:872299a
     volumes:
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore

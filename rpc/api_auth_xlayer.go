@@ -95,8 +95,8 @@ func setApiAuth(cfg string) {
 
 }
 
-// check returns the API key authentication check result
-func check(key string) error {
+// checkAuthKey checks the API authentication key
+func checkAuthKey(key string) error {
 	gApikeyAuthMap.RLock()
 	defer gApikeyAuthMap.RUnlock()
 
@@ -116,7 +116,7 @@ func check(key string) error {
 func apiAuthHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if gApikeyAuthMap.Enable {
-			if er := check(path.Base(r.URL.Path)); er != nil {
+			if er := checkAuthKey(path.Base(r.URL.Path)); er != nil {
 				err := handleNoAuthErr(w, er)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)

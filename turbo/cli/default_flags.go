@@ -223,6 +223,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.PoolManagerUrl,
 	&utils.DisableVirtualCounters,
 	&utils.DAUrl,
+
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
 	&utils.TxPoolPackBatchSpecialList,

@@ -32,8 +32,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ledgerwatch/erigon/rlp"
-
 	"github.com/VictoriaMetrics/metrics"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
@@ -41,7 +39,6 @@ import (
 	"github.com/google/btree"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
-	core_types "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
@@ -149,10 +146,11 @@ const (
 	SenderDisallowedSendTx DiscardReason = 25 // sender is not allowed to send transactions by ACL policy
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 
-	ReceiverDisallowedReceiveTx DiscardReason = 127 // XLayer receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 128 // XLayer the transaction is sent by a no whitelisted account
-
 	DiscardByLimbo DiscardReason = 27
+
+	// For X Layer
+	ReceiverDisallowedReceiveTx DiscardReason = 127 // receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 128 // the transaction is sent by a non-whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -795,15 +793,9 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
-		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
-		if err == nil {
-			to := txnDec.GetTo()
-			if p.checkBlockedAddr(*to) {
-				log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
-				return ReceiverDisallowedReceiveTx
-			}
-		} else {
-			log.Error(fmt.Sprintf("DecodeTransaction error: %v, rlp=%s", err, hex.EncodeToString(txn.Rlp)))
+		if p.checkBlockedAddr(txn.To) {
+			log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
+			return ReceiverDisallowedReceiveTx
 		}
 	}
 
@@ -1086,7 +1078,8 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
-	// XLayer Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
+	// For X Layer
+	// Discard a metaTx from the best pending pool if it has overflow the zk-counters during execution
 	// We must delete them and re-tag the related transactions before transaction sort
 	for _, tx := range p.overflowZkCounters {
 		pending.Remove(tx)

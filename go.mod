@@ -39,7 +39,7 @@ require (
 	github.com/emicklei/dot v1.0.0
 	github.com/emirpasic/gods v1.18.1
 	github.com/fjl/gencodec v0.0.0-20220412091415-8bb9e558978c
-	github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240415152010-66aa405ca33f
+	github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240731131132-b59db2f72b04
 	github.com/gateway-fm/vectorized-poseidon-gold v1.0.0
 	github.com/gballet/go-verkle v0.0.0-20221121182333-31427a1f2d35
 	github.com/go-stack/stack v1.8.1
@@ -68,6 +68,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/maticnetwork/crand v1.0.2
 	github.com/maticnetwork/polyproto v0.0.2
+	github.com/mitchellh/copystructure v1.2.0
 	github.com/multiformats/go-multiaddr v0.8.0
 	github.com/nsf/jsondiff v0.0.0-20230430225905-43f6cf3098c1
 	github.com/nxadm/tail v1.4.9-0.20211216163028-4472660a31a6
@@ -76,6 +77,8 @@ require (
 	github.com/pelletier/go-toml/v2 v2.1.0
 	github.com/pion/stun v0.4.0
 	github.com/prometheus/client_golang v1.15.1
+	github.com/prometheus/client_model v0.4.0
+	github.com/prometheus/common v0.44.0
 	github.com/protolambda/eth2-shuffle v1.1.0
 	github.com/protolambda/ztyp v0.2.2
 	github.com/prysmaticlabs/go-bitfield v0.0.0-20210809151128-385d8c5e3fb7
@@ -84,6 +87,7 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/segmentio/kafka-go v0.4.47
 	github.com/shirou/gopsutil/v3 v3.23.2
+	github.com/spf13/afero v1.10.0
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	github.com/status-im/keycard-go v0.2.0
@@ -214,6 +218,7 @@ require (
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
@@ -251,8 +256,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
-	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/quic-go/qtls-go1-19 v0.2.1 // indirect
@@ -266,7 +269,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
-	github.com/spf13/afero v1.10.0 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/viper v1.16.0 // indirect

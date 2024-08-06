@@ -47,6 +47,7 @@ STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
 .PHONY: run
 run: ## Runs a full node
+	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
 	$(RUN_DOCKER_POOL_DB)
@@ -54,25 +55,23 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR_DB)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+
+	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
 	sleep 3
-	$(RUN_DOCKER_PROVER)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 3
-	$(RUN_DOCKER_APPROVE)
-	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 10
 	#$(RUN_DOCKER_SIGNER)
 	$(RUN_DOCKER_SEQ_SENDER)
-	sleep 3
 	$(RUN_DOCKER_AGGREGATOR)
-	sleep 3
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
 
 .PHONY: all
 all: ## Runs a full node
+	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
 	$(RUN_DOCKER_POOL_DB)
@@ -84,23 +83,20 @@ all: ## Runs a full node
 	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+
+	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 3
-	$(RUN_DOCKER_PROVER)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 3
-	$(RUN_DOCKER_APPROVE)
-	sleep 3
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 10
 	#$(RUN_DOCKER_SIGNER)
 	$(RUN_DOCKER_SEQ_SENDER)
-	sleep 3
 	$(RUN_DOCKER_AGGREGATOR)
+	$(RUN_DOCKER_POOL_MANAGER)
+	$(RUN_DOCKER_RPC)
 
+	# bridge services
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3

@@ -20,6 +20,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
+	"github.com/ledgerwatch/erigon/zk/seqlog"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
@@ -276,9 +277,6 @@ func SpawnSequencingStage(
 
 	var block *types.Block
 	for blockNumber := executionAt + 1; runLoopBlocks; blockNumber++ {
-
-		log.Info(fmt.Sprintf("[%s] Starting new block for loop, block %s", logPrefix, blockNumber))
-
 		if l1Recovery {
 			decodedBlocksIndex := blockNumber - (executionAt + 1)
 			if decodedBlocksIndex == decodedBlocksSize {
@@ -298,6 +296,8 @@ func SpawnSequencingStage(
 		}
 
 		log.Info(fmt.Sprintf("[%s] Starting block %d (forkid %v)...", logPrefix, blockNumber, forkId))
+		seqlog.GetBlockLogger().SetBlockNum(blockNumber)
+		blockStart := time.Now()
 
 		lastStartedBn = blockNumber
 
@@ -324,7 +324,10 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
+
+		log.Info(fmt.Sprintf("isAnyRecovery = %b, overflowOnNewBlock = %b", isAnyRecovery, overflowOnNewBlock))
 		if !isAnyRecovery && overflowOnNewBlock {
+			log.Info("closeReason: BatchOverflow")
 			break
 		}
 
@@ -356,6 +359,8 @@ func SpawnSequencingStage(
 		if !isAnyRecovery {
 			log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
 		}
+		addTxsStart := time.Now()
+		blockCloseReason := ""
 
 		// we don't care about defer order here we just need to make sure the tickers are stopped to
 		// avoid a leak
@@ -376,10 +381,12 @@ func SpawnSequencingStage(
 				}
 			case <-blockTicker.C:
 				if !isAnyRecovery {
+					blockCloseReason = "blockTickerTimeOut"
 					break LOOP_TRANSACTIONS
 				}
 			case <-batchTicker.C:
 				if !isAnyRecovery {
+					log.Info("closeReason: BatchTimeOut")
 					runLoopBlocks = false
 					break LOOP_TRANSACTIONS
 				}
@@ -398,7 +405,6 @@ func SpawnSequencingStage(
 					}
 					cfg.txPool.UnlockFlusher()
 				} else if !l1Recovery {
-					log.Info(fmt.Sprintf("[%s] getNextPoolTransactions Started", logPrefix))
 					cfg.txPool.LockFlusher()
 					blockTransactions, err = getNextPoolTransactions(ctx, cfg, executionAt, forkId, yielded)
 					if err != nil {
@@ -416,7 +422,6 @@ func SpawnSequencingStage(
 
 				var receipt *types.Receipt
 				var execResult *core.ExecutionResult
-				log.Info(fmt.Sprintf("[%s] attemptAddTransaction Started", logPrefix))
 				for i, transaction := range blockTransactions {
 					txHash := transaction.Hash()
 
@@ -501,8 +506,12 @@ func SpawnSequencingStage(
 				}
 			}
 		}
+		if blockCloseReason != "" {
+			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitTxsTimeOut, time.Since(addTxsStart))
+		} else {
+			seqlog.GetBlockLogger().AppendStepLog(seqlog.AddTxs, time.Since(addTxsStart))
+		}
 
-		log.Info(fmt.Sprintf("[%s] WriteBlockL1InfoTreeIndex Started", logPrefix))
 		if err = sdb.hermezDb.WriteBlockL1InfoTreeIndex(blockNumber, l1TreeUpdateIndex); err != nil {
 			return err
 		}
@@ -511,7 +520,6 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
-		log.Info(fmt.Sprintf("[%s] doFinishBlockAndUpdateState Ended", logPrefix))
 		t.LogTimer()
 		gasPerSecond := float64(0)
 		elapsedSeconds := t.Elapsed().Seconds()
@@ -533,6 +541,10 @@ func SpawnSequencingStage(
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, blockNumber, len(addedTransactions)))
 		}
 
+		BlockTxCount := uint64(len(addedTransactions))
+		seqlog.GetBlockLogger().SetTxCount(BlockTxCount)
+
+		commit2DBStart := time.Now()
 		if !hasExecutorForThisBatch {
 			// save counters midbatch
 			// here they shouldn't add more to counters other than what they already have
@@ -567,6 +579,9 @@ func SpawnSequencingStage(
 
 			lastBatch = thisBatch
 		}
+		seqlog.GetBlockLogger().AppendStepLog(seqlog.Save2DB, time.Since(commit2DBStart))
+		seqlog.GetBlockLogger().SetTotalDuration(time.Since(blockStart))
+		log.Info(seqlog.GetBlockLogger().PrintLogAndFlush())
 	}
 
 	l1InfoIndex, err := sdb.hermezDb.GetBlockL1InfoTreeIndex(lastStartedBn)

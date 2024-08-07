@@ -258,5 +258,5 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolBlockedList,
 	&utils.SequencerBatchSleepDuration,
 	&utils.TxPoolOkPayAccountList,
-	&utils.TxPoolOkPayGasLimitPercentage,
+	&utils.TxPoolOkPayGasLimitPerBlock,
 }

@@ -387,13 +387,13 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		limbo:                   newLimbo(),
 		// X Layer config
 		xlayerCfg: XLayerConfig{
-			EnableWhitelist:         ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:               ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:             ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddrs:       ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
-			GasPriceMultiple:        ethCfg.DeprecatedTxPool.GasPriceMultiple,
-			OkPayAccountList:        ethCfg.DeprecatedTxPool.OkPayAccountList,
-			OkPayGasLimitPercentage: ethCfg.DeprecatedTxPool.OkPayGasLimitPercentage,
+			EnableWhitelist:       ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:             ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:           ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs:     ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:      ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			OkPayAccountList:      ethCfg.DeprecatedTxPool.OkPayAccountList,
+			OkPayGasLimitPerBlock: ethCfg.DeprecatedTxPool.OkPayGasLimitPerBlock,
 		},
 	}, nil
 }

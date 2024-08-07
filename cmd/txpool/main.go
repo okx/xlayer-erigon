@@ -57,13 +57,13 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList         bool
-	whiteList               []string
-	blockList               []string
-	freeClaimGasAddrs       []string
-	gasPriceMultiple        uint64
-	okPayAccountList        []string
-	okPayGasLimitPercentage uint64
+	enableWhiteList       bool
+	whiteList             []string
+	blockList             []string
+	freeClaimGasAddrs     []string
+	gasPriceMultiple      uint64
+	okPayAccountList      []string
+	okPayGasLimitPerBlock uint64
 )
 
 func init() {
@@ -93,7 +93,7 @@ func init() {
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, ethconfig.DeprecatedDefaultTxPoolConfig.EnableWhitelist, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.WhiteList, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.BlockedList, utils.TxPoolBlockedList.Usage)
-	rootCmd.Flags().Uint64Var(&okPayGasLimitPercentage, utils.TxPoolOkPayGasLimitPercentage.Name, 50, utils.TxPoolOkPayGasLimitPercentage.Usage)
+	rootCmd.Flags().Uint64Var(&okPayGasLimitPerBlock, utils.TxPoolOkPayGasLimitPerBlock.Name, 0, utils.TxPoolOkPayGasLimitPerBlock.Usage)
 	rootCmd.Flags().StringSliceVar(&okPayAccountList, utils.TxPoolOkPayAccountList.Name, []string{}, utils.TxPoolOkPayAccountList.Usage)
 }
 
@@ -196,10 +196,7 @@ func doTxpool(ctx context.Context) error {
 		addr := common.HexToAddress(addrHex)
 		ethCfg.DeprecatedTxPool.OkPayAccountList[i] = addr.String()
 	}
-	if okPayGasLimitPercentage > 100 {
-		okPayGasLimitPercentage = 100
-	}
-	ethCfg.DeprecatedTxPool.OkPayGasLimitPercentage = okPayGasLimitPercentage
+	ethCfg.DeprecatedTxPool.OkPayGasLimitPerBlock = okPayGasLimitPerBlock
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)

@@ -25,8 +25,8 @@ type XLayerConfig struct {
 	GasPriceMultiple uint64
 	// okPayAccountList is the ok pay bundler accounts address
 	OkPayAccountList []string
-	// okPayGasLimitPercentage is the percentage of block max gas limit
-	OkPayGasLimitPercentage uint64
+	// OkPayGasLimitPerBlock is the block max gas limit for ok pay tx
+	OkPayGasLimitPerBlock uint64
 }
 
 type GPCache interface {

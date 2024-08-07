@@ -35,7 +35,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 
 	// Get L2 coin price
 	l2CoinPrice := f.ratePrc.GetL2CoinPrice()
-	if l2CoinPrice < MinUSDTPrice {
+	if l2CoinPrice < minUSDTPrice {
 		log.Warn("update gas price average failed, the L2 native coin price is too small")
 		return
 	}

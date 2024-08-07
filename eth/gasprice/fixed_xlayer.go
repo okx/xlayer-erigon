@@ -21,9 +21,10 @@ type FixedGasPrice struct {
 // newFixedGasPriceSuggester inits l2 fixed price suggester.
 func newFixedGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *FixedGasPrice {
 	gps := &FixedGasPrice{
-		cfg:     cfg,
-		ctx:     ctx,
-		ratePrc: newKafkaProcessor(cfg.XLayer, ctx),
+		cfg:       cfg,
+		ctx:       ctx,
+		lastRawGP: new(big.Int).Set(cfg.Default),
+		ratePrc:   newKafkaProcessor(cfg.XLayer, ctx),
 	}
 	return gps
 }

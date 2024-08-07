@@ -23,7 +23,7 @@ func newFollowerGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *
 	return &FollowerGasPrice{
 		cfg:       cfg,
 		ctx:       ctx,
-		lastRawGP: new(big.Int).SetUint64(1),
+		lastRawGP: new(big.Int).Set(cfg.Default),
 		kafkaPrc:  newKafkaProcessor(cfg.XLayer, ctx),
 	}
 }

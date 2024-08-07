@@ -148,11 +148,6 @@ var (
 		Usage: "raw gas price usdt",
 		Value: 0,
 	}
-	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
-		Name:  "gpo.enable-follower-adjust",
-		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
-		Value: true,
-	}
 	GpoCongestionThresholdFlag = cli.IntFlag{
 		Name:  "gpo.congestion-threshold",
 		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
@@ -234,9 +229,6 @@ func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	}
 	if ctx.IsSet(GpoGasPriceUsdtFlag.Name) {
 		cfg.XLayer.GasPriceUsdt = ctx.Float64(GpoGasPriceUsdtFlag.Name)
-	}
-	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
-		cfg.XLayer.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
 	}
 	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
 		cfg.XLayer.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)

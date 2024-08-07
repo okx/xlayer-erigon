@@ -32,15 +32,19 @@ func newFixedGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *Fix
 func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	//todo:apollo
 
+	// Get L2 coin price
 	l2CoinPrice := f.ratePrc.GetL2CoinPrice()
-	if l2CoinPrice < minCoinPrice {
-		log.Warn("the L2 native coin price too small...")
+	if l2CoinPrice < MinUSDTPrice {
+		log.Warn("update gas price average failed, the L2 native coin price is too small")
 		return
 	}
-	res := new(big.Float).Mul(big.NewFloat(0).SetFloat64(f.cfg.XLayer.GasPriceUsdt/l2CoinPrice), big.NewFloat(0).SetFloat64(OKBWei))
-	// Store l2 gasPrice calculated
-	result := new(big.Int)
-	res.Int(result)
+
+	// Convert fixed gas price in USDT to OKB
+	res := big.NewFloat(0).SetFloat64(f.cfg.XLayer.GasPriceUsdt / l2CoinPrice)
+	// Convert fixed gas price to OKBWei
+	result := OKBToOKBWei(res)
+
+	// Check for min/max L2 gasPrice
 	minGasPrice := new(big.Int).Set(f.cfg.Default)
 	if minGasPrice.Cmp(result) == 1 { // minGasPrice > result
 		log.Warn(fmt.Sprintf("setting DefaultGasPrice for L2: %s", f.cfg.Default.String()))
@@ -65,6 +69,8 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	} else {
 		truncateValue = result
 	}
+
+	// Cache L2 gasPrice calculated
 	log.Debug(fmt.Sprintf("Storing truncated L2 gas price: %s, L2 native coin price: %g.", truncateValue.String(), l2CoinPrice))
 	if truncateValue != nil {
 		log.Info(fmt.Sprintf("Set l2 raw gas price: %d", truncateValue.Uint64()))

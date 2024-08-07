@@ -704,11 +704,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	defer tx.Rollback()
 
 	// create buckets
-	if err := hermez_db.CreateHermezBuckets(tx); err != nil {
-		return nil, err
-	}
-
-	if err := db.CreateEriDbBuckets(tx); err != nil {
+	if err := createBuckets(tx); err != nil {
 		return nil, err
 	}
 
@@ -802,6 +798,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		}
 
 		seqVerSyncer := syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			seqAndVerifL1Contracts,
 			seqAndVerifTopics,
@@ -811,6 +808,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		)
 
 		backend.l1Syncer = syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			l1Contracts,
 			l1Topics,
@@ -820,6 +818,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		)
 
 		l1InfoTreeSyncer := syncer.NewL1Syncer(
+			ctx,
 			ethermanClients,
 			[]libcommon.Address{cfg.AddressGerManager},
 			[][]libcommon.Hash{{contracts.UpdateL1InfoTreeTopic}},
@@ -872,7 +871,14 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			// we switch context from being an RPC node to a sequencer
 			backend.txPool2.ForceUpdateLatestBlock(executionProgress)
 
+			// we need to start the pool before stage loop itself
+			// the pool holds the info about how execution stage should work - as regular or as limbo recovery
+			if err := backend.txPool2.StartIfNotStarted(ctx, backend.txPool2DB, tx); err != nil {
+				return nil, err
+			}
+
 			l1BlockSyncer := syncer.NewL1Syncer(
+				ctx,
 				ethermanClients,
 				[]libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup},
 				[][]libcommon.Hash{{
@@ -955,6 +961,22 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	return backend, nil
+}
+
+func createBuckets(tx kv.RwTx) error {
+	if err := hermez_db.CreateHermezBuckets(tx); err != nil {
+		return err
+	}
+
+	if err := db.CreateEriDbBuckets(tx); err != nil {
+		return err
+	}
+
+	if err := txpool.CreateTxPoolBuckets(tx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // creates an EtherMan instance with default parameters
@@ -1088,7 +1110,7 @@ func (s *Ethereum) PreStart() error {
 		// so here we loop and take a brief pause waiting for it to be ready
 		attempts := 0
 		for {
-			_, err = zkStages.CatchupDatastream("stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
+			_, err = zkStages.CatchupDatastream(s.sentryCtx, "stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
 			if err != nil {
 				if errors.Is(err, datastreamer.ErrAtomicOpNotAllowed) {
 					attempts++

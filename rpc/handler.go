@@ -177,7 +177,7 @@ func (h *handler) handleBatch(msgs []*jsonrpcMessage) {
 					<-boundedConcurrency
 				}()
 				// For X Layer
-				if !apikeyMethodRateLimitAllow(h.ApiKey, calls[i].Method) || !methodRateLimitAllow(calls[i].Method) {
+				if !checkApikeyMethodRateLimit(h.ApiKey, calls[i].Method) || !checkMethodRateLimit(calls[i].Method) {
 					answersWithNils[i] = errorMessage(fmt.Errorf("method rate limit exceeded"))
 					return
 				}
@@ -222,7 +222,7 @@ func (h *handler) handleMsg(msg *jsonrpcMessage, stream *jsoniter.Stream) {
 	}
 	h.startCallProc(func(cp *callProc) {
 		// For X Layer
-		if !apikeyMethodRateLimitAllow(h.ApiKey, msg.Method) || !methodRateLimitAllow(msg.Method) {
+		if !checkApikeyMethodRateLimit(h.ApiKey, msg.Method) || !checkMethodRateLimit(msg.Method) {
 			h.conn.writeJSON(cp.ctx, errorMessage(fmt.Errorf("rate limit exceeded")))
 			return
 		}

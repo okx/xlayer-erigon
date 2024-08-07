@@ -57,7 +57,7 @@ func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }
 
-func (p *TxPool) checkFreeGasExAddress(senderID uint64) bool {
+func (p *TxPool) checkFreeGasExAddr(senderID uint64) bool {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false
@@ -80,6 +80,6 @@ func (p *TxPool) checkFreeGasAddr(senderID uint64) (bool, bool) {
 			return true, true
 		}
 	}
-	free := p.freeGasAddress[addr.String()]
+	free := p.freeGasAddrs[addr.String()]
 	return free, false
 }

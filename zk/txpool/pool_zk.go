@@ -70,23 +70,23 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			return true
 		}
 		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
-		if p.checkFreeGasExAddress(senderID) {
+		if p.checkFreeGasExAddr(senderID) {
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
 			if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
 				addrHex := "0x" + inputHex[10:74]
-				p.freeGasAddress[addrHex] = true
+				p.freeGasAddrs[addrHex] = true
 			} else {
 				txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(mt.Tx.Rlp), uint64(len(mt.Tx.Rlp))))
 				to := txnDec.GetTo()
 				if err == nil && to != nil {
-					p.freeGasAddress[to.Hex()] = true
+					p.freeGasAddrs[to.Hex()] = true
 				}
 
 			}
 		} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
 			addrHex := "0x" + inputHex[4490:4554]
-			p.freeGasAddress[addrHex] = true
+			p.freeGasAddrs[addrHex] = true
 		}
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
 			*minFeeCap = mt.Tx.FeeCap

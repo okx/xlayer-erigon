@@ -451,7 +451,7 @@ func executeBlockZk(
 		}
 	}
 
-	// XLayer inner tx
+	// For X Layer
 	if writeInnerTxs {
 		if err := hermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
 			return nil, err

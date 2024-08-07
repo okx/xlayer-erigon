@@ -170,6 +170,11 @@ var (
 		Value: false,
 	}
 	// RPC
+	RpcBatchEnabled = cli.BoolFlag{
+		Name:  "rpc.batch.enabled",
+		Usage: "Enable batches request",
+		Value: false,
+	}
 	HTTPApiKeysFlag = cli.StringFlag{
 		Name: "http.apikeys",
 		Usage: `API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: 

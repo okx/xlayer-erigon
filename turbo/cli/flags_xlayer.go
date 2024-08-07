@@ -27,6 +27,7 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 }
 
 func ApplyFlagsForNodeXLayerConfig(ctx *cli.Context, cfg *nodecfg.Config) {
+	cfg.Http.BatchEnabled = ctx.Bool(utils.RpcBatchEnabled.Name)
 	cfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
 	cfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
 }

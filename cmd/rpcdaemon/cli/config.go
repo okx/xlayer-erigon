@@ -517,6 +517,8 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	}
 	srv.SetAllowList(allowListForRPC)
 
+	// For X Layer
+	srv.SetBatchEnabled(cfg.BatchEnabled)
 	srv.SetBatchLimit(cfg.BatchLimit)
 
 	var defaultAPIList []rpc.API

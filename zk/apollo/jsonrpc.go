@@ -72,6 +72,9 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	if ctx.IsSet(utils.RpcBatchConcurrencyFlag.Name) {
 		nodeCfg.Http.RpcBatchConcurrency = ctx.Uint(utils.RpcBatchConcurrencyFlag.Name)
 	}
+	if ctx.IsSet(utils.RpcBatchEnabled.Name) {
+		nodeCfg.Http.BatchEnabled = ctx.Bool(utils.RpcBatchEnabled.Name)
+	}
 	if ctx.IsSet(utils.RpcBatchLimit.Name) {
 		nodeCfg.Http.BatchLimit = ctx.Int(utils.RpcBatchLimit.Name)
 	}

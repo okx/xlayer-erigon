@@ -54,6 +54,9 @@ type Server struct {
 	disableStreaming bool
 	traceRequests    bool // Whether to print requests at INFO level
 	batchLimit       int  // Maximum number of requests in a batch
+
+	// For X Layer
+	batchEnabled bool
 }
 
 // NewServer creates a new server instance with no registered handlers.
@@ -133,8 +136,12 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec, stre
 		return
 	}
 	if batch {
-		if s.batchLimit > 0 && len(reqs) > s.batchLimit {
-			codec.writeJSON(ctx, errorMessage(fmt.Errorf("batch limit %d exceeded (can increase by --rpc.batch.limit). Requested batch of size: %d", s.batchLimit, len(reqs))))
+		// For X Layer
+		batchEnabled, batchLimit := s.getBatchReqLimitXLayer()
+		if batchEnabled {
+			codec.writeJSON(ctx, errorMessage(fmt.Errorf("batch requests are disabled")))
+		} else if batchLimit > 0 && len(reqs) > batchLimit {
+			codec.writeJSON(ctx, errorMessage(fmt.Errorf("batch limit %d exceeded (can increase by --rpc.batch.limit). Requested batch of size: %d", batchLimit, len(reqs))))
 		} else {
 			h.handleBatch(reqs)
 		}

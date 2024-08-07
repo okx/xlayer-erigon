@@ -3,8 +3,6 @@ package vm
 import (
 	"math/big"
 
-	"encoding/hex"
-
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common"
@@ -64,16 +62,9 @@ func opExtCodeHash_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeCo
 
 func opBlockhash_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	num := scope.Stack.Peek()
-	num64, overflow := num.Uint64WithOverflow()
-	if overflow {
-		num.Clear()
-		return nil, nil
-	}
 
 	ibs := interpreter.evm.IntraBlockState()
-	hash := ibs.GetBlockStateRoot(num64)
-
-	num.SetFromBig(hash.Big())
+	num.Set(ibs.GetBlockStateRoot(num))
 
 	return nil, nil
 }
@@ -176,47 +167,6 @@ func makeLog_zkevm(size int, logIndexPerTx bool) executionFunc {
 
 		d := scope.Memory.GetCopy(int64(mStart.Uint64()), int64(mSize.Uint64()))
 
-		forkBlock := uint64(0)
-		if interpreter.evm.ChainConfig().ForkID88ElderberryBlock != nil {
-			forkBlock = interpreter.VM.evm.ChainConfig().ForkID88ElderberryBlock.Uint64()
-		}
-		blockNo := interpreter.VM.evm.Context().BlockNumber
-
-		// [hack] APPLY BUG ONLY ABOVE FORKID9
-		if forkBlock == 0 || blockNo < forkBlock {
-			// [zkEvm] fill 0 at the end
-			dataLen := len(d)
-			lenMod32 := dataLen & 31
-			if lenMod32 != 0 {
-				d = append(d, make([]byte, 32-lenMod32)...)
-			}
-		} else {
-			// bug start
-			/*
-			  \  /
-			 (o)(o)
-			 /    \
-			 \    /
-			  \  /
-			   \/
-			*/
-			var err error
-
-			d, err = applyHexPadBug(d, int(mSize.Uint64()), blockNo)
-			if err != nil {
-				return nil, err
-			}
-			/*
-			  \  /
-			 (o)(o)
-			 /    \
-			 \    /
-			  \  /
-			   \/
-			*/
-			// bug end
-		}
-
 		log := types.Log{
 			Address: scope.Contract.Address(),
 			Topics:  topics,
@@ -233,86 +183,6 @@ func makeLog_zkevm(size int, logIndexPerTx bool) executionFunc {
 
 		return nil, nil
 	}
-}
-
-func applyHexPadBug(d []byte, msInt int, blockNo uint64) ([]byte, error) {
-	fullMs := msInt
-
-	var dLastWord []byte
-	if len(d) <= 32 {
-		dLastWord = append(d, make([]byte, 32-len(d))...)
-		d = []byte{}
-	} else {
-		dLastWord, msInt = getLastWordBytes(d, fullMs)
-		d = d[:len(d)-len(dLastWord)]
-	}
-
-	dataHex := hex.EncodeToString(dLastWord)
-
-	dataHex = appendZeros(dataHex, 64)
-
-	for len(dataHex) > 0 && dataHex[0] == '0' {
-		dataHex = dataHex[1:]
-	}
-
-	if len(dataHex) < msInt*2 {
-		dataHex = prependZeros(dataHex, msInt*2)
-	}
-	outputStr := takeFirstN(dataHex, msInt*2)
-
-	op, err := hex.DecodeString(outputStr)
-	if err != nil {
-		return nil, err
-	}
-	d = append(d, op...)
-
-	d = d[:fullMs]
-
-	return d, nil
-}
-
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func getLastWordBytes(data []byte, originalMsInt int) ([]byte, int) {
-	wordLength := 32
-	dataLength := len(data)
-
-	remainderLength := dataLength % wordLength
-	if remainderLength == 0 {
-		return data[dataLength-wordLength:], 32
-	}
-
-	toRemove := dataLength / wordLength
-
-	msInt := originalMsInt - (toRemove * wordLength)
-
-	return data[dataLength-remainderLength:], msInt
-}
-
-func prependZeros(data string, size int) string {
-	for len(data) < size {
-		data = "0" + data
-	}
-	return data
-}
-
-func takeFirstN(data string, n int) string {
-	if len(data) < n {
-		return data
-	}
-	return data[:n]
-}
-
-func appendZeros(dataHex string, targetLength int) string {
-	for len(dataHex) < targetLength {
-		dataHex += "0"
-	}
-	return dataHex
 }
 
 func opCreate_zkevm(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {

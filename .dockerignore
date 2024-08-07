@@ -8,3 +8,5 @@ build
 tests/testdata
 cmd/prometheus
 vendor
+
+cache.db

@@ -474,11 +474,6 @@ var (
 		Usage: "Regenerate the SMT in memory (requires a lot of RAM for most chains)",
 		Value: false,
 	}
-	SequencerInitialForkId = cli.Uint64Flag{
-		Name:  "zkevm.sequencer-initial-fork-id",
-		Usage: "The initial fork id to launch the sequencer with",
-		Value: 8,
-	}
 	SequencerBlockSealTime = cli.StringFlag{
 		Name:  "zkevm.sequencer-block-seal-time",
 		Usage: "Block seal time. Defaults to 6s",
@@ -493,6 +488,11 @@ var (
 		Name:  "zkevm.sequencer-non-empty-batch-seal-time",
 		Usage: "Batch seal time. Defaults to 3s",
 		Value: "3s",
+	}
+	SequencerHaltOnBatchNumber = cli.Uint64Flag{
+		Name:  "zkevm.sequencer-halt-on-batch-number",
+		Usage: "Halt the sequencer on this batch number",
+		Value: 0,
 	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",
@@ -513,6 +513,12 @@ var (
 		Name:  "zkevm.datastream-new-block-timeout",
 		Usage: "The timeout for the executor request",
 		Value: 500 * time.Millisecond,
+	}
+
+	WitnessMemdbSize = DatasizeFlag{
+		Name:  "zkevm.witness-memdb-size",
+		Usage: "A size of the memdb used on witness generation in format \"2GB\". Might fail generation for older batches if not enough for the unwind.",
+		Value: datasizeFlagValue(2 * datasize.GB),
 	}
 	ExecutorMaxConcurrentRequests = cli.IntFlag{
 		Name:  "zkevm.executor-max-concurrent-requests",
@@ -538,6 +544,16 @@ var (
 		Name:  "zkevm.data-stream-host",
 		Usage: "Define the host used for the zkevm data stream",
 		Value: "",
+	}
+	DataStreamWriteTimeout = cli.DurationFlag{
+		Name:  "zkevm.data-stream-writeTimeout",
+		Usage: "Define the TCP write timeout when sending data to a datastream client",
+		Value: 5 * time.Second,
+	}
+	Limbo = cli.BoolFlag{
+		Name:  "zkevm.limbo",
+		Usage: "Enable limbo processing on batches that failed verification",
+		Value: false,
 	}
 	AllowFreeTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-free-transactions",
@@ -618,6 +634,11 @@ var (
 		Name:  "zkevm.da-url",
 		Usage: "The URL of the data availability service",
 		Value: "",
+	}	
+	DebugTimers = cli.BoolFlag{
+		Name:  "debug.timers",
+		Usage: "Enable debug timers",
+		Value: false,
 	}
 	AllowInternalTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-internal-transactions",
@@ -1067,6 +1088,11 @@ var (
 		Name:  "sentinel.port",
 		Usage: "Port for sentinel",
 		Value: 7777,
+	}
+	YieldSizeFlag = cli.Uint64Flag{
+		Name:  "yieldsize",
+		Usage: "transaction count fetched from txpool each time",
+		Value: 1000,
 	}
 )
 
@@ -1811,6 +1837,7 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *nodecfg.Config, cfg *ethconfig.C
 	setTxPool(ctx, &cfg.DeprecatedTxPool)
 	cfg.TxPool = ethconfig.DefaultTxPool2Config(cfg.DeprecatedTxPool)
 	cfg.TxPool.DBDir = nodeConfig.Dirs.TxPool
+	cfg.YieldSize = ctx.Uint64(YieldSizeFlag.Name)
 
 	setEthash(ctx, nodeConfig.Dirs.DataDir, cfg)
 	setClique(ctx, &cfg.Clique, nodeConfig.Dirs.DataDir)

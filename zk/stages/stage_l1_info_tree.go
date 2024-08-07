@@ -38,7 +38,6 @@ func SpawnL1InfoTreeStage(
 	tx kv.RwTx,
 	cfg L1InfoTreeCfg,
 	ctx context.Context,
-	initialCycle bool,
 	quiet bool,
 ) (err error) {
 	logPrefix := s.LogPrefix()
@@ -64,7 +63,7 @@ func SpawnL1InfoTreeStage(
 		progress = cfg.zkCfg.L1FirstBlock - 1
 	}
 
-	latestUpdate, found, err := hermezDb.GetLatestL1InfoTreeUpdate()
+	latestUpdate, _, err := hermezDb.GetLatestL1InfoTreeUpdate()
 	if err != nil {
 		return err
 	}
@@ -89,6 +88,7 @@ LOOP:
 			if !cfg.syncer.IsDownloading() {
 				break LOOP
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
@@ -113,9 +113,10 @@ LOOP:
 	defer ticker.Stop()
 	processed := 0
 
-	var tree *l1infotree.L1InfoTree
-	var allLeaves [][32]byte
-	treeInitialised := false
+	tree, err := initialiseL1InfoTree(hermezDb)
+	if err != nil {
+		return err
+	}
 
 	// process the logs in chunks
 	for _, chunk := range chunks {
@@ -131,34 +132,33 @@ LOOP:
 		}
 
 		for _, l := range chunk {
-			header := headersMap[l.BlockNumber]
 			switch l.Topics[0] {
 			case contracts.UpdateL1InfoTreeTopic:
-				if !treeInitialised {
-					tree, allLeaves, err = initialiseL1InfoTree(hermezDb)
+				header := headersMap[l.BlockNumber]
+				if header == nil {
+					header, err = cfg.syncer.GetHeader(l.BlockNumber)
 					if err != nil {
 						return err
 					}
-					treeInitialised = true
 				}
 
-				latestUpdate, err = HandleL1InfoTreeUpdate(cfg.syncer, hermezDb, l, latestUpdate, found, header)
-				if err != nil {
-					return err
-				}
-				found = true
-
-				leafHash := l1infotree.HashLeafData(latestUpdate.GER, latestUpdate.ParentHash, latestUpdate.Timestamp)
-
-				err = hermezDb.WriteL1InfoTreeLeaf(latestUpdate.Index, leafHash)
+				tmpUpdate, err := CreateL1InfoTreeUpdate(l, header)
 				if err != nil {
 					return err
 				}
 
-				// we do not want to add index 0 to the tree
-				allLeaves = append(allLeaves, leafHash)
+				leafHash := l1infotree.HashLeafData(tmpUpdate.GER, tmpUpdate.ParentHash, tmpUpdate.Timestamp)
+				if tree.LeafExists(leafHash) {
+					log.Warn("Skipping log as L1 Info Tree leaf already exists", "hash", leafHash)
+					continue
+				}
 
-				newRoot, err := tree.BuildL1InfoRoot(allLeaves)
+				if latestUpdate != nil {
+					tmpUpdate.Index = latestUpdate.Index + 1
+				} // if latestUpdate is nil then Index = 0 which is the default value so no need to set it
+				latestUpdate = tmpUpdate
+
+				newRoot, err := tree.AddLeaf(uint32(latestUpdate.Index), leafHash)
 				if err != nil {
 					return err
 				}
@@ -171,8 +171,13 @@ LOOP:
 					"parent", latestUpdate.ParentHash.String(),
 				)
 
-				err = hermezDb.WriteL1InfoTreeRoot(common.BytesToHash(newRoot[:]), latestUpdate.Index)
-				if err != nil {
+				if err = HandleL1InfoTreeUpdate(hermezDb, latestUpdate); err != nil {
+					return err
+				}
+				if err = hermezDb.WriteL1InfoTreeLeaf(latestUpdate.Index, leafHash); err != nil {
+					return err
+				}
+				if err = hermezDb.WriteL1InfoTreeRoot(common.BytesToHash(newRoot[:]), latestUpdate.Index); err != nil {
 					return err
 				}
 
@@ -217,10 +222,10 @@ func chunkLogs(slice []types.Log, chunkSize int) [][]types.Log {
 	return chunks
 }
 
-func initialiseL1InfoTree(hermezDb *hermez_db.HermezDb) (*l1infotree.L1InfoTree, [][32]byte, error) {
+func initialiseL1InfoTree(hermezDb *hermez_db.HermezDb) (*l1infotree.L1InfoTree, error) {
 	leaves, err := hermezDb.GetAllL1InfoTreeLeaves()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	allLeaves := make([][32]byte, len(leaves))
@@ -230,10 +235,10 @@ func initialiseL1InfoTree(hermezDb *hermez_db.HermezDb) (*l1infotree.L1InfoTree,
 
 	tree, err := l1infotree.NewL1InfoTree(32, allLeaves)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return tree, allLeaves, nil
+	return tree, nil
 }
 
 func UnwindL1InfoTreeStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg L1InfoTreeCfg, ctx context.Context) error {

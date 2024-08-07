@@ -16,9 +16,10 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/transactions"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 
+	"errors"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
-	"errors"
 )
 
 type TxInfo struct {
@@ -120,7 +121,7 @@ func (api *ZkEvmAPIImpl) GetL2BlockInfoTree(ctx context.Context, blockNum rpc.Bl
 			return nil, err
 		}
 
-		receipt, execResult, _, err := core.ApplyTransaction_zkevm(chainConfig, api.ethApi._engine, evm, gp, ibs, state.NewNoopWriter(), block.Header(), tx, usedGas, effectiveGasPricePercentage)
+		receipt, execResult, _, err := core.ApplyTransaction_zkevm(chainConfig, api.ethApi._engine, evm, gp, ibs, state.NewNoopWriter(), block.Header(), tx, usedGas, effectiveGasPricePercentage, true)
 		if err != nil {
 			return nil, err
 		}

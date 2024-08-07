@@ -4,16 +4,22 @@ cdk-erigon is a fork of Erigon, currently in Alpha, optimized for syncing with t
 
 ***
 ## Release Roadmap
-- **v0.9.x**: Support for Cardona testnet
-- **v1.x.x**: Support for Mainnet
+- **v1.1.x**: RPC (full support)
+- **v2.x.x**: Sequencer (full support)
 - **v3.x.x**: Erigon 3 based (snapshot support)
 
 ***
 
+## Hardware requirements
+
+* A Linux-based OS (e.g., Ubuntu Server 22.04 LTS).
+* At least 32GB RAM with a 4-core CPU.
+* Both Apple Silicon and AMD64 are supported.
+
 ## Chain/Fork Support
 Current status of cdk-erigon's support for running various chains and fork ids:
 
-- zkEVM Cardona testnet — beta support
+- zkEVM Cardona testnet — full support
 - zkEVM mainnet — beta support
 - CDK Chains - beta support (forkid.9 and above)
 
@@ -186,13 +192,16 @@ Sequencer specific config:
 - `zkevm.executor-urls`: A csv list of the executor URLs.  These will be used in a round robbin fashion by the sequencer
 - `zkevm.executor-strict`: Defaulted to true, but can be set to false when running the sequencer without verifications (use with extreme caution)
 - `zkevm.witness-full`: Defaulted to true.  Controls whether the full or partial witness is used with the executor.
-- `zkevm.sequencer-initial-fork-id`: The fork id to start the network with.
+
+Resource Utilisation config:
+- `zkevm.smt-regenerate-in-memory`: As documented above, allows SMT regeneration in memory if machine has enough RAM, for a speedup in initial sync.
 
 Resource Utilisation config:
 - `zkevm.smt-regenerate-in-memory`: As documented above, allows SMT regeneration in memory if machine has enough RAM, for a speedup in initial sync.
 
 Useful config entries:
 - `zkevm.sync-limit`: This will ensure the network only syncs to a given block height.
+- `debug.timers`: This will enable debug timers in the logs to help with performance tuning. Recording timings of witness generation, etc. at INFO level.
 
 ***
 

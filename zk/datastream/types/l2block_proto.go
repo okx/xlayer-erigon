@@ -1,10 +1,39 @@
 package types
 
 import (
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/zk/datastream/proto/github.com/0xPolygonHermez/zkevm-node/state/datastream"
 	"google.golang.org/protobuf/proto"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 )
+
+type L2BlockEndProto struct {
+	Number uint64
+}
+
+func (b *L2BlockEndProto) Marshal() ([]byte, error) {
+	return proto.Marshal(&datastream.L2BlockEnd{
+		Number: b.Number,
+	})
+}
+
+func (b *L2BlockEndProto) Type() EntryType {
+	return EntryTypeL2BlockEnd
+}
+
+func (b *L2BlockEndProto) GetBlockNumber() uint64 {
+	return b.Number
+}
+
+func UnmarshalL2BlockEnd(data []byte) (*L2BlockEndProto, error) {
+	blockEnd := datastream.L2BlockEnd{}
+	if err := proto.Unmarshal(data, &blockEnd); err != nil {
+		return nil, err
+	}
+
+	return &L2BlockEndProto{
+		Number: blockEnd.Number,
+	}, nil
+}
 
 type L2BlockProto struct {
 	*datastream.L2Block
@@ -19,16 +48,13 @@ type FullL2Block struct {
 	GlobalExitRoot  libcommon.Hash
 	Coinbase        libcommon.Address
 	ForkId          uint64
-	ChainId         uint64
 	L1BlockHash     libcommon.Hash
 	L2Blockhash     libcommon.Hash
-	StateRoot       libcommon.Hash
-	L2Txs           []L2TransactionProto
 	ParentHash      libcommon.Hash
-	BatchEnd        bool
-	LocalExitRoot   libcommon.Hash
+	StateRoot       libcommon.Hash
 	BlockGasLimit   uint64
 	BlockInfoRoot   libcommon.Hash
+	L2Txs           []L2TransactionProto
 	Debug           Debug
 }
 
@@ -56,7 +82,7 @@ func UnmarshalL2Block(data []byte) (*FullL2Block, error) {
 		GlobalExitRoot:  libcommon.BytesToHash(block.GlobalExitRoot),
 		Coinbase:        libcommon.BytesToAddress(block.Coinbase),
 		L1BlockHash:     libcommon.BytesToHash(block.L1Blockhash),
-		L2Blockhash:     libcommon.Hash{},
+		L2Blockhash:     libcommon.BytesToHash(block.Hash),
 		StateRoot:       libcommon.BytesToHash(block.StateRoot),
 		BlockGasLimit:   block.BlockGasLimit,
 		BlockInfoRoot:   libcommon.BytesToHash(block.BlockInfoRoot),

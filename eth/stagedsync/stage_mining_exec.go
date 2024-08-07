@@ -10,8 +10,8 @@ import (
 	"time"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/net/context"
 

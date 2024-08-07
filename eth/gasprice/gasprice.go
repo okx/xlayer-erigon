@@ -22,8 +22,8 @@ import (
 	"errors"
 	"math/big"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"

@@ -7,7 +7,7 @@ import (
 )
 
 var blockLogger *blockLogInstance
-var once sync.Once
+var blockOnce sync.Once
 
 type blockLogInstance struct {
 	BlockNum      uint64
@@ -17,7 +17,7 @@ type blockLogInstance struct {
 }
 
 func GetBlockLogger() *blockLogInstance {
-	once.Do(func() {
+	blockOnce.Do(func() {
 		blockLogger = &blockLogInstance{}
 		blockLogger.init()
 	})
@@ -62,10 +62,11 @@ func (b *blockLogInstance) PrintLogAndFlush() string {
 
 // stepTag Name
 const (
-	AddTxs         = "attemptAddTransaction"
-	WaitTxsTimeOut = "waitingBlockTimeout"
-	PbState        = "postBlockStateHandling"
-	ZkInc          = "zkIncrementIntermediateHashes"
-	DoFin          = "finaliseBlockWrite"
-	Save2DB        = "commitToDB"
+	AddTxs           = "attemptAddTransaction"
+	WaitBlockTimeOut = "waitingBlockTimeout"
+	WaitBatchTimeOut = "waitingBatchTimeout"
+	PbState          = "postBlockStateHandling"
+	ZkInc            = "zkIncrementIntermediateHashes"
+	DoFin            = "finaliseBlockWrite"
+	Save2DB          = "commitToDB"
 )

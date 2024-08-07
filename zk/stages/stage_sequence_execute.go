@@ -268,6 +268,9 @@ func SpawnSequencingStage(
 	} else {
 		log.Info(fmt.Sprintf("[%s] Continuing unfinished batch %d from block %d", logPrefix, thisBatch, executionAt))
 	}
+	batchCloseReason := ""
+	batchStart := time.Now()
+	seqlog.GetBatchLogger().SetBlockNum(thisBatch)
 
 	blockDataSizeChecker := NewBlockDataChecker()
 
@@ -325,9 +328,8 @@ func SpawnSequencingStage(
 			return err
 		}
 
-		log.Info(fmt.Sprintf("isAnyRecovery = %b, overflowOnNewBlock = %b", isAnyRecovery, overflowOnNewBlock))
 		if !isAnyRecovery && overflowOnNewBlock {
-			log.Info("closeReason: BatchOverflow")
+			seqlog.GetBatchLogger().SetClosingReason("BatchCounterOverflow")
 			break
 		}
 
@@ -386,12 +388,14 @@ func SpawnSequencingStage(
 				}
 			case <-batchTicker.C:
 				if !isAnyRecovery {
-					log.Info("closeReason: BatchTimeOut")
+					batchCloseReason = "batchTickerTimeOut"
+					seqlog.GetBatchLogger().SetClosingReason("EmptyBatchTimeOut")
 					runLoopBlocks = false
 					break LOOP_TRANSACTIONS
 				}
 			case <-nonEmptyBatchTimer.C:
 				if !isAnyRecovery && hasAnyTransactionsInThisBatch {
+					seqlog.GetBatchLogger().SetClosingReason("NonEmptyBatchTimeOut")
 					runLoopBlocks = false
 					break LOOP_TRANSACTIONS
 				}
@@ -507,7 +511,9 @@ func SpawnSequencingStage(
 			}
 		}
 		if blockCloseReason != "" {
-			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitTxsTimeOut, time.Since(addTxsStart))
+			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBlockTimeOut, time.Since(addTxsStart))
+		} else if batchCloseReason != "" && len(blockTransactions) == 0 {
+			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBatchTimeOut, time.Since(addTxsStart))
 		} else {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.AddTxs, time.Since(addTxsStart))
 		}
@@ -543,6 +549,7 @@ func SpawnSequencingStage(
 
 		BlockTxCount := uint64(len(addedTransactions))
 		seqlog.GetBlockLogger().SetTxCount(BlockTxCount)
+		seqlog.GetBatchLogger().AccmuTxCount(BlockTxCount)
 
 		commit2DBStart := time.Now()
 		if !hasExecutorForThisBatch {
@@ -580,9 +587,14 @@ func SpawnSequencingStage(
 			lastBatch = thisBatch
 		}
 		seqlog.GetBlockLogger().AppendStepLog(seqlog.Save2DB, time.Since(commit2DBStart))
-		seqlog.GetBlockLogger().SetTotalDuration(time.Since(blockStart))
+		blockTime := time.Since(blockStart)
+		seqlog.GetBlockLogger().SetTotalDuration(blockTime)
+		seqlog.GetBatchLogger().AppendBlockLog(blockNumber, blockTime)
+		seqlog.GetBatchLogger().AccmuBlockCount()
 		log.Info(seqlog.GetBlockLogger().PrintLogAndFlush())
 	}
+
+	commitStart := time.Now()
 
 	l1InfoIndex, err := sdb.hermezDb.GetBlockL1InfoTreeIndex(lastStartedBn)
 	if err != nil {
@@ -627,6 +639,9 @@ func SpawnSequencingStage(
 			return err
 		}
 	}
+	seqlog.GetBatchLogger().AppendCommitLog(time.Since(commitStart))
+	seqlog.GetBatchLogger().SetTotalDuration(time.Since(batchStart))
+	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 
 	// X Layer handle
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)

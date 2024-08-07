@@ -125,6 +125,7 @@ func (s *Server) serveSingleRequest(ctx context.Context, codec ServerCodec, stre
 	h := newHandler(ctx, codec, s.idgen, &s.services, s.methodAllowList, s.batchConcurrency, s.traceRequests, ctx.Value("apikey").(string))
 	h.allowSubscribe = false
 	defer h.close(io.EOF, nil)
+
 	reqs, batch, err := codec.readBatch()
 	if err != nil {
 		if err != io.EOF {

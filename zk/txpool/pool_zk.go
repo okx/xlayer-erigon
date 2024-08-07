@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 
@@ -181,13 +182,13 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
-
-	p.pending.EnforceBestInvariants() // X Layer it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
 	var toRemove []*metaTx
 	count := 0
+
+	p.pending.EnforceBestInvariants()
 
 	for i := 0; count < int(n) && i < len(best.ms); i++ {
 		// if we wouldn't have enough gas for a standard transaction then quit out early
@@ -269,12 +270,34 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 	for i := 0; i < len(best.ms); i++ {
 		mt := best.ms[i]
 		if bytes.Equal(mt.Tx.IDHash[:], txHash[:]) {
-			// X Layer optimize pool
 			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
 	}
 }
+
+func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx kv.Tx) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+	if !p.started.Load() {
+		txPoolDbTx, err := txPoolDb.BeginRo(ctx)
+		if err != nil {
+			return err
+		}
+		defer txPoolDbTx.Rollback()
+
+		if err := p.fromDB(ctx, txPoolDbTx, coreTx); err != nil {
+			return fmt.Errorf("loading txs from DB: %w", err)
+		}
+
+		if p.started.CompareAndSwap(false, true) {
+			log.Info("[txpool] Start if not started")
+		}
+	}
+
+	return nil
+}
+
 func markAsLocal(txSlots *types2.TxSlots) {
 	for i := range txSlots.IsLocal {
 		txSlots.IsLocal[i] = true

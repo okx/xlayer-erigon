@@ -10,8 +10,7 @@ func (s *Server) SetBatchEnabled(flag bool) {
 func (s *Server) getBatchReqLimitXLayer() (bool, int) {
 	// if apollo is enabled, get the config from apollo
 	if nodecfg.IsApolloConfigEnable() {
-		apolloConf, err := nodecfg.GetApolloConfig()
-		if err == nil {
+		if apolloConf, err := nodecfg.GetApolloConfig(); err == nil {
 			return apolloConf.Http.BatchEnabled, apolloConf.Http.BatchLimit
 		}
 	}

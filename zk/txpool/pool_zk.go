@@ -68,19 +68,22 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			return true
 		}
 		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
-		if p.checkFreeGasExAddr(senderID) {
-			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
-			if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
-				addrHex := "0x" + inputHex[10:74]
+		if p.xlayerCfg.EnableFreeGasByNonce {
+			if p.checkFreeGasExAddr(senderID) {
+				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+				if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
+					addrHex := "0x" + inputHex[10:74]
+					p.freeGasAddrs[addrHex] = true
+				} else {
+					p.freeGasAddrs[mt.Tx.To.Hex()] = true
+				}
+			} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
+				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+				addrHex := "0x" + inputHex[4490:4554]
 				p.freeGasAddrs[addrHex] = true
-			} else {
-				p.freeGasAddrs[mt.Tx.To.Hex()] = true
 			}
-		} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
-			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
-			addrHex := "0x" + inputHex[4490:4554]
-			p.freeGasAddrs[addrHex] = true
 		}
+
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
 			*minFeeCap = mt.Tx.FeeCap
 		}
@@ -92,7 +95,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		// For X Layer
 		// free case: 1. is claim tx; 2. new bridge account with the first few tx
 		if claim ||
-			(isfreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
+			(p.xlayerCfg.EnableFreeGasByNonce && isfreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
 			// get dynamic gp
 			newGp := new(big.Int).SetInt64(int64(minTip))
 			_, dGp := p.gpCache.GetLatest()

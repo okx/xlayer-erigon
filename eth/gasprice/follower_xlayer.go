@@ -10,12 +10,6 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-const (
-	// OKBWei OKB wei
-	OKBWei       = 1e18
-	minCoinPrice = 1e-18
-)
-
 // FollowerGasPrice struct.
 type FollowerGasPrice struct {
 	cfg       gaspricecfg.Config
@@ -26,41 +20,41 @@ type FollowerGasPrice struct {
 
 // newFollowerGasPriceSuggester inits l2 follower gas price suggester which is based on the l1 gas price.
 func newFollowerGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *FollowerGasPrice {
-	gps := &FollowerGasPrice{
+	return &FollowerGasPrice{
 		cfg:       cfg,
 		ctx:       ctx,
-		lastRawGP: new(big.Int).SetUint64(1),
+		lastRawGP: new(big.Int).Set(cfg.Default),
+		kafkaPrc:  newKafkaProcessor(cfg.XLayer, ctx),
 	}
-	if cfg.XLayer.EnableFollowerAdjustByL2L1Price {
-		gps.kafkaPrc = newKafkaProcessor(cfg.XLayer, ctx)
-	}
-
-	return gps
 }
 
-// UpdateGasPriceAvg updates the gas price.
+// UpdateGasPriceAvg updates the gas price in wei.
 func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	if big.NewInt(0).Cmp(l1GasPrice) == 0 {
 		log.Warn("gas price 0 received. Skipping update...")
 		return
 	}
 
-	// Apply factor to calculate l2 gasPrice
+	// Apply gasPrice factor
 	factor := big.NewFloat(0).SetFloat64(f.cfg.XLayer.Factor)
 	res := new(big.Float).Mul(factor, big.NewFloat(0).SetInt(l1GasPrice))
 
-	// convert the eth gas price to okb gas price
-	if f.cfg.XLayer.EnableFollowerAdjustByL2L1Price {
-		l1CoinPrice, l2CoinPrice := f.kafkaPrc.GetL1L2CoinPrice()
-		if l1CoinPrice < minCoinPrice || l2CoinPrice < minCoinPrice {
-			log.Warn("the L1 or L2 native coin price too small...")
-			return
-		}
-		res = new(big.Float).Mul(big.NewFloat(0).SetFloat64(l1CoinPrice/l2CoinPrice), res)
-		log.Debug(fmt.Sprintf("L2 pre gas price value: %s. L1 coin price: %f. L2 coin price: %f", res.String(), l1CoinPrice, l2CoinPrice))
+	// Get L1 and L2 coin prices
+	l1CoinPrice, l2CoinPrice := f.kafkaPrc.GetL1L2CoinPrice()
+	if l1CoinPrice < minUSDTPrice {
+		log.Warn("update gas price average failed, the L1 native coin price is too small")
+		return
+	}
+	if l2CoinPrice < minUSDTPrice {
+		log.Warn("update gas price average failed, the L2 native coin price is too small")
+		return
 	}
 
-	// Cache l2 gasPrice calculated
+	// Convert L1 gasPrice in Eth to L2 gasPrice in OKB
+	res = new(big.Float).Mul(big.NewFloat(0).SetFloat64(l1CoinPrice/l2CoinPrice), res)
+	log.Debug(fmt.Sprintf("L2 pre gas price value: %s. L1 coin price: %f. L2 coin price: %f", res.String(), l1CoinPrice, l2CoinPrice))
+
+	// Check for min/max L2 gasPrice
 	result := new(big.Int)
 	res.Int(result)
 	minGasPrice := new(big.Int).Set(f.cfg.Default)
@@ -88,6 +82,7 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 		truncateValue = result
 	}
 
+	// Cache L2 gasPrice calculated
 	if truncateValue != nil {
 		log.Info(fmt.Sprintf("Set l2 raw gas price: %d", truncateValue.Uint64()))
 		f.lastRawGP = truncateValue

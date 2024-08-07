@@ -51,6 +51,7 @@ http.corsdomain: any
 http.timeouts.read: "60s"
 http.timeouts.write: "60s"
 rpc.batch.concurrency: 2
+rpc.batch.enabled: true
 rpc.batch.limit: 20
 ws: true
 

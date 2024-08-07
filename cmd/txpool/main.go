@@ -57,13 +57,13 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList   bool
-	whiteList         []string
-	blockList         []string
-	freeClaimGasAddrs []string
-	gasPriceMultiple  uint64
+	enableWhiteList      bool
+	whiteList            []string
+	blockList            []string
+	freeClaimGasAddrs    []string
+	gasPriceMultiple     uint64
 	enableFreeGasByNonce bool
-	freeGasExAddress     []string
+	freeGasExAddrs       []string
 	freeGasCountPerAddr  uint64
 	freeGasLimit         uint64
 )
@@ -96,7 +96,7 @@ func init() {
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.WhiteList, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.BlockedList, utils.TxPoolBlockedList.Usage)
 	rootCmd.Flags().BoolVar(&enableFreeGasByNonce, utils.TxPoolEnableFreeGasByNonce.Name, false, utils.TxPoolEnableFreeGasByNonce.Usage)
-	rootCmd.Flags().StringSliceVar(&freeGasExAddress, utils.TxPoolFreeGasExAddress.Name, []string{}, utils.TxPoolFreeGasExAddress.Usage)
+	rootCmd.Flags().StringSliceVar(&freeGasExAddrs, utils.TxPoolFreeGasExAddress.Name, []string{}, utils.TxPoolFreeGasExAddress.Usage)
 	rootCmd.PersistentFlags().Uint64Var(&freeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Name, 3, utils.TxPoolFreeGasCountPerAddr.Usage)
 	rootCmd.PersistentFlags().Uint64Var(&freeGasLimit, utils.TxPoolFreeGasLimit.Name, 3, utils.TxPoolFreeGasLimit.Usage)
 }

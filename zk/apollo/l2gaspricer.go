@@ -18,8 +18,7 @@ func (c *Client) loadL2GasPricer(value interface{}) {
 	}
 
 	// Load l2gaspricer config changes
-	loadNodeL2GasPricerConfig(ctx, c.nodeCfg)
-	loadEthL2GasPricerConfig(ctx, c.ethCfg)
+	loadL2GasPricerConfig(ctx)
 	log.Info(fmt.Sprintf("loaded l2gaspricer from apollo config: %+v", value.(string)))
 }
 
@@ -31,9 +30,13 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 		return
 	}
 
+	loadL2GasPricerConfig(ctx)
 	log.Info(fmt.Sprintf("apollo l2gaspricer old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo l2gaspricer config changed: %+v", value.NewValue.(string)))
+}
 
+// loadL2GasPricerConfig loads the dynamic gas pricer apollo configurations
+func loadL2GasPricerConfig(ctx *cli.Context) {
 	// Update l2gaspricer node config changes
 	nodecfg.UnsafeGetApolloConfig().Lock()
 	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
@@ -47,12 +50,14 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	ethconfig.UnsafeGetApolloConfig().Unlock()
 }
 
+// loadNodeL2GasPricerConfig loads the dynamic gas pricer apollo node configurations
 func loadNodeL2GasPricerConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	// Load l2gaspricer config
 }
 
+// loadEthL2GasPricerConfig loads the dynamic gas pricer apollo eth configurations
 func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
-	// Load ZK config
+	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
 	// Load l2gaspricer config

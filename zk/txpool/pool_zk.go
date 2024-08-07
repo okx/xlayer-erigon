@@ -76,13 +76,18 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		// For X Layer
 		isClaimAddr := p.isFreeClaimAddr(senderID)
 		if isClaimAddr {
-			_, dGp := p.gpCache.GetLatest()
-			if dGp != nil {
-				newGp := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
-				//newGp := dGp.Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
-				mt.minTip = newGp.Uint64()
-				mt.minFeeCap = *uint256.NewInt(mt.minTip)
+			// here for the case when restart gpCache has not init
+			// use the max uint64 as default because the remain claimTx should handle first
+			newGp := uint64(math.MaxUint64)
+			if p.gpCache != nil {
+				_, dGp := p.gpCache.GetLatest()
+				if dGp != nil {
+					newGpBig := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+					newGp = newGpBig.Uint64()
+				}
 			}
+			mt.minTip = newGp
+			mt.minFeeCap = *uint256.NewInt(mt.minTip)
 		}
 
 		mt.nonceDistance = 0
@@ -272,6 +277,8 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 }
 
 func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx kv.Tx) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	if !p.started.Load() {
 		txPoolDbTx, err := txPoolDb.BeginRo(ctx)
 		if err != nil {
@@ -281,6 +288,10 @@ func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx
 
 		if err := p.fromDB(ctx, txPoolDbTx, coreTx); err != nil {
 			return fmt.Errorf("loading txs from DB: %w", err)
+		}
+
+		if p.started.CompareAndSwap(false, true) {
+			log.Info("[txpool] Start if not started")
 		}
 	}
 

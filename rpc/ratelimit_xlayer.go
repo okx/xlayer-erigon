@@ -2,15 +2,15 @@ package rpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"sync"
 
 	"github.com/ledgerwatch/log/v3"
 	"golang.org/x/time/rate"
 )
 
-// RateLimitConfig has parameters to config the rate limit
+// RateLimitConfig contains the config of the rate limiter
 type RateLimitConfig struct {
-
 	// RateLimitApis defines the apis that need to be rate limited
 	RateLimitApis []string `json:"methods"`
 
@@ -21,107 +21,103 @@ type RateLimitConfig struct {
 	RateLimitBucket int `json:"bucket"`
 }
 
-// RateLimit is the rate limit config
+// RateLimit is the struct definition for the node rate limiter
 type RateLimit struct {
 	rlm map[string]*rate.Limiter
 	sync.RWMutex
 }
 
-var rateLimit = &RateLimit{}
+// gRateLimiter is the node's singleton instance for the rate limiter
+var gRateLimiter = &RateLimit{
+	rlm: make(map[string]*rate.Limiter),
+}
 
-// InitRateLimit initializes the rate limit config
-func InitRateLimit(cfg string) {
+// SetRateLimit sets the rate limiter singleton instance
+func SetRateLimit(cfg string) {
 	if cfg == "" {
 		return
 	}
 	rlc := RateLimitConfig{}
 	err := json.Unmarshal([]byte(cfg), &rlc)
 	if err != nil {
-		log.Warn("invalid rate limit config: %s", cfg)
+		log.Warn(fmt.Sprintf("invalid rate limit config: %s", cfg))
 		return
 	}
-	setRateLimit(rlc)
+	setRateLimiter(rlc)
 }
 
-// setRateLimit sets the rate limit config
-func setRateLimit(rlc RateLimitConfig) {
-	rateLimit.Lock()
-	defer rateLimit.Unlock()
-	rateLimit.rlm = updateRateLimit(rlc)
-}
+// setRateLimiter sets the rate limiter in the singleton instance map
+func setRateLimiter(cfg RateLimitConfig) {
+	gRateLimiter.Lock()
+	defer gRateLimiter.Unlock()
 
-// updateRateLimit updates the rate limit config
-func updateRateLimit(rateLimit RateLimitConfig) map[string]*rate.Limiter {
-	log.Info("rate limit config updated", "config", rateLimit)
-	if len(rateLimit.RateLimitApis) > 0 {
-		log.Info("rate limit enabled", "api", rateLimit.RateLimitApis, "count", rateLimit.RateLimitCount, "bucket", rateLimit.RateLimitBucket)
-		rlm := make(map[string]*rate.Limiter)
-		for _, api := range rateLimit.RateLimitApis {
-			rlm[api] = rate.NewLimiter(rate.Limit(rateLimit.RateLimitCount), rateLimit.RateLimitBucket)
-		}
-		return rlm
+	// Clear rate limiter map
+	gRateLimiter.rlm = make(map[string]*rate.Limiter)
+
+	// Set API rate limiter map
+	for _, api := range cfg.RateLimitApis {
+		gRateLimiter.rlm[api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
+		log.Info(fmt.Sprintf("Rate limiter enabled for api method: %v with count: %v and bucket: %v", cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
 	}
-	return nil
+	log.Info(fmt.Sprintf("Set node rate limiter, cfg: %v", cfg))
 }
 
-// methodRateLimitAllow returns true if the method is allowed by the rate limit
-func methodRateLimitAllow(method string) bool {
-	rateLimit.RLock()
-	rlm := rateLimit.rlm
-	rateLimit.RUnlock()
-	if rlm != nil && rlm[method] != nil && !rlm[method].Allow() {
-		return false
-	}
-	return true
-}
-
-// ApikeyRateLimit is the api rate limit config
+// ApikeyRateLimit is the struct definition for the API key rate limiter
 type ApikeyRateLimit struct {
 	rlm map[string]map[string]*rate.Limiter
 	sync.RWMutex
 }
 
-var apiKeyRateLimit = &ApikeyRateLimit{}
+// gApikeyRateLimiter is the node's singleton instance for the API key rate limiter
+var gApikeyRateLimiter = &ApikeyRateLimit{
+	rlm: make(map[string]map[string]*rate.Limiter),
+}
 
-// initApikeyRateLimit initializes the apikey rate limit config
-func initApikeyRateLimit(cfg map[string]*RateLimitConfig) {
-	if len(cfg) == 0 {
+// clearApikeyRateLimitMap clears the API key rate limiter map
+func clearApikeyRateLimitMap() {
+	gApikeyRateLimiter.rlm = make(map[string]map[string]*rate.Limiter)
+}
+
+// setApiKeyRateLimit sets the global API key rate limiter
+func setApikeyRateLimit(key string, cfg RateLimitConfig) {
+	gApikeyRateLimiter.Lock()
+	defer gApikeyRateLimiter.Unlock()
+
+	if _, ok := gApikeyRateLimiter.rlm[key]; ok {
+		log.Warn("API key rate limiter already set, skipping")
 		return
 	}
-	setApikeyRateLimit(cfg)
-}
 
-// setApikeyRateLimit sets the rate limit config
-func setApikeyRateLimit(rlc map[string]*RateLimitConfig) {
-	apiKeyRateLimit.Lock()
-	defer apiKeyRateLimit.Unlock()
-	apiKeyRateLimit.rlm = updateApikeyRateLimit(rlc)
-}
-
-// updateApikeyRateLimit updates the rate limit config
-func updateApikeyRateLimit(rateLimit map[string]*RateLimitConfig) map[string]map[string]*rate.Limiter {
-	akrlm := make(map[string]map[string]*rate.Limiter)
-	log.Info("apikey rate limit config updated", "config", rateLimit)
-	for apikey, config := range rateLimit {
-		if len(config.RateLimitApis) > 0 {
-			log.Info("rate limit enabled", "api", config.RateLimitApis, "count", config.RateLimitCount, "bucket", config.RateLimitBucket)
-			rlm := make(map[string]*rate.Limiter)
-			for _, api := range config.RateLimitApis {
-				rlm[api] = rate.NewLimiter(rate.Limit(config.RateLimitCount), config.RateLimitBucket)
-			}
-			akrlm[apikey] = rlm
-		}
+	// Set API key rate limiter map
+	gApikeyRateLimiter.rlm[key] = make(map[string]*rate.Limiter)
+	for _, api := range cfg.RateLimitApis {
+		gApikeyRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
+		log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
 	}
-	return akrlm
+	log.Info(fmt.Sprintf("Set API key rate limiter for key: %v, cfg: %v", key, cfg))
 }
 
-// apikeyMethodRateLimitAllow returns true if the method is allowed by the rate limit
-func apikeyMethodRateLimitAllow(api, method string) bool {
-	apiKeyRateLimit.RLock()
-	rlm := apiKeyRateLimit.rlm
-	apiKeyRateLimit.RUnlock()
-	if rlm != nil && rlm[api] != nil && rlm[api][method] != nil && !rlm[api][method].Allow() {
-		return false
+// checkMethodRateLimit returns true if the method API is allowed by the rate limiter
+func checkMethodRateLimit(method string) bool {
+	gRateLimiter.RLock()
+	defer gRateLimiter.RUnlock()
+
+	if rl, ok := gRateLimiter.rlm[method]; ok {
+		return rl.Allow()
+	}
+	return true
+}
+
+// checkApikeyMethodRateLimit returns true if the key and the method API is allowed
+// by the API key rate limiter
+func checkApikeyMethodRateLimit(key, method string) bool {
+	gApikeyRateLimiter.RLock()
+	defer gApikeyRateLimiter.RUnlock()
+
+	if rlm, keyFound := gApikeyRateLimiter.rlm[key]; keyFound {
+		if rl, ok := rlm[method]; ok {
+			return rl.Allow()
+		}
 	}
 	return true
 }

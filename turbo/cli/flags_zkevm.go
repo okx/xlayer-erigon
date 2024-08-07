@@ -161,7 +161,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	}
 
 	// For X Layer
-	ApplyFlagsForXLayerConfig(ctx, cfg)
+	ApplyFlagsForEthXLayerConfig(ctx, cfg)
 	utils2.EnableTimer(cfg.DebugTimers)
 
 	checkFlag(utils.L2ChainIdFlag.Name, cfg.L2ChainId)

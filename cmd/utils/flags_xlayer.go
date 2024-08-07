@@ -77,6 +77,18 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
+	TxPoolFreeGasExAddrs = cli.StringFlag{
+		Name:  "txpool.freegasexaddress",
+		Usage: "FreeGasExAddress is the ex address which can be free gas for the transfer receiver",
+	}
+	TxPoolFreeGasCountPerAddr = cli.Uint64Flag{
+		Name:  "txpool.freegascountperaddr",
+		Usage: "FreeGasCountPerAddr is the count limit of free gas tx per address",
+	}
+	TxPoolFreeGasLimit = cli.Uint64Flag{
+		Name:  "txpool.freegaslimit",
+		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
+	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",

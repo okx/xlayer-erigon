@@ -20,8 +20,8 @@ type XLayerConfig struct {
 	GasPriceMultiple uint64
 	// EnableFreeGasByNonce enable free gas
 	EnableFreeGasByNonce bool
-	// FreeGasExAddress is the ex address which can be free gas for the transfer receiver
-	FreeGasExAddress []string
+	// FreeGasExAddrs is the ex address which can be free gas for the transfer receiver
+	FreeGasExAddrs []string
 	// FreeGasCountPerAddr is the count limit of free gas tx per address
 	FreeGasCountPerAddr uint64
 	// FreeGasLimit is the max gas allowed use to do a free gas tx
@@ -53,7 +53,6 @@ func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
 	return false
 }
 
-
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }
@@ -63,7 +62,7 @@ func (p *TxPool) checkFreeGasExAddress(senderID uint64) bool {
 	if !ok {
 		return false
 	}
-	for _, e := range p.xlayerCfg.FreeGasExAddress {
+	for _, e := range p.xlayerCfg.FreeGasExAddrs {
 		if common.HexToAddress(e) == addr {
 			return true
 		}

@@ -329,9 +329,9 @@ type TxPool struct {
 	aclDB                   kv.RwDB
 
 	// For X Layer
-	xlayerCfg XLayerConfig
-	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
-	freeGasAddress          map[string]bool
+	xlayerCfg      XLayerConfig
+	gpCache        GPCache // GPCache will only work in sequencer node, without rpc node
+	freeGasAddress map[string]bool
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -388,13 +388,13 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		limbo:                   newLimbo(),
 		// X Layer config
 		xlayerCfg: XLayerConfig{
-			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
-			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			EnableWhitelist:      ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:            ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:          ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs:    ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:     ethCfg.DeprecatedTxPool.GasPriceMultiple,
 			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
-			FreeGasExAddress:     ethCfg.DeprecatedTxPool.FreeGasExAddress,
+			FreeGasExAddrs:       ethCfg.DeprecatedTxPool.FreeGasExAddrs,
 			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
 			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
 		},

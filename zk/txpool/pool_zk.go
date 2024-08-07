@@ -15,8 +15,6 @@ import (
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
-	core_types "github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/log/v3"
@@ -76,12 +74,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				addrHex := "0x" + inputHex[10:74]
 				p.freeGasAddrs[addrHex] = true
 			} else {
-				txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(mt.Tx.Rlp), uint64(len(mt.Tx.Rlp))))
-				to := txnDec.GetTo()
-				if err == nil && to != nil {
-					p.freeGasAddrs[to.Hex()] = true
-				}
-
+				p.freeGasAddrs[mt.Tx.To.Hex()] = true
 			}
 		} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)

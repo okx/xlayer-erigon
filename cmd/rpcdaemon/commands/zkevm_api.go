@@ -62,6 +62,7 @@ type ZkEvmAPI interface {
 	EstimateCounters(ctx context.Context, argsOrNil *zkevmRPCTransaction) (json.RawMessage, error)
 	TraceTransactionCounters(ctx context.Context, hash common.Hash, config *tracers.TraceConfig_ZkEvm, stream *jsoniter.Stream) error
 	GetBatchCountersByNumber(ctx context.Context, batchNumRpc rpc.BlockNumber) (res json.RawMessage, err error)
+	GetExitRootTable(ctx context.Context) ([]l1InfoTreeData, error)
 }
 
 // APIImpl is implementation of the ZkEvmAPI interface based on remote Db access
@@ -153,9 +154,11 @@ func (api *ZkEvmAPIImpl) IsBlockVirtualized(ctx context.Context, blockNumber rpc
 
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	latestSequencedBatch, err := hermezDb.GetLatestSequence()
+	// X Layer fixed for e2e test
 	if err != nil || latestSequencedBatch == nil {
 		return false, err
 	}
+
 	// if the batch is lower than the latest sequenced then it must be virtualized
 	return batchNum <= latestSequencedBatch.BatchNo, nil
 }
@@ -234,7 +237,7 @@ func (api *ZkEvmAPIImpl) VerifiedBatchNumber(ctx context.Context) (hexutil.Uint6
 }
 
 // GetBatchDataByNumbers returns the batch data for the given batch numbers
-func (api *ZkEvmAPIImpl) GetBatchDataByNumbers(ctx context.Context, batchNumbers []rpc.BlockNumber) (json.RawMessage, error) {
+func (api *ZkEvmAPIImpl) GetBatchDataByNumbers(ctx context.Context, batchNumbers rpc.RpcNumberArray) (json.RawMessage, error) {
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -268,9 +271,9 @@ func (api *ZkEvmAPIImpl) GetBatchDataByNumbers(ctx context.Context, batchNumbers
 		highestBatchNo, err = hermezDb.GetBatchNoByL2Block(uint64(bn.(hexutil.Uint64)))
 	}
 
-	bds := make([]*types.BatchDataSlim, 0, len(batchNumbers))
+	bds := make([]*types.BatchDataSlim, 0, len(batchNumbers.Numbers))
 
-	for _, batchNumber := range batchNumbers {
+	for _, batchNumber := range batchNumbers.Numbers {
 		bd := &types.BatchDataSlim{
 			Number: uint64(batchNumber.Int64()),
 			Empty:  false,
@@ -897,9 +900,11 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 type WitnessMode string
 
 const (
-	WitnessModeNone    WitnessMode = "none"
-	WitnessModeFull    WitnessMode = "full"
-	WitnessModeTrimmed WitnessMode = "trimmed"
+	WitnessModeNone         WitnessMode = "none"
+	WitnessModeFull         WitnessMode = "full"          // if the node mode is "full witness" - will return witness from cache
+	WitnessModeTrimmed      WitnessMode = "trimmed"       // if the node mode is "partial witness" - will return witness from cache
+	WitnessModeFullRegen    WitnessMode = "full_regen"    // forces regenerate no matter the node mode
+	WitnessModeTrimmedRegen WitnessMode = "trimmed_regen" // forces regenerate no matter the node mode
 )
 
 func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64, mode *WitnessMode) (interface{}, error) {
@@ -928,9 +933,14 @@ func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64
 		checkedMode = *mode
 	}
 
-	// we only want to check the cache if no special run mode has been supplied.  If a run mode is supplied
-	// we need to always regenerate the witness from scratch
-	if checkedMode == WitnessModeNone {
+	isWitnessModeNone := checkedMode == WitnessModeNone
+	rpcModeMatchesNodeMode :=
+		checkedMode == WitnessModeFull && api.config.WitnessFull ||
+			checkedMode == WitnessModeTrimmed && !api.config.WitnessFull
+	// we only want to check the cache if no special run mode has been supplied.
+	// or if requested mode matches the node mode
+	// otherwise regenerate it
+	if isWitnessModeNone || rpcModeMatchesNodeMode {
 		hermezDb := hermez_db.NewHermezDbReader(tx)
 		witnessCached, err := hermezDb.GetWitness(batchNumber)
 		if err != nil {
@@ -1017,6 +1027,59 @@ func (api *ZkEvmAPIImpl) GetLatestGlobalExitRoot(ctx context.Context) (common.Ha
 	}
 
 	return ger, nil
+}
+
+type l1InfoTreeData struct {
+	Index           uint64      `json:"index"`
+	Ger             common.Hash `json:"ger"`
+	InfoRoot        common.Hash `json:"info_root"`
+	MainnetExitRoot common.Hash `json:"mainnet_exit_root"`
+	RollupExitRoot  common.Hash `json:"rollup_exit_root"`
+	ParentHash      common.Hash `json:"parent_hash"`
+	MinTimestamp    uint64      `json:"min_timestamp"`
+	BlockNumber     uint64      `json:"block_number"`
+}
+
+func (api *ZkEvmAPIImpl) GetExitRootTable(ctx context.Context) ([]l1InfoTreeData, error) {
+	tx, err := api.db.BeginRo(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	hermezDb := hermez_db.NewHermezDbReader(tx)
+
+	indexToRoots, err := hermezDb.GetL1InfoTreeIndexToRoots()
+	if err != nil {
+		return nil, err
+	}
+
+	var result []l1InfoTreeData
+
+	var idx uint64 = 1
+	for {
+		info, err := hermezDb.GetL1InfoTreeUpdate(idx)
+		if err != nil {
+			return nil, err
+		}
+		if info == nil || info.Index == 0 {
+			break
+		}
+		data := l1InfoTreeData{
+			Index:           info.Index,
+			Ger:             info.GER,
+			MainnetExitRoot: info.MainnetExitRoot,
+			RollupExitRoot:  info.RollupExitRoot,
+			ParentHash:      info.ParentHash,
+			MinTimestamp:    info.Timestamp,
+			BlockNumber:     info.BlockNumber,
+			InfoRoot:        indexToRoots[info.Index],
+		}
+		result = append(result, data)
+		idx++
+	}
+
+	return result, nil
 }
 
 func (api *ZkEvmAPIImpl) sendGetBatchWitness(rpcUrl string, batchNumber uint64, mode *WitnessMode) (json.RawMessage, error) {

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/node/nodecfg"
 )
 
 func TestLoadJsonRPCConfig(t *testing.T) {
@@ -34,9 +33,9 @@ func TestLoadJsonRPCConfig(t *testing.T) {
 	client.loadJsonRPC(value)
 	require.NoError(t, err)
 
-	apolloNodeCfg, err := nodecfg.GetApolloConfig()
+	apolloNodeCfg, err := GetApolloNodeConfig()
 	require.NoError(t, err)
-	apolloEthCfg, err := ethconfig.GetApolloConfig()
+	apolloEthCfg, err := GetApolloEthConfig()
 	require.NoError(t, err)
 
 	logTestNodeConfig(t, &apolloNodeCfg)

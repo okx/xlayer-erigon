@@ -38,17 +38,12 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 
 // loadJsonRPCConfig loads the dynamic json rpc apollo configurations
 func loadJsonRPCConfig(ctx *cli.Context) {
-	// Update jsonrpc node config changes
-	nodecfg.UnsafeGetApolloConfig().Lock()
-	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
-	loadNodeJsonRPCConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
-	nodecfg.UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	// Update jsonrpc eth config changes
-	ethconfig.UnsafeGetApolloConfig().Lock()
-	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
-	loadEthJsonRPCConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
-	ethconfig.UnsafeGetApolloConfig().Unlock()
+	loadNodeJsonRPCConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthJsonRPCConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
+	UnsafeGetApolloConfig().setRPCFlag()
 }
 
 // loadNodeJsonRPCConfig loads the dynamic json rpc apollo node configurations

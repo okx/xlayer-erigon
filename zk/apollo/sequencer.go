@@ -2,6 +2,7 @@ package apollo
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/apolloconfig/agollo/v4/storage"
 	"github.com/ledgerwatch/erigon/cmd/utils"
@@ -37,17 +38,12 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 
 // loadSequencerConfig loads the dynamic sequencer apollo configurations
 func loadSequencerConfig(ctx *cli.Context) {
-	// Update sequencer node config changes
-	nodecfg.UnsafeGetApolloConfig().Lock()
-	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
-	loadNodeSequencerConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
-	nodecfg.UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	// Update sequencer eth config changes
-	ethconfig.UnsafeGetApolloConfig().Lock()
-	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
-	loadEthSequencerConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
-	ethconfig.UnsafeGetApolloConfig().Unlock()
+	loadNodeSequencerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthSequencerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
+	UnsafeGetApolloConfig().setSequencerFlag()
 }
 
 // loadNodeSequencerConfig loads the dynamic sequencer apollo node configurations
@@ -70,4 +66,13 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.SequencerNonEmptyBatchSealTime.Name) {
 		ethCfg.Zk.SequencerNonEmptyBatchSealTime = ctx.Duration(utils.SequencerNonEmptyBatchSealTime.Name)
 	}
+}
+
+func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
+	if IsApolloConfigSequencerEnabled() {
+		if conf, err := GetApolloEthConfig(); err == nil {
+			return conf.Zk.XLayer.SequencerBatchSleepDuration
+		}
+	}
+	return localDuration
 }

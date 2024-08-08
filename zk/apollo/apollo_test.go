@@ -29,9 +29,9 @@ func TestApolloClient(t *testing.T) {
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	apolloInitNodeCfg, err := nodecfg.GetApolloConfig()
+	apolloInitNodeCfg, err := GetApolloNodeConfig()
 	require.NoError(t, err)
-	apolloInitEthCfg, err := ethconfig.GetApolloConfig()
+	apolloInitEthCfg, err := GetApolloEthConfig()
 	require.NoError(t, err)
 
 	logTestNodeConfig(t, &apolloInitNodeCfg)
@@ -40,9 +40,9 @@ func TestApolloClient(t *testing.T) {
 	// Fire config changes on both ethconfig and nodecfg
 	time.Sleep(30 * time.Second)
 
-	apolloAfterNodeCfg, err := nodecfg.GetApolloConfig()
+	apolloAfterNodeCfg, err := GetApolloNodeConfig()
 	require.NoError(t, err)
-	apolloAfterEthCfg, err := ethconfig.GetApolloConfig()
+	apolloAfterEthCfg, err := GetApolloEthConfig()
 	require.NoError(t, err)
 
 	t.Log("Logging apollo config")
@@ -74,9 +74,9 @@ func TestApolloConfig(t *testing.T) {
 	require.Equal(t, true, loaded)
 
 	// Test to ensure read apollo nodecfg method return deep copies
-	firstCopyApolloNodeCfg, err := nodecfg.GetApolloConfig()
+	firstCopyApolloNodeCfg, err := GetApolloNodeConfig()
 	require.NoError(t, err)
-	secondCopyApolloNodeCfg, err := nodecfg.GetApolloConfig()
+	secondCopyApolloNodeCfg, err := GetApolloNodeConfig()
 	require.NoError(t, err)
 	t.Logf("1st copy address of node config: %p", &firstCopyApolloNodeCfg)
 	t.Logf("2nd copy address of node config: %p", &secondCopyApolloNodeCfg)
@@ -84,9 +84,9 @@ func TestApolloConfig(t *testing.T) {
 	require.Equal(t, firstCopyApolloNodeCfg, secondCopyApolloNodeCfg)
 
 	// Test to ensure read apollo ethconfig method return deep copies
-	firstCopyApolloEthCfg, err := ethconfig.GetApolloConfig()
+	firstCopyApolloEthCfg, err := GetApolloEthConfig()
 	require.NoError(t, err)
-	secondCopyApolloEthCfg, err := ethconfig.GetApolloConfig()
+	secondCopyApolloEthCfg, err := GetApolloEthConfig()
 	require.NoError(t, err)
 	t.Logf("1st copy address of ethconfig: %p", &firstCopyApolloEthCfg)
 	t.Logf("2nd copy address of ethconfig: %p", &secondCopyApolloEthCfg)

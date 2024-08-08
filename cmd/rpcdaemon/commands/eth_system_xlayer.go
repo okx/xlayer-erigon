@@ -99,8 +99,8 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 func (api *APIImpl) runL2GasPriceSuggester() {
 	ctx := api.L2GasPricer.GetCtx()
 
-	if apolloConf, err := apollo.GetApolloGasPricerConfig(); err == nil {
-		api.L2GasPricer.UpdateConfig(apolloConf)
+	if apollo.IsApolloConfigL2GasPricerEnabled() {
+		api.L2GasPricer.UpdateConfig(apollo.GetApolloGasPricerConfig())
 	}
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
@@ -114,9 +114,8 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			log.Info("Finishing l2 gas price suggester...")
 			return
 		case <-updateTimer.C:
-			if apolloConf, err := apollo.GetApolloGasPricerConfig(); err == nil {
-				fmt.Println("Get apollo cfg here1: ", apolloConf)
-				api.L2GasPricer.UpdateConfig(apolloConf)
+			if apollo.IsApolloConfigL2GasPricerEnabled() {
+				api.L2GasPricer.UpdateConfig(apollo.GetApolloGasPricerConfig())
 			}
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {

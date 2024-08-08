@@ -95,19 +95,14 @@ func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	}
 
 	// Load l2gaspricer config
+	ethCfg.GPO = ethconfig.Defaults.GPO
 	utils.SetApolloGPOXLayer(ctx, &ethCfg.GPO)
 }
 
-func GetApolloGasPricerConfig() (gaspricecfg.Config, error) {
-	if IsApolloConfigL2GasPricerEnabled() {
-		conf, err := GetApolloEthConfig()
-		if err != nil {
-			return gaspricecfg.Config{}, err
-		} else {
-			return conf.GPO, nil
-		}
-	}
-	return gaspricecfg.Config{}, fmt.Errorf("apollo l2gaspricer disabled")
+func GetApolloGasPricerConfig() gaspricecfg.Config {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	return unsafeGetApolloConfig().EthCfg.GPO
 }
 
 // setL2GasPricerFlag sets the dynamic gas pricer apollo flag

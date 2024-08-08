@@ -389,9 +389,11 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	// For X Layer
 	// Only Sequencer requires to calculate dynamic gas price periodically
 	// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
-	if sequencer.IsSequencer() {
-		apii.runL2GasPricerForXLayer()
-	}
+	GasPricerOnce.Do(func() {
+		if sequencer.IsSequencer() {
+			apii.runL2GasPricerForXLayer()
+		}
+	})
 
 	return apii
 }
@@ -535,15 +537,14 @@ type GasPriceCache struct {
 	latestPrice *big.Int
 	latestHash  common.Hash
 	mtx         sync.Mutex
-	rawGP       *big.Int
-	rgpMtx      sync.RWMutex
+	rawGPCache  *RawGPCache
 }
 
 func NewGasPriceCache() *GasPriceCache {
 	return &GasPriceCache{
 		latestPrice: big.NewInt(0),
 		latestHash:  common.Hash{},
-		rawGP:       big.NewInt(0),
+		rawGPCache:  NewRawGPCache(),
 	}
 }
 
@@ -563,14 +564,13 @@ func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {
 }
 
 func (c *GasPriceCache) GetLatestRawGP() *big.Int {
-	c.rgpMtx.RLock()
-	defer c.rgpMtx.RUnlock()
-	rgp := new(big.Int).Set(c.rawGP) // deep copy
+	rgp, err := c.rawGPCache.GetMin()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
 	return rgp
 }
 
 func (c *GasPriceCache) SetLatestRawGP(rgp *big.Int) {
-	c.rgpMtx.Lock()
-	c.rawGP = rgp
-	c.rgpMtx.Unlock()
+	c.rawGPCache.Add(rgp)
 }

@@ -738,8 +738,8 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
+	// X Layer
 	rgp := p.gpCache.GetLatestRawGP()
-
 	if !p.isFreeGas(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))

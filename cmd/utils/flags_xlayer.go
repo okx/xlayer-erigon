@@ -236,7 +236,7 @@ func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 
 	// Default price check
 	if cfg.Default == nil || cfg.Default.Int64() <= 0 {
-		cfg.Default = gaspricecfg.DefaultXLayerPrice
+		cfg.Default = new(big.Int).Set(gaspricecfg.DefaultXLayerPrice)
 	}
 }
 

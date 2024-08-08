@@ -100,7 +100,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 	ctx := api.L2GasPricer.GetCtx()
 
 	if ethconfig.IsApolloConfigEnable() {
-		if apolloConf, err := ethconfig.GetGasPricerConfig(); err == nil {
+		if apolloConf, err := ethconfig.GetApolloGasPricerConfig(); err == nil {
 			api.L2GasPricer.UpdateConfig(apolloConf)
 		}
 	}
@@ -117,7 +117,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			return
 		case <-updateTimer.C:
 			if ethconfig.IsApolloConfigEnable() {
-				if apolloConf, err := ethconfig.GetGasPricerConfig(); err == nil {
+				if apolloConf, err := ethconfig.GetApolloGasPricerConfig(); err == nil {
 					api.L2GasPricer.UpdateConfig(apolloConf)
 				}
 			}

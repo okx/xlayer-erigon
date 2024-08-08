@@ -75,7 +75,7 @@ func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 // ----------------------------------------------------------------
 // Apollo gaspricer configurations
 // ----------------------------------------------------------------
-func GetGasPricerConfig() (gaspricecfg.Config, error) {
+func GetApolloGasPricerConfig() (gaspricecfg.Config, error) {
 	conf, err := GetApolloConfig()
 	if err != nil {
 		return gaspricecfg.Config{}, err

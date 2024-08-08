@@ -29,14 +29,15 @@ func TestGetBatchSealTime(t *testing.T) {
 		t.Skip()
 	}
 
-	// TODO Return correct time while batch was closed only
+	// latest batch seal time
 	batchNum, err := operations.GetBatchNumber()
 	require.NoError(t, err)
-	log.Infof("Batch number: %d", batchNum)
 	batchSealTime, err := operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
-	require.NoError(t, err)
-	log.Infof("Batch seal time: %d", batchSealTime)
+	require.Equal(t, batchSealTime, uint64(0))
+	log.Infof("Batch number: %d", batchNum)
 
+	// old batch seal time
+	batchNum = batchNum - 1
 	batch, err := operations.GetBatchByNumber(new(big.Int).SetUint64(batchNum))
 	var maxTime uint64
 	for _, block := range batch.Blocks {
@@ -48,8 +49,10 @@ func TestGetBatchSealTime(t *testing.T) {
 			maxTime = blockTime
 		}
 	}
+	batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
+	require.NoError(t, err)
 	log.Infof("Max block time: %d, batchSealTime: %d", maxTime, batchSealTime)
-	//require.Equal(t, maxTime, batchSealTime) // TODO Fix this
+	require.Equal(t, maxTime, batchSealTime)
 }
 
 func TestClaimTx(t *testing.T) {

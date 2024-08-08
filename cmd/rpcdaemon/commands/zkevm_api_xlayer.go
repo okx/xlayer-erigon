@@ -15,7 +15,7 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumber rpc.B
 		return 0, err
 	}
 
-	if batchNumber.Int64() > int64(lastBatchNo) {
+	if batchNumber.Int64() >= int64(lastBatchNo) {
 		return 0, errors.New(fmt.Sprintf("couldn't get batch number %d's seal time, error: unexpected batch. got %d, last batch should be %d", batchNumber, batchNumber, lastBatchNo))
 	}
 
@@ -34,7 +34,7 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumber rpc.B
 		return 0, errors.New("batch is empty")
 	}
 
-	lastBlock, err := api.GetFullBlockByNumber(ctx, rpc.BlockNumber(blocks[0]), false)
+	lastBlock, err := api.GetFullBlockByNumber(ctx, rpc.BlockNumber(blocks[len(blocks)-1]), false)
 
 	return lastBlock.Timestamp, nil
 }

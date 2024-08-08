@@ -33,10 +33,8 @@ func TestLoadJsonRPCConfig(t *testing.T) {
 	client.loadJsonRPC(value)
 	require.NoError(t, err)
 
-	apolloNodeCfg, err := GetApolloNodeConfig()
-	require.NoError(t, err)
-	apolloEthCfg, err := GetApolloEthConfig()
-	require.NoError(t, err)
+	apolloNodeCfg := UnsafeGetApolloConfig().NodeCfg
+	apolloEthCfg := UnsafeGetApolloConfig().EthCfg
 
 	logTestNodeConfig(t, &apolloNodeCfg)
 	logTestEthConfig(t, &apolloEthCfg)

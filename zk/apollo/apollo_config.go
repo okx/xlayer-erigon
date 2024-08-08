@@ -49,28 +49,6 @@ func IsApolloConfigL2GasPricerEnabled() bool {
 	return UnsafeGetApolloConfig().isGPEnabled()
 }
 
-// GetApolloEthConfig returns a copy of the apollo ethconfig singleton instance
-func GetApolloEthConfig() (ethconfig.Config, error) {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	conf, err := UnsafeGetApolloConfig().EthCfg.TryClone()
-	if err != nil {
-		return ethconfig.Config{}, err
-	}
-	return conf, nil
-}
-
-// GetApolloNodeConfig returns a copy of the apollo nodecfg singleton instance
-func GetApolloNodeConfig() (nodecfg.Config, error) {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	conf, err := UnsafeGetApolloConfig().NodeCfg.TryClone()
-	if err != nil {
-		return nodecfg.Config{}, err
-	}
-	return conf, nil
-}
-
 // UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
 // without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead

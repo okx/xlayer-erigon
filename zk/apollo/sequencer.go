@@ -70,9 +70,9 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	if IsApolloConfigSequencerEnabled() {
-		if conf, err := GetApolloEthConfig(); err == nil {
-			return conf.Zk.XLayer.SequencerBatchSleepDuration
-		}
+		UnsafeGetApolloConfig().RLock()
+		defer UnsafeGetApolloConfig().RUnlock()
+		return UnsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
 	}
 	return localDuration
 }

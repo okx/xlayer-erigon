@@ -28,8 +28,8 @@ func TestApolloClient(t *testing.T) {
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	apolloNodeCfg := &UnsafeGetApolloConfig().NodeCfg
-	apolloEthCfg := &UnsafeGetApolloConfig().EthCfg
+	apolloNodeCfg := &unsafeGetApolloConfig().NodeCfg
+	apolloEthCfg := &unsafeGetApolloConfig().EthCfg
 
 	t.Log("Logging init apollo config")
 	logTestNodeConfig(t, apolloNodeCfg)

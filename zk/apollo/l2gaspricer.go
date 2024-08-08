@@ -37,12 +37,12 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 
 // loadL2GasPricerConfig loads the dynamic gas pricer apollo configurations
 func loadL2GasPricerConfig(ctx *cli.Context) {
-	UnsafeGetApolloConfig().Lock()
-	defer UnsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
 
-	loadNodeL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
-	loadEthL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
-	UnsafeGetApolloConfig().setGPFlag()
+	loadNodeL2GasPricerConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
+	loadEthL2GasPricerConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	unsafeGetApolloConfig().setGPFlag()
 }
 
 // loadNodeL2GasPricerConfig loads the dynamic gas pricer apollo node configurations

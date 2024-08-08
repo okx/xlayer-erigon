@@ -38,12 +38,12 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 
 // loadSequencerConfig loads the dynamic sequencer apollo configurations
 func loadSequencerConfig(ctx *cli.Context) {
-	UnsafeGetApolloConfig().Lock()
-	defer UnsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
 
-	loadNodeSequencerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
-	loadEthSequencerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
-	UnsafeGetApolloConfig().setSequencerFlag()
+	loadNodeSequencerConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
+	loadEthSequencerConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	unsafeGetApolloConfig().setSequencerFlag()
 }
 
 // loadNodeSequencerConfig loads the dynamic sequencer apollo node configurations
@@ -70,9 +70,9 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	if IsApolloConfigSequencerEnabled() {
-		UnsafeGetApolloConfig().RLock()
-		defer UnsafeGetApolloConfig().RUnlock()
-		return UnsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return unsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
 	}
 	return localDuration
 }

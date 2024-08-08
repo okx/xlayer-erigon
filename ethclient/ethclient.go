@@ -735,6 +735,7 @@ func (ec *Client) EstimateGas(ctx context.Context, msg ethereum.CallMsg) (uint64
 // If the transaction was a contract creation use the TransactionReceipt method to get the
 // contract address after the transaction has been mined.
 func (ec *Client) SendTransaction(ctx context.Context, tx types.Transaction) error {
+	// X Layer fix for e2e tests
 	var data bytes.Buffer
 	err := tx.MarshalBinary(&data)
 	if err != nil {

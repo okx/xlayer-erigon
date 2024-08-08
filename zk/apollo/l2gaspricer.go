@@ -7,6 +7,7 @@ import (
 	"github.com/apolloconfig/agollo/v4/storage"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
@@ -93,4 +94,16 @@ func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 	// Load l2gaspricer config
 	utils.SetApolloGPOXLayer(ctx, &ethCfg.GPO)
+}
+
+func GetApolloGasPricerConfig() (gaspricecfg.Config, error) {
+	if IsApolloConfigL2GasPricerEnabled() {
+		conf, err := GetApolloEthConfig()
+		if err != nil {
+			return gaspricecfg.Config{}, err
+		} else {
+			return conf.GPO, nil
+		}
+	}
+	return gaspricecfg.Config{}, fmt.Errorf("apollo l2gaspricer disabled")
 }

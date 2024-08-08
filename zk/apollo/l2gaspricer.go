@@ -35,16 +35,18 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	loadL2GasPricerConfig(ctx)
 	log.Info(fmt.Sprintf("apollo l2gaspricer old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo l2gaspricer config changed: %+v", value.NewValue.(string)))
+
+	// Set gp flag on fire configuration changes
+	setL2GasPricerFlag()
 }
 
 // loadL2GasPricerConfig loads the dynamic gas pricer apollo configurations
 func loadL2GasPricerConfig(ctx *cli.Context) {
-	UnsafeGetApolloConfig().Lock()
-	defer UnsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
 
-	loadNodeL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
-	loadEthL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
-	UnsafeGetApolloConfig().setGPFlag()
+	loadNodeL2GasPricerConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
+	loadEthL2GasPricerConfig(ctx, &unsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeL2GasPricerConfig loads the dynamic gas pricer apollo node configurations
@@ -106,4 +108,11 @@ func GetApolloGasPricerConfig() (gaspricecfg.Config, error) {
 		}
 	}
 	return gaspricecfg.Config{}, fmt.Errorf("apollo l2gaspricer disabled")
+}
+
+// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
+func setL2GasPricerFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setGPFlag()
 }

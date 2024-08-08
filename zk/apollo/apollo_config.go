@@ -30,51 +30,29 @@ var apolloConfig = &ApolloConfig{
 
 // IsApolloConfigRPCEnabled returns true if the jsonrpc apollo config is enabled
 func IsApolloConfigRPCEnabled() bool {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	return UnsafeGetApolloConfig().isRPCEnabled()
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+	return unsafeGetApolloConfig().isRPCEnabled()
 }
 
 // IsApolloConfigSeqEnabled returns true if the sequencer apollo config is enabled
 func IsApolloConfigSequencerEnabled() bool {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	return UnsafeGetApolloConfig().isSeqEnabled()
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+	return unsafeGetApolloConfig().isSeqEnabled()
 }
 
 // IsApolloConfigGasPricerEnabled returns true if the l2gaspricer apollo config is enabled
 func IsApolloConfigL2GasPricerEnabled() bool {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	return UnsafeGetApolloConfig().isGPEnabled()
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+	return unsafeGetApolloConfig().isGPEnabled()
 }
 
-// GetApolloEthConfig returns a copy of the apollo ethconfig singleton instance
-func GetApolloEthConfig() (ethconfig.Config, error) {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	conf, err := UnsafeGetApolloConfig().EthCfg.TryClone()
-	if err != nil {
-		return ethconfig.Config{}, err
-	}
-	return conf, nil
-}
-
-// GetApolloNodeConfig returns a copy of the apollo nodecfg singleton instance
-func GetApolloNodeConfig() (nodecfg.Config, error) {
-	UnsafeGetApolloConfig().RLock()
-	defer UnsafeGetApolloConfig().RUnlock()
-	conf, err := UnsafeGetApolloConfig().NodeCfg.TryClone()
-	if err != nil {
-		return nodecfg.Config{}, err
-	}
-	return conf, nil
-}
-
-// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
+// unsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
 // without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead
-func UnsafeGetApolloConfig() *ApolloConfig {
+func unsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 

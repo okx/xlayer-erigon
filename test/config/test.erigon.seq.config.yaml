@@ -81,7 +81,6 @@ gpo.group-id: "web3"
 gpo.default-l1-coin-price: 2000
 gpo.default-l2-coin-price: 50
 gpo.gas-price-usdt: 0.000000476190476
-gpo.enable-follower-adjust: true
 gpo.congestion-threshold: 0
 
 networkid: 195

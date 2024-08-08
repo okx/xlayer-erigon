@@ -16,16 +16,16 @@ type DefaultGasPricer struct {
 
 // newDefaultGasPriceSuggester init default gas price suggester.
 func newDefaultGasPriceSuggester(ctx context.Context, cfg gaspricecfg.Config) *DefaultGasPricer {
-	gpe := &DefaultGasPricer{
-		ctx: ctx,
-		cfg: cfg,
+	return &DefaultGasPricer{
+		ctx:       ctx,
+		cfg:       cfg,
+		lastRawGP: new(big.Int).Set(cfg.Default),
 	}
-	return gpe
 }
 
 // UpdateGasPriceAvg not needed for default strategy.
 func (d *DefaultGasPricer) UpdateGasPriceAvg(l1gp *big.Int) {
-	d.lastRawGP = d.cfg.Default
+	d.lastRawGP = new(big.Int).Set(d.cfg.Default)
 }
 
 func (d *DefaultGasPricer) GetLastRawGP() *big.Int {

@@ -34,21 +34,18 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	loadJsonRPCConfig(ctx)
 	log.Info(fmt.Sprintf("apollo jsonrpc old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo jsonrpc config changed: %+v", value.NewValue.(string)))
+
+	// Set rpc flag on fire configuration changes
+	setJsonRPCFlag()
 }
 
 // loadJsonRPCConfig loads the dynamic json rpc apollo configurations
 func loadJsonRPCConfig(ctx *cli.Context) {
-	// Update jsonrpc node config changes
-	nodecfg.UnsafeGetApolloConfig().Lock()
-	nodecfg.UnsafeGetApolloConfig().EnableApollo = true
-	loadNodeJsonRPCConfig(ctx, &nodecfg.UnsafeGetApolloConfig().Conf)
-	nodecfg.UnsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
 
-	// Update jsonrpc eth config changes
-	ethconfig.UnsafeGetApolloConfig().Lock()
-	ethconfig.UnsafeGetApolloConfig().EnableApollo = true
-	loadEthJsonRPCConfig(ctx, &ethconfig.UnsafeGetApolloConfig().Conf)
-	ethconfig.UnsafeGetApolloConfig().Unlock()
+	loadNodeJsonRPCConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
+	loadEthJsonRPCConfig(ctx, &unsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeJsonRPCConfig loads the dynamic json rpc apollo node configurations
@@ -86,4 +83,11 @@ func loadEthJsonRPCConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	loadZkConfig(ctx, ethCfg)
 
 	// Load jsonrpc config
+}
+
+// setJsonRPCFlag sets the dynamic json rpc apollo flag
+func setJsonRPCFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setRPCFlag()
 }

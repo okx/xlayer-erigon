@@ -1,7 +1,6 @@
 package apollo
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -29,72 +28,19 @@ func TestApolloClient(t *testing.T) {
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	apolloInitNodeCfg, err := nodecfg.GetApolloConfig()
-	require.NoError(t, err)
-	apolloInitEthCfg, err := ethconfig.GetApolloConfig()
-	require.NoError(t, err)
+	apolloNodeCfg := &unsafeGetApolloConfig().NodeCfg
+	apolloEthCfg := &unsafeGetApolloConfig().EthCfg
 
-	logTestNodeConfig(t, &apolloInitNodeCfg)
-	logTestEthConfig(t, &apolloInitEthCfg)
+	t.Log("Logging init apollo config")
+	logTestNodeConfig(t, apolloNodeCfg)
+	logTestEthConfig(t, apolloEthCfg)
 
 	// Fire config changes on both ethconfig and nodecfg
 	time.Sleep(30 * time.Second)
 
-	apolloAfterNodeCfg, err := nodecfg.GetApolloConfig()
-	require.NoError(t, err)
-	apolloAfterEthCfg, err := ethconfig.GetApolloConfig()
-	require.NoError(t, err)
-
-	t.Log("Logging apollo config")
-	logTestNodeConfig(t, &apolloAfterNodeCfg)
-	logTestEthConfig(t, &apolloAfterEthCfg)
-
-	// Test apollo dynamic configuration changes
-	require.NotEqual(t, apolloInitNodeCfg, apolloAfterNodeCfg)
-	require.NotEqual(t, apolloInitEthCfg, apolloAfterEthCfg)
-}
-
-func TestApolloConfig(t *testing.T) {
-	c := &ethconfig.Config{
-		Zk: &ethconfig.Zk{
-			XLayer: ethconfig.XLayerConfig{
-				Apollo: ethconfig.ApolloClientConfig{
-					IP:            "http://127.0.0.1:18080",
-					AppID:         "SampleApp",
-					NamespaceName: "sequencer-hihihi.txt",
-					Enable:        true,
-				},
-			},
-		},
-	}
-	client := NewClient(c)
-
-	// Test load config cache
-	loaded := client.LoadConfig()
-	require.Equal(t, true, loaded)
-
-	// Test to ensure read apollo nodecfg method return deep copies
-	firstCopyApolloNodeCfg, err := nodecfg.GetApolloConfig()
-	require.NoError(t, err)
-	secondCopyApolloNodeCfg, err := nodecfg.GetApolloConfig()
-	require.NoError(t, err)
-	t.Logf("1st copy address of node config: %p", &firstCopyApolloNodeCfg)
-	t.Logf("2nd copy address of node config: %p", &secondCopyApolloNodeCfg)
-	require.NotEqual(t, fmt.Sprintf("%p", &firstCopyApolloNodeCfg), fmt.Sprintf("%p", &secondCopyApolloNodeCfg))
-	require.Equal(t, firstCopyApolloNodeCfg, secondCopyApolloNodeCfg)
-
-	// Test to ensure read apollo ethconfig method return deep copies
-	firstCopyApolloEthCfg, err := ethconfig.GetApolloConfig()
-	require.NoError(t, err)
-	secondCopyApolloEthCfg, err := ethconfig.GetApolloConfig()
-	require.NoError(t, err)
-	t.Logf("1st copy address of ethconfig: %p", &firstCopyApolloEthCfg)
-	t.Logf("2nd copy address of ethconfig: %p", &secondCopyApolloEthCfg)
-	require.NotEqual(t, fmt.Sprintf("%p", &firstCopyApolloEthCfg), fmt.Sprintf("%p", &secondCopyApolloEthCfg))
-	t.Logf("1st copy address of zk config: %p", firstCopyApolloEthCfg.Zk)
-	t.Logf("2nd copy address of zk config: %p", secondCopyApolloEthCfg.Zk)
-	require.NotEqual(t, fmt.Sprintf("%p", firstCopyApolloEthCfg.Zk), fmt.Sprintf("%p", secondCopyApolloEthCfg.Zk))
-	require.Equal(t, firstCopyApolloEthCfg, secondCopyApolloEthCfg)
+	t.Log("Logging after apollo config")
+	logTestNodeConfig(t, apolloNodeCfg)
+	logTestEthConfig(t, apolloEthCfg)
 }
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {

@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -10,10 +12,9 @@ import (
 func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	cfg.XLayer = ethconfig.XLayerConfig{
 		Apollo: ethconfig.ApolloClientConfig{
-			Enable:        ctx.Bool(utils.ApolloEnableFlag.Name),
-			IP:            ctx.String(utils.ApolloIPAddr.Name),
-			AppID:         ctx.String(utils.ApolloAppId.Name),
-			NamespaceName: ctx.String(utils.ApolloNamespaceName.Name),
+			Enable: ctx.Bool(utils.ApolloEnableFlag.Name),
+			IP:     ctx.String(utils.ApolloIPAddr.Name),
+			AppID:  ctx.String(utils.ApolloAppId.Name),
 		},
 		Nacos: ethconfig.NacosConfig{
 			URLs:               ctx.String(utils.NacosURLsFlag.Name),
@@ -23,6 +24,14 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		},
 		EnableInnerTx:               ctx.Bool(utils.AllowInternalTransactions.Name),
 		SequencerBatchSleepDuration: ctx.Duration(utils.SequencerBatchSleepDuration.Name),
+	}
+
+	if ctx.IsSet(utils.ApolloNamespaceName.Name) {
+		ns := strings.Split(ctx.String(utils.ApolloNamespaceName.Name), ",")
+		for idx, item := range ns {
+			ns[idx] = strings.TrimSpace(item)
+		}
+		cfg.XLayer.Apollo.NamespaceName = strings.Join(ns, ",")
 	}
 }
 

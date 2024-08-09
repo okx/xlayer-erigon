@@ -5,6 +5,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/erigon/zk/apollo"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net"
@@ -24,6 +25,7 @@ func initRunForXLayer(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) {
 
 	// Start Metrics Server
 	if ethCfg.Zk.XLayer.Metrics.Enabled {
+		metrics.XLayerMetricsInit()
 		go startMetricsHttpServer(ethCfg.Zk.XLayer.Metrics)
 	}
 }

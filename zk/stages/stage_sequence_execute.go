@@ -20,6 +20,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	"github.com/ledgerwatch/erigon/zk/seqlog"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
@@ -329,7 +330,8 @@ func SpawnSequencingStage(
 		}
 
 		if !isAnyRecovery && overflowOnNewBlock {
-			seqlog.GetBatchLogger().SetClosingReason("BatchCounterOverflow")
+			batchCloseReason = metrics.CounterOverflow
+			seqlog.GetBatchLogger().SetClosingReason(metrics.CounterOverflow)
 			break
 		}
 
@@ -388,14 +390,15 @@ func SpawnSequencingStage(
 				}
 			case <-batchTicker.C:
 				if !isAnyRecovery {
-					batchCloseReason = "batchTickerTimeOut"
-					seqlog.GetBatchLogger().SetClosingReason("EmptyBatchTimeOut")
+					batchCloseReason = metrics.EmptyTimeOut
+					seqlog.GetBatchLogger().SetClosingReason(metrics.EmptyTimeOut)
 					runLoopBlocks = false
 					break LOOP_TRANSACTIONS
 				}
 			case <-nonEmptyBatchTimer.C:
 				if !isAnyRecovery && hasAnyTransactionsInThisBatch {
-					seqlog.GetBatchLogger().SetClosingReason("NonEmptyBatchTimeOut")
+					batchCloseReason = metrics.NonEmptyTimeOut
+					seqlog.GetBatchLogger().SetClosingReason(metrics.NonEmptyTimeOut)
 					runLoopBlocks = false
 					break LOOP_TRANSACTIONS
 				}
@@ -512,7 +515,7 @@ func SpawnSequencingStage(
 		}
 		if blockCloseReason != "" {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBlockTimeOut, time.Since(addTxsStart))
-		} else if batchCloseReason != "" && len(blockTransactions) == 0 {
+		} else if batchCloseReason == metrics.EmptyTimeOut {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBatchTimeOut, time.Since(addTxsStart))
 		} else {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.AddTxs, time.Since(addTxsStart))
@@ -640,7 +643,9 @@ func SpawnSequencingStage(
 		}
 	}
 	seqlog.GetBatchLogger().AppendCommitLog(time.Since(commitStart))
-	seqlog.GetBatchLogger().SetTotalDuration(time.Since(batchStart))
+	batchTime := time.Since(batchStart)
+	seqlog.GetBatchLogger().SetTotalDuration(batchTime)
+	metrics.BatchExecuteTime(batchCloseReason, batchTime)
 	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 
 	// X Layer handle

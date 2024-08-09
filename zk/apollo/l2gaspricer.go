@@ -111,3 +111,10 @@ func setL2GasPricerFlag() {
 	defer unsafeGetApolloConfig().Unlock()
 	unsafeGetApolloConfig().setGPFlag()
 }
+
+// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
+func setL2GasPricerFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setGPFlag()
+}

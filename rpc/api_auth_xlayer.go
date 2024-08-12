@@ -13,12 +13,14 @@ import (
 
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 	"github.com/ledgerwatch/log/v3"
+	"golang.org/x/time/rate"
 )
 
-// ApiKeyAuthMap is the struct definition for the allowed API auth keys
-type ApiKeyAuthMap struct {
+// ApiKeyAutRateLimiter is the struct definition for the allowed API auth keys rate limiter
+type ApiKeyAutRateLimiter struct {
 	Enable    bool
 	AllowKeys map[string]ApiKeyItem
+	rlm       map[string]map[string]*rate.Limiter
 	sync.RWMutex
 }
 
@@ -28,17 +30,18 @@ type ApiKeyItem struct {
 	Timeout time.Time
 }
 
-// gApikeyAuthMap is the node's singleton instance for the allowed API auth keys
-var gApikeyAuthMap = &ApiKeyAuthMap{
+// gApiKeyAutRateLimiter is the node's singleton instance for the allowed API auth keys rate limiter
+var gApiKeyAutRateLimiter = &ApiKeyAutRateLimiter{
 	Enable:    false,
 	AllowKeys: make(map[string]ApiKeyItem),
+	rlm:       make(map[string]map[string]*rate.Limiter),
 }
 
-// SetApiAuth sets the gApikeyAuthMap singleton instance with the API
+// SetApiAuth sets the gApiKeyAutRateLimiter singleton instance with the API
 // auth key configs
 func SetApiAuth(cfg string) {
-	gApikeyAuthMap.Lock()
-	defer gApikeyAuthMap.Unlock()
+	gApiKeyAutRateLimiter.Lock()
+	defer gApiKeyAutRateLimiter.Unlock()
 
 	if cfg == "" {
 		return
@@ -46,9 +49,9 @@ func SetApiAuth(cfg string) {
 	log.Info(fmt.Sprintf("Setting API keys auth, config: %v", cfg))
 	keyItems := strings.Split(cfg, "\n")
 
-	// Clear API auth key map
-	gApikeyAuthMap.AllowKeys = make(map[string]ApiKeyItem)
-	clearApikeyRateLimitMap()
+	// Clear API auth key maps
+	gApiKeyAutRateLimiter.AllowKeys = make(map[string]ApiKeyItem)
+	gApiKeyAutRateLimiter.rlm = make(map[string]map[string]*rate.Limiter)
 
 	// Set API auth key map
 	for _, item := range keyItems {
@@ -77,31 +80,52 @@ func SetApiAuth(cfg string) {
 			log.Warn(fmt.Sprintf("Project [%s], key [%s] is invalid, key = md5(Project+Timeout)", keyCfg.Project, keyCfg.Key))
 			continue
 		}
+
 		// Set API key authentication
 		key := strings.ToLower(keyCfg.Key)
-		gApikeyAuthMap.AllowKeys[key] = ApiKeyItem{
+		gApiKeyAutRateLimiter.AllowKeys[key] = ApiKeyItem{
 			Project: keyCfg.Project,
 			Timeout: parse,
 		}
-		// Set API key rate limiter
-		rlCfg := RateLimitConfig{
-			RateLimitApis:   keyCfg.Methods,
-			RateLimitCount:  keyCfg.Count,
-			RateLimitBucket: keyCfg.Bucket,
-		}
-		setApikeyRateLimit(key, rlCfg)
-		gApikeyAuthMap.Enable = true
-	}
 
+		// Set API key rate limiter
+		if _, ok := gApiKeyAutRateLimiter.rlm[key]; ok {
+			log.Warn("API key rate limiter already set, skipping")
+			return
+		}
+
+		// Set API key rate limiter map
+		gApiKeyAutRateLimiter.rlm[key] = make(map[string]*rate.Limiter)
+		for _, api := range keyCfg.Methods {
+			gApiKeyAutRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(keyCfg.Count), keyCfg.Bucket)
+			log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, keyCfg.Methods, keyCfg.Count, keyCfg.Bucket))
+		}
+		log.Info(fmt.Sprintf("Set API key rate limiter for key: %v, cfg: %v", key, cfg))
+		gApiKeyAutRateLimiter.Enable = true
+	}
+}
+
+// checkApikeyMethodRateLimit returns true if the key and the method API is allowed
+// by the API key rate limiter
+func checkApikeyMethodRateLimit(key, method string) bool {
+	gApiKeyAutRateLimiter.RLock()
+	defer gApiKeyAutRateLimiter.RUnlock()
+
+	if rlm, keyFound := gApiKeyAutRateLimiter.rlm[key]; keyFound {
+		if rl, ok := rlm[method]; ok {
+			return rl.Allow()
+		}
+	}
+	return true
 }
 
 // checkAuthKey checks the API authentication key
 func checkAuthKey(key string) error {
-	gApikeyAuthMap.RLock()
-	defer gApikeyAuthMap.RUnlock()
+	gApiKeyAutRateLimiter.RLock()
+	defer gApiKeyAutRateLimiter.RUnlock()
 
 	key = strings.ToLower(key)
-	if item, ok := gApikeyAuthMap.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
+	if item, ok := gApiKeyAutRateLimiter.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
 		//metrics.RequestAuthCount(al.allowKeys[key].project)
 		return nil
 	} else if ok && time.Now().After(item.Timeout) {
@@ -115,7 +139,7 @@ func checkAuthKey(key string) error {
 
 func apiAuthHandlerFunc(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if gApikeyAuthMap.Enable {
+		if gApiKeyAutRateLimiter.Enable {
 			if er := checkAuthKey(path.Base(r.URL.Path)); er != nil {
 				err := handleNoAuthErr(w, er)
 				if err != nil {

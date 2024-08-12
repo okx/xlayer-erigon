@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// loadJsonRPC loads the apollo jsonrpc config cache on startup
 func (c *Client) loadJsonRPC(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {

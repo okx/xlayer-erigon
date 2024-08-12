@@ -1557,6 +1557,7 @@ func (db *HermezDbReader) GetForkFromRollupType(rollupType uint64) (uint64, erro
 }
 
 func (db *HermezDb) WriteNewForkHistory(forkId, lastVerifiedBatch uint64) error {
+	log.Info(fmt.Sprintf("zjg, [HermezDb] WriteNewForkHistory: forkId:%v, lastVerifiedBatch:%v", forkId, lastVerifiedBatch))
 	cursor, err := db.tx.Cursor(FORK_HISTORY)
 	if err != nil {
 		return err

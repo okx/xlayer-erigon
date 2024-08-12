@@ -216,6 +216,13 @@ func prepareForkId(lastBatch, executionAt uint64, hermezDb forkDb) (uint64, erro
 		return 0, err
 	}
 
+	for _, batch := range allBatches {
+		log.Info(fmt.Sprintf("zjg, prepareForkId Batch %v", batch))
+	}
+	for _, fork := range allForks {
+		log.Info(fmt.Sprintf("zjg, prepareForkId Fork %v", fork))
+	}
+
 	nextBatch := lastBatch + 1
 
 	// iterate over the batch boundaries and find the latest fork that applies

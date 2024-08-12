@@ -93,6 +93,7 @@ Loop:
 						return err
 					}
 				case contracts.AddNewRollupTypeTopic:
+					log.Info(fmt.Sprintf("zjg, received AddNewRollupTypeTopic"))
 					rollupType := l.Topics[1].Big().Uint64()
 					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
 					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
@@ -100,8 +101,10 @@ Loop:
 						return err
 					}
 				case contracts.CreateNewRollupTopic:
+					log.Info(fmt.Sprintf("zjg, received CreateNewRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
+						log.Info(fmt.Sprintf("zjg, received CreateNewRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					rollupTypeBytes := l.Data[0:32]
@@ -117,8 +120,10 @@ Loop:
 						return err
 					}
 				case contracts.UpdateRollupTopic:
+					log.Info(fmt.Sprintf("zjg, received UpdateRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
+						log.Info(fmt.Sprintf("zjg, received UpdateRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					newRollupBytes := l.Data[0:32]

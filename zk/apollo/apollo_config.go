@@ -50,6 +50,13 @@ func IsApolloConfigL2GasPricerEnabled() bool {
 	return unsafeGetApolloConfig().isGPEnabled()
 }
 
+// IsApolloConfigPoolEnabled returns true if the pool apollo config is enabled
+func IsApolloConfigPoolEnabled() bool {
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+	return unsafeGetApolloConfig().isPoolEnabled()
+}
+
 // unsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
 // without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead

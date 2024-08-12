@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/apolloconfig/agollo/v4/storage"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -66,4 +67,40 @@ func setPoolFlag() {
 	unsafeGetApolloConfig().Lock()
 	defer unsafeGetApolloConfig().Unlock()
 	unsafeGetApolloConfig().setPoolFlag()
+}
+
+func CheckBlockedAddr(localBlockedList []string, addr libcommon.Address) bool {
+	if IsApolloConfigPoolEnabled() {
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return containsAddress(unsafeGetApolloConfig().EthCfg.DeprecatedTxPool.BlockedList, addr)
+	}
+	return containsAddress(localBlockedList, addr)
+}
+
+func GetEnableWhitelist(localEnableWhitelist bool) bool {
+	if IsApolloConfigPoolEnabled() {
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return unsafeGetApolloConfig().EthCfg.DeprecatedTxPool.EnableWhitelist
+	}
+	return localEnableWhitelist
+}
+
+func CheckWhitelistAddr(localWhitelist []string, addr libcommon.Address) bool {
+	if IsApolloConfigPoolEnabled() {
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return containsAddress(unsafeGetApolloConfig().EthCfg.DeprecatedTxPool.WhiteList, addr)
+	}
+	return containsAddress(localWhitelist, addr)
+}
+
+func CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr libcommon.Address) bool {
+	if IsApolloConfigPoolEnabled() {
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return containsAddress(unsafeGetApolloConfig().EthCfg.DeprecatedTxPool.FreeClaimGasAddrs, addr)
+	}
+	return containsAddress(localFreeClaimGasAddrs, addr)
 }

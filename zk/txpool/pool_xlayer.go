@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 )
 
 // XLayerConfig contains the X Layer configs for the txpool
@@ -25,37 +26,12 @@ type GPCache interface {
 	SetLatest(hash common.Hash, price *big.Int)
 }
 
-func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
-	// check from config
-	for _, e := range p.xlayerCfg.BlockedList {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
-	// check from config
-	for _, e := range p.xlayerCfg.WhiteList {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
+func (p *TxPool) isFreeClaimAddrXLayer(senderID uint64) bool {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false
 	}
-	for _, e := range p.xlayerCfg.FreeClaimGasAddrs {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
+	return apollo.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr)
 }
 
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {

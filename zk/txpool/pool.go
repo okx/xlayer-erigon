@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
 
@@ -781,21 +782,21 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is blocked
-	if p.checkBlockedAddr(from) {
+	if apollo.CheckBlockedAddr(p.xlayerCfg.BlockedList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx
 	}
 
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
-		if p.checkBlockedAddr(txn.To) {
+		if apollo.CheckBlockedAddr(p.xlayerCfg.BlockedList, txn.To) {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
 			return ReceiverDisallowedReceiveTx
 		}
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.xlayerCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if apollo.GetEnableWhitelist(p.xlayerCfg.EnableWhitelist) && !apollo.CheckWhiteAddr(p.xlayerCfg.WhiteList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}

@@ -36,6 +36,9 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	log.Info(fmt.Sprintf("apollo jsonrpc old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo jsonrpc config changed: %+v", value.NewValue.(string)))
 
+	// Fire rate limiter configurations
+	setRateLimiterConfig(ctx)
+
 	// Set rpc flag on fire configuration changes
 	setJsonRPCFlag()
 }
@@ -78,11 +81,9 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	}
 	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
 		nodeCfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
-		rpc.SetApiAuth(nodeCfg.Http.HttpApiKeys)
 	}
 	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
 		nodeCfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
-		rpc.SetRateLimit(nodeCfg.Http.MethodRateLimit)
 	}
 }
 
@@ -99,4 +100,16 @@ func setJsonRPCFlag() {
 	unsafeGetApolloConfig().Lock()
 	defer unsafeGetApolloConfig().Unlock()
 	unsafeGetApolloConfig().setRPCFlag()
+}
+
+func setRateLimiterConfig(ctx *cli.Context) {
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		rpc.SetApiAuth(unsafeGetApolloConfig().NodeCfg.Http.HttpApiKeys)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		rpc.SetRateLimit(unsafeGetApolloConfig().NodeCfg.Http.MethodRateLimit)
+	}
 }

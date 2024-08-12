@@ -2,10 +2,12 @@ package apollo
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/apolloconfig/agollo/v4/storage"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
@@ -57,7 +59,57 @@ func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	// Load generic ZK config
 	loadZkConfig(ctx, ethCfg)
 
+	// Load generic gas pricer config
+	if ctx.IsSet(utils.EffectiveGasPriceForEthTransfer.Name) {
+		effectiveGasPriceForEthTransferVal := ctx.Float64(utils.EffectiveGasPriceForEthTransfer.Name)
+		effectiveGasPriceForEthTransferVal = math.Max(effectiveGasPriceForEthTransferVal, 0)
+		effectiveGasPriceForEthTransferVal = math.Min(effectiveGasPriceForEthTransferVal, 1)
+		ethCfg.Zk.EffectiveGasPriceForEthTransfer = uint8(math.Round(effectiveGasPriceForEthTransferVal * 255.0))
+	}
+	if ctx.IsSet(utils.EffectiveGasPriceForErc20Transfer.Name) {
+		effectiveGasPriceForErc20TransferVal := ctx.Float64(utils.EffectiveGasPriceForErc20Transfer.Name)
+		effectiveGasPriceForErc20TransferVal = math.Max(effectiveGasPriceForErc20TransferVal, 0)
+		effectiveGasPriceForErc20TransferVal = math.Min(effectiveGasPriceForErc20TransferVal, 1)
+		ethCfg.Zk.EffectiveGasPriceForErc20Transfer = uint8(math.Round(effectiveGasPriceForErc20TransferVal * 255.0))
+	}
+	if ctx.IsSet(utils.EffectiveGasPriceForContractInvocation.Name) {
+		effectiveGasPriceForContractInvocationVal := ctx.Float64(utils.EffectiveGasPriceForContractInvocation.Name)
+		effectiveGasPriceForContractInvocationVal = math.Max(effectiveGasPriceForContractInvocationVal, 0)
+		effectiveGasPriceForContractInvocationVal = math.Min(effectiveGasPriceForContractInvocationVal, 1)
+		ethCfg.Zk.EffectiveGasPriceForContractInvocation = uint8(math.Round(effectiveGasPriceForContractInvocationVal * 255.0))
+	}
+	if ctx.IsSet(utils.EffectiveGasPriceForContractDeployment.Name) {
+		effectiveGasPriceForContractDeploymentVal := ctx.Float64(utils.EffectiveGasPriceForContractDeployment.Name)
+		effectiveGasPriceForContractDeploymentVal = math.Max(effectiveGasPriceForContractDeploymentVal, 0)
+		effectiveGasPriceForContractDeploymentVal = math.Min(effectiveGasPriceForContractDeploymentVal, 1)
+		ethCfg.Zk.EffectiveGasPriceForContractDeployment = uint8(math.Round(effectiveGasPriceForContractDeploymentVal * 255.0))
+	}
+	if ctx.IsSet(utils.DefaultGasPrice.Name) {
+		ethCfg.Zk.DefaultGasPrice = ctx.Uint64(utils.DefaultGasPrice.Name)
+	}
+	if ctx.IsSet(utils.MaxGasPrice.Name) {
+		ethCfg.Zk.MaxGasPrice = ctx.Uint64(utils.MaxGasPrice.Name)
+	}
+	if ctx.IsSet(utils.GasPriceFactor.Name) {
+		ethCfg.Zk.GasPriceFactor = ctx.Float64(utils.GasPriceFactor.Name)
+	}
+
 	// Load l2gaspricer config
+	ethCfg.GPO = ethconfig.Defaults.GPO
+	utils.SetApolloGPOXLayer(ctx, &ethCfg.GPO)
+}
+
+func GetApolloGasPricerConfig() gaspricecfg.Config {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	return unsafeGetApolloConfig().EthCfg.GPO
+}
+
+// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
+func setL2GasPricerFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setGPFlag()
 }
 
 // setL2GasPricerFlag sets the dynamic gas pricer apollo flag

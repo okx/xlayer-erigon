@@ -12,9 +12,9 @@ import (
 	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/rawdb"
-	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/erigon/rpc"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
@@ -97,28 +97,32 @@ func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
 }
 
 func (api *APIImpl) runL2GasPriceSuggester() {
-	cfg := api.L2GasPricer.GetConfig()
 	ctx := api.L2GasPricer.GetCtx()
 
-	// TODO: apollo
+	if apollo.IsApolloConfigL2GasPricerEnabled() {
+		api.L2GasPricer.UpdateConfig(apollo.GetApolloGasPricerConfig())
+	}
 	l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 	// if err != nil, do nothing
 	if err == nil {
 		api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 	}
-	updateTimer := time.NewTimer(cfg.XLayer.UpdatePeriod)
+	updateTimer := time.NewTimer(api.L2GasPricer.GetConfig().XLayer.UpdatePeriod)
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("Finishing l2 gas price suggester...")
 			return
 		case <-updateTimer.C:
+			if apollo.IsApolloConfigL2GasPricerEnabled() {
+				api.L2GasPricer.UpdateConfig(apollo.GetApolloGasPricerConfig())
+			}
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
 			}
 			api.updateDynamicGP(ctx)
-			updateTimer.Reset(cfg.XLayer.UpdatePeriod)
+			updateTimer.Reset(api.L2GasPricer.GetConfig().XLayer.UpdatePeriod)
 		}
 	}
 }
@@ -135,7 +139,7 @@ func (api *APIImpl) updateDynamicGP(ctx context.Context) {
 		log.Error(fmt.Sprintf("error chainConfig: %v", err))
 		return
 	}
-	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), ethconfig.Defaults.GPO, api.gasCache)
+	oracle := gasprice.NewOracle(NewGasPriceOracleBackend(tx, cc, api.BaseAPI), api.L2GasPricer.GetConfig(), api.gasCache)
 	tipcap, err := oracle.SuggestTipCap(ctx)
 	if err != nil {
 		log.Error(fmt.Sprintf("error SuggestTipCap: %v", err))

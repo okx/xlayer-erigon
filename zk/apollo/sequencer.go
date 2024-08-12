@@ -73,6 +73,13 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	}
 }
 
+// setSequencerFlag sets the dynamic sequencer apollo flag
+func setSequencerFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setSequencerFlag()
+}
+
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	if IsApolloConfigSequencerEnabled() {
 		unsafeGetApolloConfig().RLock()
@@ -80,11 +87,4 @@ func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 		return unsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
 	}
 	return localDuration
-}
-
-// setSequencerFlag sets the dynamic sequencer apollo flag
-func setSequencerFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setSequencerFlag()
 }

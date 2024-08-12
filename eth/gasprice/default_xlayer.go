@@ -28,6 +28,10 @@ func (d *DefaultGasPricer) UpdateGasPriceAvg(l1gp *big.Int) {
 	d.lastRawGP = new(big.Int).Set(d.cfg.Default)
 }
 
+func (d *DefaultGasPricer) UpdateConfig(c gaspricecfg.Config) {
+	d.cfg = c
+}
+
 func (d *DefaultGasPricer) GetLastRawGP() *big.Int {
 	return d.lastRawGP
 }

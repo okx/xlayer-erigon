@@ -18,9 +18,8 @@ import (
 
 // ApiKeyAutRateLimiter is the struct definition for the allowed API auth keys rate limiter
 type ApiKeyAutRateLimiter struct {
-	Enable    bool
-	AllowKeys map[string]ApiKeyItem
-	rlm       map[string]map[string]*rate.Limiter
+	Enable bool
+	KeyMap map[string]ApiKeyItem
 	sync.RWMutex
 }
 
@@ -28,13 +27,13 @@ type ApiKeyAutRateLimiter struct {
 type ApiKeyItem struct {
 	Project string
 	Timeout time.Time
+	Rlm     map[string]*rate.Limiter
 }
 
 // gApiKeyAutRateLimiter is the node's singleton instance for the allowed API auth keys rate limiter
 var gApiKeyAutRateLimiter = &ApiKeyAutRateLimiter{
-	Enable:    false,
-	AllowKeys: make(map[string]ApiKeyItem),
-	rlm:       make(map[string]map[string]*rate.Limiter),
+	Enable: false,
+	KeyMap: make(map[string]ApiKeyItem),
 }
 
 // SetApiAuth sets the gApiKeyAutRateLimiter singleton instance with the API
@@ -49,9 +48,8 @@ func SetApiAuth(cfg string) {
 	log.Info(fmt.Sprintf("Setting API keys auth, config: %v", cfg))
 	keyItems := strings.Split(cfg, "\n")
 
-	// Clear API auth key maps
-	gApiKeyAutRateLimiter.AllowKeys = make(map[string]ApiKeyItem)
-	gApiKeyAutRateLimiter.rlm = make(map[string]map[string]*rate.Limiter)
+	// Clear API auth key
+	gApiKeyAutRateLimiter.KeyMap = make(map[string]ApiKeyItem)
 
 	// Set API auth key map
 	for _, item := range keyItems {
@@ -81,23 +79,22 @@ func SetApiAuth(cfg string) {
 			continue
 		}
 
-		// Set API key authentication
 		key := strings.ToLower(keyCfg.Key)
-		gApiKeyAutRateLimiter.AllowKeys[key] = ApiKeyItem{
-			Project: keyCfg.Project,
-			Timeout: parse,
+		if _, ok := gApiKeyAutRateLimiter.KeyMap[key]; ok {
+			log.Warn("API key rate limiter already set, skipping")
+			continue
 		}
 
-		// Set API key rate limiter
-		if _, ok := gApiKeyAutRateLimiter.rlm[key]; ok {
-			log.Warn("API key rate limiter already set, skipping")
-			return
+		// Set API key authentication
+		gApiKeyAutRateLimiter.KeyMap[key] = ApiKeyItem{
+			Project: keyCfg.Project,
+			Timeout: parse,
+			Rlm:     make(map[string]*rate.Limiter),
 		}
 
 		// Set API key rate limiter map
-		gApiKeyAutRateLimiter.rlm[key] = make(map[string]*rate.Limiter)
 		for _, api := range keyCfg.Methods {
-			gApiKeyAutRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(keyCfg.Count), keyCfg.Bucket)
+			gApiKeyAutRateLimiter.KeyMap[key].Rlm[api] = rate.NewLimiter(rate.Limit(keyCfg.Count), keyCfg.Bucket)
 			log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, keyCfg.Methods, keyCfg.Count, keyCfg.Bucket))
 		}
 		log.Info(fmt.Sprintf("Set API key rate limiter for key: %v, cfg: %v", key, cfg))
@@ -111,8 +108,8 @@ func checkApikeyMethodRateLimit(key, method string) bool {
 	gApiKeyAutRateLimiter.RLock()
 	defer gApiKeyAutRateLimiter.RUnlock()
 
-	if rlm, keyFound := gApiKeyAutRateLimiter.rlm[key]; keyFound {
-		if rl, ok := rlm[method]; ok {
+	if keyItem, keyFound := gApiKeyAutRateLimiter.KeyMap[key]; keyFound {
+		if rl, ok := keyItem.Rlm[method]; ok {
 			return rl.Allow()
 		}
 	}
@@ -125,7 +122,7 @@ func checkAuthKey(key string) error {
 	defer gApiKeyAutRateLimiter.RUnlock()
 
 	key = strings.ToLower(key)
-	if item, ok := gApiKeyAutRateLimiter.AllowKeys[key]; ok && time.Now().Before(item.Timeout) {
+	if item, ok := gApiKeyAutRateLimiter.KeyMap[key]; ok && time.Now().Before(item.Timeout) {
 		//metrics.RequestAuthCount(al.allowKeys[key].project)
 		return nil
 	} else if ok && time.Now().After(item.Timeout) {

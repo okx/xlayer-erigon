@@ -19,6 +19,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/erigon/zk/l1_data"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
@@ -610,8 +611,9 @@ func SpawnSequencingStage(
 }
 
 func tryHaltSequencer(logPrefix string, cfg SequenceBlockCfg, thisBatch uint64) {
-	if cfg.zk.SequencerHaltOnBatchNumber != 0 &&
-		cfg.zk.SequencerHaltOnBatchNumber == thisBatch {
+	// For X Layer
+	seqHaltOnBatchNumber := apollo.GetSequencerHalt(cfg.zk.SequencerHaltOnBatchNumber)
+	if seqHaltOnBatchNumber != 0 && seqHaltOnBatchNumber == thisBatch {
 		for {
 			log.Info(fmt.Sprintf("[%s] Halt sequencer on batch %d...", logPrefix, thisBatch))
 			time.Sleep(5 * time.Second) //nolint:gomnd

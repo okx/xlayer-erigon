@@ -26,25 +26,21 @@ type XLayerConfig struct {
 	DefaultL2CoinPrice float64 `toml:",omitempty"`
 	GasPriceUsdt       float64 `toml:",omitempty"`
 
-	// EnableFollowerAdjustByL2L1Price is dynamic adjust the factor through the L1 and L2 coins price in follower strategy
-	EnableFollowerAdjustByL2L1Price bool `toml:",omitempty"`
-
 	CongestionThreshold int `toml:",omitempty"`
 }
 
 var (
 	DefaultXLayerConfig = XLayerConfig{
-		Type:                            DefaultType,
-		UpdatePeriod:                    10 * time.Second,
-		Factor:                          0.01,
-		KafkaURL:                        "0.0.0.0",
-		Topic:                           "xlayer",
-		GroupID:                         "xlayer",
-		DefaultL1CoinPrice:              2000,
-		DefaultL2CoinPrice:              50,
-		GasPriceUsdt:                    0.000000476190476,
-		EnableFollowerAdjustByL2L1Price: true,
-		CongestionThreshold:             0,
+		Type:                DefaultType,
+		UpdatePeriod:        10 * time.Second,
+		Factor:              0.01,
+		KafkaURL:            "0.0.0.0",
+		Topic:               "xlayer",
+		GroupID:             "xlayer",
+		DefaultL1CoinPrice:  2000,
+		DefaultL2CoinPrice:  50,
+		GasPriceUsdt:        0.000000476190476,
+		CongestionThreshold: 0,
 	}
 	DefaultXLayerPrice = big.NewInt(1 * params.GWei)
 )

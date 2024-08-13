@@ -7,6 +7,7 @@ import (
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
+	"github.com/ledgerwatch/erigon/rpc"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
@@ -34,6 +35,9 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	loadJsonRPCConfig(ctx)
 	log.Info(fmt.Sprintf("apollo jsonrpc old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo jsonrpc config changed: %+v", value.NewValue.(string)))
+
+	// Fire rate limiter configurations
+	setRateLimiterConfig(ctx)
 
 	// Set rpc flag on fire configuration changes
 	setJsonRPCFlag()
@@ -75,6 +79,12 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	if ctx.IsSet(utils.WSEnabledFlag.Name) {
 		nodeCfg.Http.WebsocketEnabled = true
 	}
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		nodeCfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		nodeCfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
+	}
 }
 
 // loadEthJsonRPCConfig loads the dynamic json rpc apollo eth configurations
@@ -90,4 +100,16 @@ func setJsonRPCFlag() {
 	unsafeGetApolloConfig().Lock()
 	defer unsafeGetApolloConfig().Unlock()
 	unsafeGetApolloConfig().setRPCFlag()
+}
+
+func setRateLimiterConfig(ctx *cli.Context) {
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		rpc.SetApiAuth(unsafeGetApolloConfig().NodeCfg.Http.HttpApiKeys)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		rpc.SetRateLimit(unsafeGetApolloConfig().NodeCfg.Http.MethodRateLimit)
+	}
 }

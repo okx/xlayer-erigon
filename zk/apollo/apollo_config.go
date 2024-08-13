@@ -12,6 +12,7 @@ const (
 	JsonRPCFlag = 1 << iota
 	SequencerFlag
 	L2GasPricerFlag
+	PoolFlag
 )
 
 // ApolloConfig is the apollo backend dynamic config
@@ -49,6 +50,13 @@ func IsApolloConfigL2GasPricerEnabled() bool {
 	return unsafeGetApolloConfig().isGPEnabled()
 }
 
+// IsApolloConfigPoolEnabled returns true if the pool apollo config is enabled
+func IsApolloConfigPoolEnabled() bool {
+	unsafeGetApolloConfig().RLock()
+	defer unsafeGetApolloConfig().RUnlock()
+	return unsafeGetApolloConfig().isPoolEnabled()
+}
+
 // unsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
 // without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead
@@ -71,6 +79,11 @@ func (c *ApolloConfig) isGPEnabled() bool {
 	return c.EnableFlag&L2GasPricerFlag != 0
 }
 
+// isPoolEnabled returns true if the Pool flag is enabled
+func (c *ApolloConfig) isPoolEnabled() bool {
+	return c.EnableFlag&PoolFlag != 0
+}
+
 func (c *ApolloConfig) setRPCFlag() {
 	c.EnableFlag |= JsonRPCFlag
 }
@@ -82,4 +95,8 @@ func (c *ApolloConfig) setSequencerFlag() {
 
 func (c *ApolloConfig) setGPFlag() {
 	c.EnableFlag |= L2GasPricerFlag
+}
+
+func (c *ApolloConfig) setPoolFlag() {
+	c.EnableFlag |= PoolFlag
 }

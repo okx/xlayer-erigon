@@ -13,6 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// loadL2GasPricer loads the apollo l2gaspricer config cache on startup
 func (c *Client) loadL2GasPricer(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {
@@ -24,7 +25,7 @@ func (c *Client) loadL2GasPricer(value interface{}) {
 	log.Info(fmt.Sprintf("loaded l2gaspricer from apollo config: %+v", value.(string)))
 }
 
-// fireL2GasPricer fires the l2gaspricer config change
+// fireL2GasPricer fires the apollo l2gaspricer config change
 func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {

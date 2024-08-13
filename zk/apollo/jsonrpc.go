@@ -13,6 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// loadJsonRPC loads the apollo jsonrpc config cache on startup
 func (c *Client) loadJsonRPC(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {
@@ -24,7 +25,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 	log.Info(fmt.Sprintf("loaded jsonrpc from apollo config: %+v", value.(string)))
 }
 
-// fireJsonRPC fires the jsonrpc config change
+// fireJsonRPC fires the apollo jsonrpc config change
 func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {

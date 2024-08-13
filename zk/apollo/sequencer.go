@@ -71,6 +71,9 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.SequencerBatchSleepDuration.Name) {
 		ethCfg.Zk.XLayer.SequencerBatchSleepDuration = ctx.Duration(utils.SequencerBatchSleepDuration.Name)
 	}
+	if ctx.IsSet(utils.SequencerHaltOnBatchNumber.Name) {
+		ethCfg.Zk.SequencerHaltOnBatchNumber = ctx.Uint64(utils.SequencerHaltOnBatchNumber.Name)
+	}
 }
 
 // setSequencerFlag sets the dynamic sequencer apollo flag
@@ -87,4 +90,13 @@ func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 		return unsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
 	}
 	return localDuration
+}
+
+func GetSequencerHalt(localHaltBatchNumber uint64) uint64 {
+	if IsApolloConfigSequencerEnabled() {
+		unsafeGetApolloConfig().RLock()
+		defer unsafeGetApolloConfig().RUnlock()
+		return unsafeGetApolloConfig().EthCfg.Zk.SequencerHaltOnBatchNumber
+	}
+	return localHaltBatchNumber
 }

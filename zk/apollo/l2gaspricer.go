@@ -99,22 +99,15 @@ func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	utils.SetApolloGPOXLayer(ctx, &ethCfg.GPO)
 }
 
+// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
+func setL2GasPricerFlag() {
+	unsafeGetApolloConfig().Lock()
+	defer unsafeGetApolloConfig().Unlock()
+	unsafeGetApolloConfig().setGPFlag()
+}
+
 func GetApolloGasPricerConfig() gaspricecfg.Config {
 	unsafeGetApolloConfig().Lock()
 	defer unsafeGetApolloConfig().Unlock()
 	return unsafeGetApolloConfig().EthCfg.GPO
-}
-
-// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
-func setL2GasPricerFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setGPFlag()
-}
-
-// setL2GasPricerFlag sets the dynamic gas pricer apollo flag
-func setL2GasPricerFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setGPFlag()
 }

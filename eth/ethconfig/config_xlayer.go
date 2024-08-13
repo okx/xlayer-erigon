@@ -14,6 +14,8 @@ type XLayerConfig struct {
 	EnableInnerTx bool
 	// Sequencer
 	SequencerBatchSleepDuration time.Duration
+
+	L2Fork9UpgradeBatch uint64
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

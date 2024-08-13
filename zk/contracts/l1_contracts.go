@@ -16,4 +16,5 @@ var (
 	AddNewRollupTypeTopic          = common.HexToHash("0xa2970448b3bd66ba7e524e7b2a5b9cf94fa29e32488fb942afdfe70dd4b77b52")
 	CreateNewRollupTopic           = common.HexToHash("0x194c983456df6701c6a50830b90fe80e72b823411d0d524970c9590dc277a641")
 	UpdateRollupTopic              = common.HexToHash("0xf585e04c05d396901170247783d3e5f0ee9c1df23072985b50af089f5e48b19d")
+	AddExistingRollupTopic         = common.HexToHash("0xadfc7d56f7e39b08b321534f14bfb135ad27698f7d2f5ad0edc2356ea9a3f850")
 )

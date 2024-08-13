@@ -14,6 +14,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/constants"
 	"github.com/ledgerwatch/erigon/zk/contracts"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/erigon/zk/types"
@@ -86,6 +87,7 @@ Loop:
 			}
 
 			for _, l := range logs {
+				log.Info(fmt.Sprintf("Received log: %v", l.TxHash.String()))
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
 				case contracts.InitialSequenceBatchesTopic:
@@ -93,7 +95,7 @@ Loop:
 						return err
 					}
 				case contracts.AddNewRollupTypeTopic:
-					log.Info(fmt.Sprintf("zjg, received AddNewRollupTypeTopic"))
+					log.Info(fmt.Sprintf("Received AddNewRollupTypeTopic"))
 					rollupType := l.Topics[1].Big().Uint64()
 					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
 					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
@@ -101,10 +103,10 @@ Loop:
 						return err
 					}
 				case contracts.CreateNewRollupTopic:
-					log.Info(fmt.Sprintf("zjg, received CreateNewRollupTopic"))
+					log.Info(fmt.Sprintf("Received CreateNewRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
-						log.Info(fmt.Sprintf("zjg, received CreateNewRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						log.Info(fmt.Sprintf("Received CreateNewRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					rollupTypeBytes := l.Data[0:32]
@@ -120,10 +122,10 @@ Loop:
 						return err
 					}
 				case contracts.UpdateRollupTopic:
-					log.Info(fmt.Sprintf("zjg, received UpdateRollupTopic"))
+					log.Info(fmt.Sprintf("Received UpdateRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
-						log.Info(fmt.Sprintf("zjg, received UpdateRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						log.Info(fmt.Sprintf("Received UpdateRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					newRollupBytes := l.Data[0:32]
@@ -133,11 +135,31 @@ Loop:
 						return err
 					}
 					if fork == 0 {
-						return fmt.Errorf("received UpdateRollupTopic for unknown rollup type: %v", newRollup)
+						return fmt.Errorf("Received UpdateRollupTopic for unknown rollup type: %v", newRollup)
 					}
 					latestVerifiedBytes := l.Data[32:64]
 					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
+					if fork == uint64(constants.ForkID9Elderberry2) && cfg.zkCfg.XLayer.L2Fork9UpgradeBatch != 0 {
+						latestVerified = cfg.zkCfg.XLayer.L2Fork9UpgradeBatch
+						log.Warn(fmt.Sprintf("Received UpdateRollupTopic for fork 9, setting latestVerified to %v", latestVerified))
+					}
+
 					if err := hermezDb.WriteNewForkHistory(fork, latestVerified); err != nil {
+						return err
+					}
+				case contracts.AddExistingRollupTopic:
+					log.Info(fmt.Sprintf("Received AddExistingRollupTopic"))
+					rollupId := l.Topics[1].Big().Uint64()
+					if rollupId != cfg.zkCfg.L1RollupId {
+						log.Info(fmt.Sprintf("Received AddExistingRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						continue
+					}
+
+					forkId := new(big.Int).SetBytes(l.Data[0:32]).Uint64()
+					chainID := new(big.Int).SetBytes(l.Data[64:96]).Uint64()
+					latestVerified := new(big.Int).SetBytes(l.Data[128:160]).Uint64()
+					log.Info(fmt.Sprintf("Received AddExistingRollupTopic, forkId: %v, chainID: %v, latestVerified: %v", forkId, chainID, latestVerified))
+					if err := hermezDb.WriteNewForkHistory(forkId, latestVerified); err != nil {
 						return err
 					}
 				default:

@@ -217,10 +217,10 @@ func prepareForkId(lastBatch, executionAt uint64, hermezDb forkDb) (uint64, erro
 	}
 
 	for _, batch := range allBatches {
-		log.Info(fmt.Sprintf("zjg, prepareForkId Batch %v", batch))
+		log.Debug(fmt.Sprintf("PrepareForkId Batch %v", batch))
 	}
 	for _, fork := range allForks {
-		log.Info(fmt.Sprintf("zjg, prepareForkId Fork %v", fork))
+		log.Debug(fmt.Sprintf("PrepareForkId Fork %v", fork))
 	}
 
 	nextBatch := lastBatch + 1

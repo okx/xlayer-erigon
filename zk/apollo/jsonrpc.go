@@ -46,11 +46,11 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 
 // loadJsonRPCConfig loads the dynamic json rpc apollo configurations
 func loadJsonRPCConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	loadNodeJsonRPCConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
-	loadEthJsonRPCConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	loadNodeJsonRPCConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthJsonRPCConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeJsonRPCConfig loads the dynamic json rpc apollo node configurations
@@ -98,19 +98,19 @@ func loadEthJsonRPCConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 // setJsonRPCFlag sets the dynamic json rpc apollo flag
 func setJsonRPCFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setRPCFlag()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().setRPCFlag()
 }
 
 func setRateLimiterConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().RLock()
-	defer unsafeGetApolloConfig().RUnlock()
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
 
 	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
-		rpc.SetApiAuth(unsafeGetApolloConfig().NodeCfg.Http.HttpApiKeys)
+		rpc.SetApiAuth(UnsafeGetApolloConfig().NodeCfg.Http.HttpApiKeys)
 	}
 	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
-		rpc.SetRateLimit(unsafeGetApolloConfig().NodeCfg.Http.MethodRateLimit)
+		rpc.SetRateLimit(UnsafeGetApolloConfig().NodeCfg.Http.MethodRateLimit)
 	}
 }

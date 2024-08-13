@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/apolloconfig/agollo/v4/storage"
+	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -41,11 +42,11 @@ func (c *Client) firePool(key string, value *storage.ConfigChange) {
 
 // loadPoolConfig loads the dynamic pool apollo configurations
 func loadPoolConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	loadNodePoolConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
-	loadEthPoolConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	loadNodePoolConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthPoolConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodePoolConfig loads the dynamic pool apollo node configurations
@@ -63,7 +64,55 @@ func loadEthPoolConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 }
 
 func setPoolFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setPoolFlag()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().setPoolFlag()
+}
+
+// -------------------------- txpool config methods --------------------------
+// Note that due to the circular dependency constraints on the txpool, we will
+// pass the the apollo singleton instance directly into the txpool. Thus, pool
+// method definitions defer in design and are defined as methods instead.
+//
+// Mutex read/write locks are to be held with every exposed methods to ensure
+// atomicity.
+
+func (cfg *ApolloConfig) CheckBlockedAddr(localBlockedList []string, addr libcommon.Address) bool {
+	cfg.RLock()
+	defer cfg.RUnlock()
+
+	if cfg.isPoolEnabled() {
+		return containsAddress(cfg.EthCfg.DeprecatedTxPool.BlockedList, addr)
+	}
+	return containsAddress(localBlockedList, addr)
+}
+
+func (cfg *ApolloConfig) GetEnableWhitelist(localEnableWhitelist bool) bool {
+	cfg.RLock()
+	defer cfg.RUnlock()
+
+	if cfg.isPoolEnabled() {
+		return cfg.EthCfg.DeprecatedTxPool.EnableWhitelist
+	}
+	return localEnableWhitelist
+}
+
+func (cfg *ApolloConfig) CheckWhitelistAddr(localWhitelist []string, addr libcommon.Address) bool {
+	cfg.RLock()
+	defer cfg.RUnlock()
+
+	if cfg.isPoolEnabled() {
+		return containsAddress(cfg.EthCfg.DeprecatedTxPool.WhiteList, addr)
+	}
+	return containsAddress(localWhitelist, addr)
+}
+
+func (cfg *ApolloConfig) CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr libcommon.Address) bool {
+	cfg.RLock()
+	defer cfg.RUnlock()
+
+	if cfg.isPoolEnabled() {
+		return containsAddress(cfg.EthCfg.DeprecatedTxPool.FreeClaimGasAddrs, addr)
+	}
+	return containsAddress(localFreeClaimGasAddrs, addr)
 }

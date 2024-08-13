@@ -31,36 +31,36 @@ var apolloConfig = &ApolloConfig{
 
 // IsApolloConfigRPCEnabled returns true if the jsonrpc apollo config is enabled
 func IsApolloConfigRPCEnabled() bool {
-	unsafeGetApolloConfig().RLock()
-	defer unsafeGetApolloConfig().RUnlock()
-	return unsafeGetApolloConfig().isRPCEnabled()
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().isRPCEnabled()
 }
 
 // IsApolloConfigSeqEnabled returns true if the sequencer apollo config is enabled
 func IsApolloConfigSequencerEnabled() bool {
-	unsafeGetApolloConfig().RLock()
-	defer unsafeGetApolloConfig().RUnlock()
-	return unsafeGetApolloConfig().isSeqEnabled()
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().isSeqEnabled()
 }
 
 // IsApolloConfigGasPricerEnabled returns true if the l2gaspricer apollo config is enabled
 func IsApolloConfigL2GasPricerEnabled() bool {
-	unsafeGetApolloConfig().RLock()
-	defer unsafeGetApolloConfig().RUnlock()
-	return unsafeGetApolloConfig().isGPEnabled()
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().isGPEnabled()
 }
 
 // IsApolloConfigPoolEnabled returns true if the pool apollo config is enabled
 func IsApolloConfigPoolEnabled() bool {
-	unsafeGetApolloConfig().RLock()
-	defer unsafeGetApolloConfig().RUnlock()
-	return unsafeGetApolloConfig().isPoolEnabled()
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+	return UnsafeGetApolloConfig().isPoolEnabled()
 }
 
-// unsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
+// UnsafeGetApolloConfig is an unsafe function that returns directly the singleton instance
 // without locking the sync mutex
 // For read operations and most use cases, GetApolloConfig should be used instead
-func unsafeGetApolloConfig() *ApolloConfig {
+func UnsafeGetApolloConfig() *ApolloConfig {
 	return apolloConfig
 }
 

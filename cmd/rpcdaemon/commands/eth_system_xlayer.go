@@ -25,7 +25,7 @@ func (api *APIImpl) gasPriceXL(ctx context.Context) (*hexutil.Big, error) {
 		return api.gasPriceNonRedirectedXL(ctx)
 	}
 
-	price, err := api.getGPFromTrustedNode()
+	price, err := api.getGPFromTrustedNode("eth_gasPrice")
 	if err != nil {
 		log.Error(fmt.Sprintf("eth_gasPrice error: %v", err))
 		return (*hexutil.Big)(api.L2GasPricer.GetConfig().Default), nil
@@ -71,8 +71,8 @@ func (api *APIImpl) getLatestBlockTxNum(ctx context.Context) (int, error) {
 	return len(b.Transactions()), nil
 }
 
-func (api *APIImpl) getGPFromTrustedNode() (*big.Int, error) {
-	res, err := client.JSONRPCCall(api.l2RpcUrl, "eth_gasPrice")
+func (api *APIImpl) getGPFromTrustedNode(method string) (*big.Int, error) {
+	res, err := client.JSONRPCCall(api.l2RpcUrl, method)
 	if err != nil {
 		return nil, errors.New("failed to get gas price from trusted node")
 	}
@@ -120,6 +120,7 @@ func (api *APIImpl) runL2GasPriceSuggester() {
 			l1gp, err := gasprice.GetL1GasPrice(api.L1RpcUrl)
 			if err == nil {
 				api.L2GasPricer.UpdateGasPriceAvg(l1gp)
+				api.gasCache.SetLatestRawGP(api.L2GasPricer.GetLastRawGP())
 			}
 			api.updateDynamicGP(ctx)
 			updateTimer.Reset(api.L2GasPricer.GetConfig().XLayer.UpdatePeriod)
@@ -170,4 +171,20 @@ func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
 	avg := new(big.Int).Add(low, high)
 	avg = avg.Quo(avg, big.NewInt(2)) //nolint:gomnd
 	return avg
+}
+
+func (api *APIImpl) MinGasPrice(ctx context.Context) (*hexutil.Big, error) {
+	var minGP *big.Int
+	if sequencer.IsSequencer() {
+		minGP = api.gasCache.GetLatestRawGP()
+		return (*hexutil.Big)(minGP), nil
+	}
+
+	minGP, err := api.getGPFromTrustedNode("eth_minGasPrice")
+	if err != nil {
+		log.Error(fmt.Sprintf("eth_minGasPrice error: %v", err))
+		return nil, err
+	}
+
+	return (*hexutil.Big)(minGP), nil
 }

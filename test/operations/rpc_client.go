@@ -212,3 +212,14 @@ func transHexToUint64(hex json.RawMessage) (uint64, error) {
 
 	return result1, nil
 }
+func GetMinGasPrice() (uint64, error) {
+	response, err := client.JSONRPCCall(DefaultL2NetworkURL, "eth_minGasPrice")
+	if err != nil {
+		return 0, err
+	}
+	if response.Error != nil {
+		return 0, fmt.Errorf("%d - %s", response.Error.Code, response.Error.Message)
+	}
+
+	return transHexToUint64(response.Result)
+}

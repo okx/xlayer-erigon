@@ -47,6 +47,8 @@ type OracleBackend interface {
 type Cache interface {
 	GetLatest() (libcommon.Hash, *big.Int)
 	SetLatest(hash libcommon.Hash, price *big.Int)
+	GetLatestRawGP() *big.Int
+	SetLatestRawGP(rgp *big.Int)
 }
 
 // Oracle recommends gas prices based on the content of recent

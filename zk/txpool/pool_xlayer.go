@@ -23,6 +23,8 @@ type XLayerConfig struct {
 type GPCache interface {
 	GetLatest() (common.Hash, *big.Int)
 	SetLatest(hash common.Hash, price *big.Int)
+	GetLatestRawGP() *big.Int
+	SetLatestRawGP(rgp *big.Int)
 }
 
 func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
@@ -60,4 +62,8 @@ func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
 
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
+}
+
+func (p *TxPool) isFreeGas(senderID uint64) bool {
+	return p.isFreeClaimAddr(senderID)
 }

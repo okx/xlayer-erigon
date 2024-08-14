@@ -57,6 +57,21 @@ func TestGetBatchSealTime(t *testing.T) {
 	require.Equal(t, maxTime, batchSealTime)
 }
 
+func TestBridgeTx(t *testing.T) {
+	ctx := context.Background()
+	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	client, err := ethclient.NewL1Client(ctx, operations.DefaultL1NetworkURL, common.HexToAddress(operations.BridgeAddr))
+	require.NoError(t, err)
+
+	amount := new(big.Int).SetUint64(10)
+	var destNetwork uint32 = 1
+	destAddr := common.HexToAddress(operations.DefaultSequencerAddress)
+	auth, err := operations.GetAuth(operations.DefaultSequencerPrivateKey, operations.DefaultL1ChainID)
+	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, client)
+	require.NoError(t, err)
+}
+
 func TestClaimTx(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)

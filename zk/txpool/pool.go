@@ -366,7 +366,8 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 	for _, sender := range cfg.TracedSenders {
 		tracedSenders[common.BytesToAddress([]byte(sender))] = struct{}{}
 	}
-	return &TxPool{
+
+	tp := &TxPool{
 		lock:                    &sync.Mutex{},
 		byHash:                  map[string]*metaTx{},
 		isLocalLRU:              localsHistory,
@@ -397,8 +398,23 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
 			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
 			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			EnableFreeGasList: ethCfg.DeprecatedTxPool.EnableFreeGasList,
 		},
-	}, nil
+	}
+	tp.setFreeGasList(ethCfg.DeprecatedTxPool.FreeGasList)
+	return tp, nil
+}
+
+func (p *TxPool) setFreeGasList(freeGasList []ethconfig.FreeGasInfo) {
+	p.xlayerCfg.FreeGasFromNameMap = make(map[string]string)
+	p.xlayerCfg.FreeGasList = make(map[string]*ethconfig.FreeGasInfo, len(freeGasList))
+	for _, info := range freeGasList {
+		for _, from := range info.FromList {
+			p.xlayerCfg.FreeGasFromNameMap[from] = info.Name
+		}
+		infoCopy := info
+		p.xlayerCfg.FreeGasList[info.Name] = &infoCopy
+	}
 }
 
 func (p *TxPool) OnNewBlock(ctx context.Context, stateChanges *remote.StateChangeBatch, unwindTxs, minedTxs types.TxSlots, tx kv.Tx) error {

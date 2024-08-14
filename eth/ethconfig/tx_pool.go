@@ -55,6 +55,19 @@ type DeprecatedTxPoolConfig struct {
 	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
+	// EnableFreeGasList enable the special project of XLayer for free gas
+	EnableFreeGasList bool
+	// FreeGasList is the special project of XLayer
+	FreeGasList []FreeGasInfo
+}
+
+// FreeGasInfo contains the details for what tx should be free
+type FreeGasInfo struct {
+	Name             string
+	FromList         []string
+	ToList           []string
+	MethodSigs       []string
+	GasPriceMultiple uint64
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon/eth/ethconfig"
 )
 
 // XLayerConfig contains the X Layer configs for the txpool
@@ -18,6 +19,11 @@ type XLayerConfig struct {
 	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
+	// For special project
+	// EnableFreeGasList enable the special project of XLayer for free gas
+	EnableFreeGasList  bool
+	FreeGasFromNameMap map[string]string                 // map[from]projectName
+	FreeGasList        map[string]*ethconfig.FreeGasInfo // map[projectName]FreeGasInfo
 }
 
 type GPCache interface {

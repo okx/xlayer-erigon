@@ -200,11 +200,13 @@ func SpawnSequencingStage(
 
 		// let's check if we have any L1 data to recover
 		nextBatchData, err = l1_data.BreakDownL1DataByBatch(thisBatch, forkId, sdb.hermezDb.HermezDbReader)
+		log.Info(fmt.Sprintf("debug-----100"))
 		if err != nil {
 			return err
 		}
-
+		log.Info(fmt.Sprintf("debug-----101"))
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
+		log.Info(fmt.Sprintf("debug-----102--:%v", nextBatchData.DecodedData))
 		if decodedBlocksSize == 0 {
 			if forkId == uint64(constants.ForkID8Elderberry) && 321734 == thisBatch {
 				log.Warn(fmt.Sprintf("[%s] L1 recovery warning! Specific batch num for forkID8 on X Layer testnet", logPrefix), "batch", thisBatch)

@@ -174,29 +174,31 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 	// we expect that the batch we're going to load in next should be in the db already because of the l1 block sync
 	// stage, if it is not there we need to panic as we're in a bad state
 	batchData, err := reader.GetL1BatchData(batchNo)
+	log.Info(fmt.Sprintf("debug-----0"))
 	if err != nil {
 		log.Error("Error getting batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
-
+	log.Info(fmt.Sprintf("debug-----1"))
 	if len(batchData) == 0 {
+		log.Info(fmt.Sprintf("debug-----2"))
 		log.Info(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
 		// end of the line for batch recovery so return empty
 		return decoded, nil
 	}
-
+	log.Info(fmt.Sprintf("debug-----3"))
 	decoded.Coinbase = common.BytesToAddress(batchData[:length.Addr])
 	decoded.L1InfoRoot = common.BytesToHash(batchData[length.Addr : length.Addr+length.Hash])
 	tsBytes := batchData[length.Addr+length.Hash : length.Addr+length.Hash+8]
 	decoded.LimitTimestamp = binary.BigEndian.Uint64(tsBytes)
 	batchData = batchData[length.Addr+length.Hash+8:]
-
+	log.Info(fmt.Sprintf("debug-----4"))
 	decoded.DecodedData, err = zktx.DecodeBatchL2Blocks(batchData, forkId)
 	if err != nil {
 		log.Error("Error decoding batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
-
+	log.Info(fmt.Sprintf("debug-----5"))
 	// no data means no more work to do - end of the line
 	if len(decoded.DecodedData) == 0 {
 		log.Info("No data in batch", "batch", batchNo)
@@ -208,6 +210,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 	for _, batch := range decoded.DecodedData {
 		transactionsInBatch += len(batch.Transactions)
 	}
+	log.Info(fmt.Sprintf("debug-----6"))
 	if transactionsInBatch == 0 {
 		// we need to check if this batch should simply be empty or not so we need to check against the
 		// highest known batch number to see if we have work to do still
@@ -219,6 +222,8 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 			decoded.IsWorkRemaining = false
 		}
 	}
+
+	log.Info(fmt.Sprintf("debug-----7"))
 
 	return decoded, err
 }

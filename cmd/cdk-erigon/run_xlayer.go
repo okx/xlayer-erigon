@@ -9,6 +9,6 @@ import (
 func initRunForXLayer(ethCfg *ethconfig.Config) {
 	apolloClient := apollo.NewClient(ethCfg)
 	if apolloClient.LoadConfig() {
-		log.Info("apollo config loaded")
+		log.Info("Apollo config loaded")
 	}
 }

@@ -80,8 +80,12 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 				}
 			} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
 				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
-				addrHex := "0x" + inputHex[4490:4554]
-				p.freeGasAddrs[addrHex] = true
+				if len(inputHex) > 4554 {
+					addrHex := "0x" + inputHex[4490:4554]
+					p.freeGasAddrs[addrHex] = true
+				} else {
+					p.freeGasAddrs[mt.Tx.To.Hex()] = true
+				}
 			}
 		}
 

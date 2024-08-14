@@ -72,7 +72,7 @@ txpool.packbatchspeciallist : ["0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"]
 txpool.gaspricemultiple : 2
 txpool.blockedlist: ["0xdD2FD4581271e230360230F9337D5c0430Bf44C0"]
 txpool.enablefreegasbynonce : true
-txpool.freegascountperaddr : 10
+txpool.freegascountperaddr : 100
 
 gpo.type: "follower"
 gpo.update-period: "2s"

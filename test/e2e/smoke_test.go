@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
@@ -97,97 +98,79 @@ func TestClaimTx(t *testing.T) {
 }
 
 func TestNewBridgeFreeGas(t *testing.T) {
-
 	ctx := context.Background()
-	l1Client, err := ethclient.NewL1Client(ctx, operations.DefaultL1NetworkURL, common.HexToAddress(operations.BridgeAddr))
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
-	auth, err := operations.GetAuth(operations.DefaultL2NewAccPrivateKey, operations.DefaultL1ChainID)
-	nonce, err := client.PendingNonceAt(ctx, auth.From)
-	require.NoError(t, err)
 
+	// newAcc transfer failed
+	from := common.HexToAddress(operations.DefaultL2NewAcc)
 	to := common.HexToAddress(operations.DefaultSequencerAddress)
-
+	nonce, err := client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+	gas := params.MaxGasLimit
 	var tx types.Transaction = &types.LegacyTx{
 		CommonTx: types.CommonTx{
 			Nonce: nonce,
 			To:    &to,
-			Gas:   params.MaxGasLimit,
-			Value: uint256.NewInt(encoding.Gwei),
+			Gas:   gas,
+			Value: uint256.NewInt(0),
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
-
 	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAccPrivateKey, "0x"))
 	require.NoError(t, err)
-
 	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
 	signedTx, err := types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
-
 	err = client.SendTransaction(ctx, signedTx)
 	require.Error(t, err)
+	fmt.Println("finish newAcc transfer failed")
 
-	var destNetwork uint32 = 1
-	amount := new(big.Int).SetUint64(0)
-	tokenAddr := common.Address{} // This means is eth
-	destAddr := common.HexToAddress(operations.DefaultL2NewAcc)
-	err = sendBridgeAsset(ctx, tokenAddr, amount, destNetwork, &destAddr, []byte{}, auth, l1Client)
+	// seq -> newAcc
+	from = common.HexToAddress(operations.DefaultSequencerAddress)
+	to = common.HexToAddress(operations.DefaultL2NewAcc)
+	nonce, err = client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
-
-	nonce, err = client.PendingNonceAt(ctx, auth.From)
-	require.NoError(t, err)
-
 	tx = &types.LegacyTx{
 		CommonTx: types.CommonTx{
 			Nonce: nonce,
 			To:    &to,
-			Gas:   params.MaxGasLimit,
-			Value: uint256.NewInt(encoding.Gwei),
+			Gas:   gas,
+			Value: uint256.NewInt(0),
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
-
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultSequencerPrivateKey, "0x"))
+	require.NoError(t, err)
 	signedTx, err = types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
+	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+	require.NoError(t, err)
+	fmt.Println("finish sequner transfer failed")
 
+	// newAcc transfer success
+	from = common.HexToAddress(operations.DefaultL2NewAcc)
+	to = common.HexToAddress(operations.DefaultSequencerAddress)
+	nonce, err = client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+	tx = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &to,
+			Gas:   gas,
+			Value: uint256.NewInt(0),
+		},
+		GasPrice: uint256.MustFromBig(big.NewInt(0)),
+	}
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAccPrivateKey, "0x"))
+	require.NoError(t, err)
+	signedTx, err = types.SignTx(tx, *signer, privateKey)
+	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
 	require.Error(t, err)
-
-	/*
-		transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
-
-		from := common.HexToAddress(operations.DefaultSequencerAddress)
-		to := common.HexToAddress(operations.DefaultL2AdminAddress)
-		nonce, err := client.PendingNonceAt(ctx, from)
-		gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
-			From:  from,
-			To:    &to,
-			Value: uint256.NewInt(10),
-		})
-		require.NoError(t, err)
-		var tx types.Transaction = &types.LegacyTx{
-			CommonTx: types.CommonTx{
-				Nonce: nonce,
-				To:    &to,
-				Gas:   gas,
-				Value: uint256.NewInt(10),
-			},
-			GasPrice: uint256.MustFromBig(big.NewInt(0)),
-		}
-
-		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultSequencerPrivateKey, "0x"))
-		require.NoError(t, err)
-
-		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
-		signedTx, err := types.SignTx(tx, *signer, privateKey)
-		require.NoError(t, err)
-
-		err = client.SendTransaction(ctx, signedTx)
-		require.NoError(t, err)
-
-		err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
-		require.NoError(t, err)
-	*/
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+	require.NoError(t, err)
 }
 
 func TestWhiteAndBlockList(t *testing.T) {

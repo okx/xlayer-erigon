@@ -3,7 +3,6 @@ package commands
 import (
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -21,7 +20,7 @@ func TestCache_AddAndGetMin(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedMin := big.NewInt(3)
-	require.Equal(t, minRGP.Int64(), expectedMin.Int64())
+	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
 }
 
 func TestCache_EmptyCache(t *testing.T) {
@@ -32,26 +31,23 @@ func TestCache_EmptyCache(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestCache_OldValuesCleanup(t *testing.T) {
+func TestCache_CircularBufferOverwrite(t *testing.T) {
 	cache := NewRawGPCache()
 
-	// Add an old value
-	oldValue := big.NewInt(10)
-	cache.values[time.Now().Add(-6*time.Minute)] = oldValue
+	// Fill the cache to its limit
+	for i := 1; i <= cacheSize; i++ {
+		cache.Add(big.NewInt(int64(i * 10)))
+	}
 
-	// Add a recent value
-	recentValue := big.NewInt(5)
-	cache.Add(recentValue)
+	// Now add one more item, which should overwrite the oldest item
+	cache.Add(big.NewInt(5))
 
-	// Check the minimum value
+	// Check that the minimum value is now 5, which is the smallest in the current buffer
 	minRGP, err := cache.GetMin()
 	require.NoError(t, err)
 
 	expectedMin := big.NewInt(5)
-	require.Equal(t, minRGP.Int64(), expectedMin.Int64())
-
-	// Ensure the old value is removed
-	require.Equal(t, 1, len(cache.values))
+	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
 }
 
 func TestCache_MultipleValues(t *testing.T) {
@@ -69,21 +65,43 @@ func TestCache_MultipleValues(t *testing.T) {
 
 	expectedMin := big.NewInt(4)
 	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
-
 }
 
 func TestCache_ValuesExactlyAtLimit(t *testing.T) {
 	cache := NewRawGPCache()
 
-	// Add values exactly at the limit of 5 minutes
-	cache.values[time.Now().Add(-5*time.Minute)] = big.NewInt(8)
-	cache.values[time.Now().Add(-5*time.Minute+1*time.Second)] = big.NewInt(4)
-	cache.values[time.Now().Add(-4*time.Minute)] = big.NewInt(2)
+	// Fill the cache to its limit with specific values
+	cache.Add(big.NewInt(8))
+	cache.Add(big.NewInt(4))
+	cache.Add(big.NewInt(12))
+	cache.Add(big.NewInt(2))
+	cache.Add(big.NewInt(6))
 
-	// Check the minimum value
+	// Now check the minimum value
 	minRGP, err := cache.GetMin()
 	require.NoError(t, err)
 
 	expectedMin := big.NewInt(2)
+	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
+}
+
+func TestCache_OverwriteOldValues(t *testing.T) {
+	cache := NewRawGPCache()
+
+	// Add values to fill the buffer
+	for i := 1; i <= cacheSize; i++ {
+		cache.Add(big.NewInt(int64(i * 10)))
+	}
+
+	// Add additional values to overwrite the oldest ones
+	cache.Add(big.NewInt(1))
+	cache.Add(big.NewInt(2))
+	cache.Add(big.NewInt(3))
+
+	// Check that the minimum value is now 1, which is the smallest in the buffer
+	minRGP, err := cache.GetMin()
+	require.NoError(t, err)
+
+	expectedMin := big.NewInt(1)
 	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
 }

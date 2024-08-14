@@ -77,6 +77,11 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
+	TxPoolEnableFreeGasByNonce = cli.BoolFlag{
+		Name:  "txpool.enablefreegasbynonce",
+		Usage: "EnableFreeGasByNonce enable free gas",
+		Value: false,
+	}
 	TxPoolFreeGasExAddrs = cli.StringFlag{
 		Name:  "txpool.freegasexaddress",
 		Usage: "FreeGasExAddress is the ex address which can be free gas for the transfer receiver",
@@ -285,6 +290,23 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
+	}
+	if ctx.IsSet(TxPoolEnableFreeGasByNonce.Name) {
+		cfg.EnableFreeGasByNonce = ctx.Bool(TxPoolEnableFreeGasByNonce.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasExAddrs.Name) {
+		addrHexes := SplitAndTrim(ctx.String((TxPoolFreeGasExAddrs.Name)))
+		cfg.FreeGasExAddrs = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.FreeGasExAddrs[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolFreeGasCountPerAddr.Name) {
+		cfg.FreeGasCountPerAddr = ctx.Uint64(TxPoolFreeGasCountPerAddr.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
+		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
 	}
 }
 

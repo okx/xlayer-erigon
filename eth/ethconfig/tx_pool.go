@@ -80,11 +80,15 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 	Lifetime: 3 * time.Hour,
 
 	// X Layer config
-	BlockedList:       []string{},
-	EnableWhitelist:   false,
-	WhiteList:         []string{},
-	FreeClaimGasAddrs: []string{},
-	GasPriceMultiple:  2,
+	BlockedList:          []string{},
+	EnableWhitelist:      false,
+	WhiteList:            []string{},
+	FreeClaimGasAddrs:    []string{},
+	GasPriceMultiple:     2,
+	EnableFreeGasByNonce: false,
+	FreeGasExAddrs:       []string{},
+	FreeGasCountPerAddr:  3,
+	FreeGasLimit:         21000,
 }
 
 var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Config {

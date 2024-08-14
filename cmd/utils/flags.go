@@ -202,11 +202,6 @@ var (
 		Usage: "How often transactions should be committed to the storage",
 		Value: txpoolcfg.DefaultConfig.CommitEvery,
 	}
-	TxPoolEnableFreeGasByNonce = cli.BoolFlag{
-		Name:  "txpool.enablefreegasbynonce",
-		Usage: "EnableFreeGasByNonce enable free gas",
-		Value: false,
-	}
 	// Miner settings
 	MiningEnabledFlag = cli.BoolFlag{
 		Name:  "mine",

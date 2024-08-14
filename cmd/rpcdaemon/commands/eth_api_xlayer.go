@@ -20,18 +20,18 @@ func (apii *APIImpl) runL2GasPricerForXLayer() {
 	go apii.runL2GasPriceSuggester()
 }
 
+// cacheSize = 300sec (TTL) / 10sec (UpdatePeriod) = 30
 const cacheSize = 30 // Circular buffer size
 
 type RawGPCache struct {
-	values []*big.Int // Circular buffer
-	head   int        // Points to the current head of the buffer
+	values [cacheSize]*big.Int // Circular buffer
+	head   int                 // Points to the current head of the buffer
 }
 
 // NewRawGPCache initializes a RawGPCache with a fixed size circular buffer
 func NewRawGPCache() *RawGPCache {
 	return &RawGPCache{
-		values: make([]*big.Int, cacheSize),
-		head:   0,
+		head: 0,
 	}
 }
 
@@ -44,16 +44,22 @@ func (c *RawGPCache) Add(rgp *big.Int) {
 
 // GetMin returns the minimum RGP in the circular buffer
 func (c *RawGPCache) GetMin() (*big.Int, error) {
-	if c.values[0] == nil { // The buffer is empty
-		return nil, fmt.Errorf("no values in cache")
-	}
-
+	isEmpty := true
 	minRGP := big.NewInt(0).SetInt64(math.MaxInt64) // Initialize to maximum big.Int
 	for _, value := range c.values {
-		if value != nil && value.Cmp(minRGP) < 0 {
+		if value == nil {
+			continue
+		}
+		isEmpty = false
+		if value.Cmp(minRGP) < 0 {
 			minRGP = value
 		}
 	}
+
+	if isEmpty {
+		return nil, fmt.Errorf("no values in cache")
+	}
+
 	return new(big.Int).Set(minRGP), nil
 }
 

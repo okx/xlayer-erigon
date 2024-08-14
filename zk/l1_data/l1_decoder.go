@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/0xPolygonHermez/zkevm-data-streamer/log"
 	"strings"
 
+	"encoding/binary"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon/accounts/abi"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/zk/contracts"
 	"github.com/ledgerwatch/erigon/zk/da"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
-	"github.com/gateway-fm/cdk-erigon-lib/common/length"
-	"encoding/binary"
 )
 
 type RollupBaseEtrogBatchData struct {
@@ -195,6 +196,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 
 	// no data means no more work to do - end of the line
 	if len(decoded.DecodedData) == 0 {
+		log.Info("No data in batch", "batch", batchNo)
 		return decoded, nil
 	}
 

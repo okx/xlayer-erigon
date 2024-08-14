@@ -193,7 +193,7 @@ func SpawnSequencingStage(
 
 	if l1Recovery {
 		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed! [%v,%v]", logPrefix, cfg.zk.L1SyncStartBlock, thisBatch))
 			time.Sleep(1 * time.Second)
 			return nil
 		}
@@ -206,18 +206,23 @@ func SpawnSequencingStage(
 
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
 		if decodedBlocksSize == 0 {
-			if forkId == uint64(constants.ForkID8Elderberry) && 321734 == thisBatch {
+			if forkId == uint64(constants.ForkID8Elderberry) && 321735 == thisBatch {
+				thisBatch = 321733
 				log.Warn(fmt.Sprintf("[%s] L1 recovery warning! Specific batch num for forkID8 on X Layer testnet", logPrefix), "batch", thisBatch)
 				if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
 					return err
 				}
+				//if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
+				//	return err
+				//}
 				if freshTx {
 					if err = tx.Commit(); err != nil {
 						return err
 					}
 				}
+				time.Sleep(100000 * time.Second)
 			} else {
-				log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
+				log.Info(fmt.Sprintf("[%s] L1 recovery has completed! Decoded blocks size is 0.", logPrefix), "batch", thisBatch)
 			}
 
 			time.Sleep(1 * time.Second)

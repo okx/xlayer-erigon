@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/0xPolygonHermez/zkevm-data-streamer/log"
 	"strings"
 
 	"encoding/binary"
@@ -16,6 +15,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/da"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
+	"github.com/ledgerwatch/log/v3"
 )
 
 type RollupBaseEtrogBatchData struct {

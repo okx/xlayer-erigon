@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
@@ -10,7 +9,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/ethclient"
-	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/test/operations"
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/erigon/zkevm/log"
@@ -97,16 +95,17 @@ func TestClaimTx(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestNewBridgeFreeGas(t *testing.T) {
+func TestNewAccFreeGas(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	var gas uint64 = 21000
 
 	// newAcc transfer failed
 	from := common.HexToAddress(operations.DefaultL2NewAcc)
 	to := common.HexToAddress(operations.DefaultSequencerAddress)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
-	gas := params.MaxGasLimit
 	var tx types.Transaction = &types.LegacyTx{
 		CommonTx: types.CommonTx{
 			Nonce: nonce,
@@ -122,8 +121,9 @@ func TestNewBridgeFreeGas(t *testing.T) {
 	signedTx, err := types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, 5)
 	require.Error(t, err)
-	fmt.Println("finish newAcc transfer failed")
 
 	// seq -> newAcc
 	from = common.HexToAddress(operations.DefaultSequencerAddress)
@@ -135,7 +135,7 @@ func TestNewBridgeFreeGas(t *testing.T) {
 			Nonce: nonce,
 			To:    &to,
 			Gas:   gas,
-			Value: uint256.NewInt(0),
+			Value: uint256.NewInt(10),
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
@@ -147,7 +147,6 @@ func TestNewBridgeFreeGas(t *testing.T) {
 	require.NoError(t, err)
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 	require.NoError(t, err)
-	fmt.Println("finish sequner transfer failed")
 
 	// newAcc transfer success
 	from = common.HexToAddress(operations.DefaultL2NewAcc)
@@ -168,7 +167,7 @@ func TestNewBridgeFreeGas(t *testing.T) {
 	signedTx, err = types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
-	require.Error(t, err)
+	require.NoError(t, err)
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 	require.NoError(t, err)
 }

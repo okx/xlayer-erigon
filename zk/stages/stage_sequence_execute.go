@@ -211,9 +211,10 @@ func SpawnSequencingStage(
 				if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
 					return err
 				}
+			} else {
+				log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			}
 
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
 			return nil
 		}

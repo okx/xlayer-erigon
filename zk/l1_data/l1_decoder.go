@@ -175,10 +175,12 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 	// stage, if it is not there we need to panic as we're in a bad state
 	batchData, err := reader.GetL1BatchData(batchNo)
 	if err != nil {
+		log.Error("Error getting batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
 
 	if len(batchData) == 0 {
+		log.Info(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
 		// end of the line for batch recovery so return empty
 		return decoded, nil
 	}
@@ -191,6 +193,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 
 	decoded.DecodedData, err = zktx.DecodeBatchL2Blocks(batchData, forkId)
 	if err != nil {
+		log.Error("Error decoding batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
 

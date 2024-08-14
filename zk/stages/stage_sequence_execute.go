@@ -211,6 +211,11 @@ func SpawnSequencingStage(
 				if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
 					return err
 				}
+				if freshTx {
+					if err = tx.Commit(); err != nil {
+						return err
+					}
+				}
 			} else {
 				log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			}

@@ -206,21 +206,19 @@ func SpawnSequencingStage(
 
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
 		if decodedBlocksSize == 0 {
-			if forkId == uint64(constants.ForkID8Elderberry) && 321735 == thisBatch {
-				thisBatch = 321733
+			if forkId == uint64(constants.ForkID8Elderberry) && 321734 == thisBatch {
 				log.Warn(fmt.Sprintf("[%s] L1 recovery warning! Specific batch num for forkID8 on X Layer testnet", logPrefix), "batch", thisBatch)
 				if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
 					return err
 				}
-				//if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
-				//	return err
-				//}
+				if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
+					return err
+				}
 				if freshTx {
 					if err = tx.Commit(); err != nil {
 						return err
 					}
 				}
-				time.Sleep(100000 * time.Second)
 			} else {
 				log.Info(fmt.Sprintf("[%s] L1 recovery has completed! Decoded blocks size is 0.", logPrefix), "batch", thisBatch)
 			}

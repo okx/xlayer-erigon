@@ -149,6 +149,7 @@ LOOP:
 						time.Sleep(500 * time.Millisecond)
 					}
 				}
+				log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v", logPrefix, l.TxHash.String()))
 
 				lastBatchSequenced := l.Topics[1].Big().Uint64()
 				latestBatch = lastBatchSequenced
@@ -161,6 +162,7 @@ LOOP:
 
 				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
 				if err != nil {
+					log.Error(fmt.Sprintf("SpawnSequencerL1BlockSyncStage, DecodeL1BatchData, %v", err))
 					return err
 				}
 
@@ -171,7 +173,7 @@ LOOP:
 				// from the latest batch in the original event
 				initBatch := lastBatchSequenced - uint64(len(batches)-1)
 
-				log.Debug(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
+				log.Info(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
 					"hash", transaction.Hash().String(),
 					"initBatch", initBatch,
 					"batches", len(batches),
@@ -186,7 +188,7 @@ LOOP:
 					copy(data[20:], l1InfoRoot)
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
-
+					log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, len(data), b))
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}

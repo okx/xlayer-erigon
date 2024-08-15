@@ -46,7 +46,7 @@ func SpawnSequencerL1BlockSyncStage(
 	quiet bool,
 ) error {
 	logPrefix := s.LogPrefix()
-	log.Info(fmt.Sprintf("[%s] Starting L1 block sync stage", logPrefix))
+	log.Info(fmt.Sprintf("[%s] Starting L1 block sync stage, stop:%v", logPrefix, cfg.zkCfg.L1SyncStopBatch))
 	defer log.Info(fmt.Sprintf("[%s] Finished L1 block sync stage", logPrefix))
 
 	if cfg.zkCfg.L1SyncStartBlock == 0 {
@@ -149,10 +149,12 @@ LOOP:
 						time.Sleep(500 * time.Millisecond)
 					}
 				}
-				log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v", logPrefix, l.TxHash.String()))
 
 				lastBatchSequenced := l.Topics[1].Big().Uint64()
 				latestBatch = lastBatchSequenced
+
+				log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v, lastBatchSequenced:%v, latestBatch:%v",
+					logPrefix, l.TxHash.String(), lastBatchSequenced, latestBatch))
 
 				l1InfoRoot := l.Data
 				if len(l1InfoRoot) != 32 {
@@ -177,6 +179,7 @@ LOOP:
 					"hash", transaction.Hash().String(),
 					"initBatch", initBatch,
 					"batches", len(batches),
+					"lastBatchSequenced", lastBatchSequenced,
 				)
 
 				// iterate over the batches in reverse order to ensure that the batches are written in the correct order

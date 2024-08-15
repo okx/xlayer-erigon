@@ -57,7 +57,7 @@ type DecodedBatchL2Data struct {
 }
 
 func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, error) {
-	log.Info(fmt.Sprintf("DecodeBatchL2Blocks forkID", forkID))
+	log.Info(fmt.Sprintf("DecodeBatchL2Blocks forkID:%v", forkID))
 	var result []DecodedBatchL2Data
 	var pos uint64
 	txDataLength := uint64(len(txsData))

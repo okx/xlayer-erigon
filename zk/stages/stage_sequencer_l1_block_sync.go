@@ -191,7 +191,7 @@ LOOP:
 					copy(data[20:], l1InfoRoot)
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
-					log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, len(data), b))
+					log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}

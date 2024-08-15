@@ -33,8 +33,10 @@ const (
 	DefaultL2AdminAddress    = "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 	DefaultL2AdminPrivateKey = "0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
 
-	DefaultL2NewAcc           = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
-	DefaultL2NewAccPrivateKey = "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+	DefaultL2NewAcc1Address    = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+	DefaultL2NewAcc1PrivateKey = "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+	DefaultL2NewAcc2Address    = "0xAed6892D56AAB5DA8FBcd85b924C3bE63c74Cc29"
+	DefaultL2NewAcc2PrivateKey = "bc362a16d3dedd6cdba639eb8fa91b2f6d9f929eb490ca2e5a748ba041c6a131"
 )
 
 // Manager controls operations and has knowledge about how to set up and tear

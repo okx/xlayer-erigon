@@ -118,7 +118,7 @@ func TestNewAccFreeGas(t *testing.T) {
 	var gas uint64 = 21000
 
 	// newAcc transfer failed
-	from := common.HexToAddress(operations.DefaultL2NewAcc)
+	from := common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	to := common.HexToAddress(operations.DefaultSequencerAddress)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestNewAccFreeGas(t *testing.T) {
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
-	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAccPrivateKey, "0x"))
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc1PrivateKey, "0x"))
 	require.NoError(t, err)
 	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
 	signedTx, err := types.SignTx(tx, *signer, privateKey)
@@ -143,7 +143,7 @@ func TestNewAccFreeGas(t *testing.T) {
 
 	// seq -> newAcc
 	from = common.HexToAddress(operations.DefaultSequencerAddress)
-	to = common.HexToAddress(operations.DefaultL2NewAcc)
+	to = common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	nonce, err = client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
 	tx = &types.LegacyTx{
@@ -165,7 +165,7 @@ func TestNewAccFreeGas(t *testing.T) {
 	require.NoError(t, err)
 
 	// newAcc transfer success
-	from = common.HexToAddress(operations.DefaultL2NewAcc)
+	from = common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	to = common.HexToAddress(operations.DefaultSequencerAddress)
 	nonce, err = client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestNewAccFreeGas(t *testing.T) {
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
-	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAccPrivateKey, "0x"))
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc1PrivateKey, "0x"))
 	require.NoError(t, err)
 	signedTx, err = types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
@@ -410,7 +410,7 @@ func TestMinGasPrice(t *testing.T) {
 		}
 		require.NoError(t, err)
 
-		from := common.HexToAddress(operations.DefaultL2AdminAddress)
+		from := common.HexToAddress(operations.DefaultL2NewAcc2Address)
 		to := common.HexToAddress(operations.DefaultSequencerAddress)
 		nonce, err := client.PendingNonceAt(ctx, from)
 		require.NoError(t, err)
@@ -423,7 +423,7 @@ func TestMinGasPrice(t *testing.T) {
 			},
 			GasPrice: uint256.NewInt(temp),
 		}
-		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
+		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc2PrivateKey, "0x"))
 		require.NoError(t, err)
 		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
 		signedTx, err := types.SignTx(tx, *signer, privateKey)

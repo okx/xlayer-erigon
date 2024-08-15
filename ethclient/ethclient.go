@@ -23,6 +23,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
+	"strconv"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
@@ -30,8 +33,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
-	"math/big"
-	"strconv"
 )
 
 var EmptyTxsHash = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")

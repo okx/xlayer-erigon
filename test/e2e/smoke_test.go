@@ -137,7 +137,7 @@ func TestNewAccFreeGas(t *testing.T) {
 	signedTx, err := types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
-	require.NoError(t, err)
+	require.Error(t, err)
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, 5)
 	require.Error(t, err)
 

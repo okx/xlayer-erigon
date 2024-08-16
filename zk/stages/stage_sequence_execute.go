@@ -7,7 +7,6 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/ledgerwatch/erigon/zk/constants"
 	"github.com/ledgerwatch/log/v3"
 
 	mapset "github.com/deckarep/golang-set/v2"
@@ -205,23 +204,7 @@ func SpawnSequencingStage(
 		}
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
 		if decodedBlocksSize == 0 {
-			if forkId == uint64(constants.ForkID8Elderberry) && 321734 == thisBatch {
-				log.Warn(fmt.Sprintf("[%s] L1 recovery warning! Specific batch num for forkID8 on X Layer testnet", logPrefix), "batch", thisBatch)
-				if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, thisBatch); err != nil {
-					return err
-				}
-				if err = sdb.hermezDb.WriteForkId(thisBatch, forkId); err != nil {
-					return err
-				}
-				if freshTx {
-					if err = tx.Commit(); err != nil {
-						return err
-					}
-				}
-			} else {
-				log.Info(fmt.Sprintf("[%s] L1 recovery has completed! Decoded blocks size is 0.", logPrefix), "batch", thisBatch)
-			}
-
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed! Decoded blocks size is 0.", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
 			return nil
 		}

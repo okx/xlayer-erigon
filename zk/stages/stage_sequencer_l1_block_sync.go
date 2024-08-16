@@ -228,6 +228,7 @@ LOOP:
 	}
 
 	if freshTx {
+		log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Committing L1 block sync stage, latestBatch:%v", logPrefix, latestBatch))
 		if err := tx.Commit(); err != nil {
 			return err
 		}

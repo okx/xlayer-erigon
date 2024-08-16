@@ -1309,7 +1309,7 @@ func (db *HermezDb) WriteL1BatchData(batchNumber uint64, data []byte) error {
 // coinbase = 20 bytes
 // batchL2Data = remaining
 func (db *HermezDbReader) GetL1BatchData(batchNumber uint64) ([]byte, error) {
-	log.Info(fmt.Sprintf("[HermezDbReader] GetL1BatchData: %v", batchNumber))
+	//log.Info(fmt.Sprintf("[HermezDbReader] GetL1BatchData: %v", batchNumber))
 	k := Uint64ToBytes(batchNumber)
 	return db.tx.GetOne(L1_BATCH_DATA, k)
 }

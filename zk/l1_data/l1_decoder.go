@@ -49,7 +49,7 @@ func BuildSequencesForValidium(data []byte, daUrl string) ([]RollupBaseEtrogBatc
 		hash := common.BytesToHash(validiumSequence.TransactionsHash[:])
 		data, err := da.GetOffChainData(context.Background(), daUrl, hash)
 		if err != nil {
-			log.Error(fmt.Sprintf("BuildSequencesForValidium-----5"))
+			log.Error(fmt.Sprintf("GetOffChainData, hash:%v", hash.String()))
 			return nil, err
 		}
 

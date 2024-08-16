@@ -105,3 +105,40 @@ func TestCache_OverwriteOldValues(t *testing.T) {
 	expectedMin := big.NewInt(1)
 	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
 }
+
+func TestRawGPCache_GetMinGPMoreRecent(t *testing.T) {
+	cache := NewRawGPCache()
+
+	// Fill the cache with initial values
+	for i := 0; i < cacheSize; i++ {
+		cache.Add(big.NewInt(int64(i + 1)))
+	}
+
+	// Ensure we get the minimum from the last minGPWindowSize elements
+	minRGP, err := cache.GetMinGPMoreRecent()
+	require.NoError(t, err)
+
+	expectedMin := big.NewInt(4)
+	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
+}
+
+func TestRawGPCache_GetMinGPMoreRecent_OverwriteOldValues(t *testing.T) {
+	cache := NewRawGPCache()
+
+	// Fill the cache with initial values
+	for i := 0; i < cacheSize; i++ {
+		cache.Add(big.NewInt(int64(i + 1)))
+	}
+
+	// Now add more values that overwrite the older ones
+	cache.Add(big.NewInt(30))
+	cache.Add(big.NewInt(30)) // This is the new minimum
+	cache.Add(big.NewInt(30))
+
+	// Ensure we get the minimum from the last minGPWindowSize elements
+	minRGP, err := cache.GetMinGPMoreRecent()
+	require.NoError(t, err)
+
+	expectedMin := big.NewInt(7)
+	require.Equal(t, expectedMin.Int64(), minRGP.Int64())
+}

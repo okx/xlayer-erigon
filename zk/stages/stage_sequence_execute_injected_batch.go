@@ -5,6 +5,7 @@ import (
 
 	"errors"
 
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -31,6 +32,7 @@ func processInjectedInitialBatch(
 	parentBlock *types.Block,
 	blockContext *evmtypes.BlockContext,
 	l1Recovery bool,
+	l1RecoveryCoinbase common.Address,
 ) error {
 	injected, err := sdb.hermezDb.GetL1InjectedBatch(0)
 	if err != nil {
@@ -73,7 +75,7 @@ func processInjectedInitialBatch(
 	execResults := []*core.ExecutionResult{execResult}
 	effectiveGases := []uint8{effectiveGas}
 
-	_, err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts, execResults, effectiveGases, 0, l1Recovery)
+	_, err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, injectedBatchNumber, injected.LastGlobalExitRoot, injected.L1ParentHash, txns, receipts, execResults, effectiveGases, 0, l1Recovery, l1RecoveryCoinbase)
 	return err
 }
 

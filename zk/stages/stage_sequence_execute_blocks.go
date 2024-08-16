@@ -84,6 +84,7 @@ func finaliseBlock(
 	execResults []*core.ExecutionResult,
 	effectiveGases []uint8,
 	l1Recovery bool,
+	l1RecoveryCoinbase common.Address,
 ) (*types.Block, error) {
 	stateWriter := state.NewPlainStateWriter(sdb.tx, sdb.tx, newHeader.Number.Uint64()).SetAccumulator(accumulator)
 	chainReader := stagedsync.ChainReader{
@@ -123,7 +124,9 @@ func finaliseBlock(
 		return nil, err
 	}
 
+	coinbase := cfg.zk.AddressSequencer
 	if l1Recovery {
+		coinbase = l1RecoveryCoinbase
 		for i, receipt := range receipts {
 			core.ProcessReceiptForBlockExecution(receipt, sdb.hermezDb.HermezDbReader, cfg.chainConfig, newHeader.Number.Uint64(), newHeader, transactions[i])
 		}
@@ -152,10 +155,9 @@ func finaliseBlock(
 	if err != nil {
 		return nil, err
 	}
-
 	finalHeader := finalBlock.HeaderNoCopy()
 	finalHeader.Root = newRoot
-	finalHeader.Coinbase = cfg.zk.AddressSequencer
+	finalHeader.Coinbase = coinbase
 	finalHeader.GasLimit = utils.GetBlockGasLimitForFork(forkId)
 	finalHeader.ReceiptHash = types.DeriveSha(receipts)
 	finalHeader.Bloom = types.CreateBloom(receipts)

@@ -98,7 +98,7 @@ func SpawnSequencingStage(
 		getHashFn := core.GetHashFn(header, getHeader)
 		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &cfg.zk.AddressSequencer, parentBlock.ExcessDataGas())
 
-		if err = processInjectedInitialBatch(ctx, cfg, s, sdb, forkId, header, parentBlock, &blockContext, l1Recovery); err != nil {
+		if err = processInjectedInitialBatch(ctx, cfg, s, sdb, forkId, header, parentBlock, &blockContext, l1Recovery, cfg.zk.AddressSequencer); err != nil {
 			return err
 		}
 
@@ -331,7 +331,11 @@ func SpawnSequencingStage(
 
 		ibs := state.New(sdb.stateReader)
 		getHashFn := core.GetHashFn(header, getHeader)
-		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &cfg.zk.AddressSequencer, parentBlock.ExcessDataGas())
+		coinbase := cfg.zk.AddressSequencer
+		if l1Recovery {
+			coinbase = nextBatchData.Coinbase
+		}
+		blockContext := core.NewEVMBlockContext(header, getHashFn, cfg.engine, &coinbase, parentBlock.ExcessDataGas())
 
 		parentRoot := parentBlock.Root()
 		if err = handleStateForNewBlockStarting(
@@ -500,7 +504,7 @@ func SpawnSequencingStage(
 			return err
 		}
 
-		block, err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, addedExecutionResults, effectiveGases, infoTreeIndexProgress, l1Recovery)
+		block, err = doFinishBlockAndUpdateState(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, ger, l1BlockHash, addedTransactions, addedReceipts, addedExecutionResults, effectiveGases, infoTreeIndexProgress, l1Recovery, coinbase)
 		if err != nil {
 			return err
 		}

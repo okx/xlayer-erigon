@@ -386,6 +386,7 @@ func doFinishBlockAndUpdateState(
 	effectiveGases []uint8,
 	l1InfoIndex uint64,
 	l1Recovery bool,
+	l1RecoveryCoinbase common.Address,
 ) (*types.Block, error) {
 	thisBlockNumber := header.Number.Uint64()
 
@@ -393,7 +394,7 @@ func doFinishBlockAndUpdateState(
 		cfg.accumulator.StartChange(thisBlockNumber, header.Hash(), nil, false)
 	}
 
-	block, err := finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, cfg.accumulator, ger, l1BlockHash, transactions, receipts, execResults, effectiveGases, l1Recovery)
+	block, err := finaliseBlock(ctx, cfg, s, sdb, ibs, header, parentBlock, forkId, thisBatch, cfg.accumulator, ger, l1BlockHash, transactions, receipts, execResults, effectiveGases, l1Recovery, l1RecoveryCoinbase)
 	if err != nil {
 		return nil, err
 	}

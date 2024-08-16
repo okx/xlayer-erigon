@@ -31,24 +31,26 @@ func GetOffChainData(ctx context.Context, url string, hash common.Hash) ([]byte,
 		response, err := client.JSONRPCCall(url, "sync_getOffChainData", hash)
 
 		if httpErr, ok := err.(*client.HTTPError); ok && httpErr.StatusCode == http.StatusTooManyRequests {
-			log.Info(fmt.Sprintf("GetOffChainData StatusTooManyRequests， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
+			log.Error(fmt.Sprintf("GetOffChainData StatusTooManyRequests， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
 			time.Sleep(retryDelay)
 			attemp += 1
 			continue
-		} else if err == io.EOF {
-			log.Info(fmt.Sprintf("GetOffChainData io.EOF， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
+		}
+
+		if err == io.EOF {
+			log.Error(fmt.Sprintf("GetOffChainData io.EOF， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
 			time.Sleep(retryDelay)
 			attemp += 1
 			continue
 		}
 
 		if err != nil {
-			log.Info(fmt.Sprintf("GetOffChainData error， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
+			log.Error(fmt.Sprintf("GetOffChainData error， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
 			return nil, err
 		}
 
 		if response.Error != nil {
-			log.Info(fmt.Sprintf("GetOffChainData response error， hash:%v, attemp:%v, error:%v", hash.String(), attemp, response.Error.Message))
+			log.Error(fmt.Sprintf("GetOffChainData response error， hash:%v, attemp:%v, error:%v", hash.String(), attemp, response.Error.Message))
 			return nil, fmt.Errorf("%v %v", response.Error.Code, response.Error.Message)
 		}
 

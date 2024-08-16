@@ -160,7 +160,7 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	for idx, sequence := range sequences {
 		batchL2Datas[idx] = sequence.Transactions
 	}
-	log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----13, batchL2Datas len:%v", len(sequences)))
+	//log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----13, batchL2Datas len:%v", len(sequences)))
 	return batchL2Datas, coinbase, limitTimstamp, err
 }
 

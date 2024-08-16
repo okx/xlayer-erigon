@@ -153,8 +153,8 @@ LOOP:
 				lastBatchSequenced := l.Topics[1].Big().Uint64()
 				latestBatch = lastBatchSequenced
 
-				log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v, lastBatchSequenced:%v, latestBatch:%v",
-					logPrefix, l.TxHash.String(), lastBatchSequenced, latestBatch))
+				//log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v, lastBatchSequenced:%v, latestBatch:%v",
+				//	logPrefix, l.TxHash.String(), lastBatchSequenced, latestBatch))
 
 				l1InfoRoot := l.Data
 				if len(l1InfoRoot) != 32 {
@@ -191,7 +191,7 @@ LOOP:
 					copy(data[20:], l1InfoRoot)
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
-					log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
+					//log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}

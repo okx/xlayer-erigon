@@ -2,6 +2,7 @@ package stages
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -162,6 +163,29 @@ Loop:
 					if err := hermezDb.WriteNewForkHistory(forkId, latestVerified); err != nil {
 						return err
 					}
+				case contracts.UpdateEtrogSequenceTopic:
+					all := hex.EncodeToString(l.Data)
+					log.Info(fmt.Sprintf("Received UpdateEtrogSequenceTopic:%v", all))
+					numBatch := new(big.Int).SetBytes(l.Data[0:32]).Uint64()
+					lastGlobalExitRoot := l.Data[64:96]
+					sequencer := l.Data[96:128]
+					trailingCutoff := len(l.Data) - getTrailingCutoffLen(l.Data)
+					txs := l.Data[160:trailingCutoff]
+					hexStringLastGlobalExitRoot := hex.EncodeToString(lastGlobalExitRoot)
+					hexStringSequencer := hex.EncodeToString(sequencer)
+					hexTx := hex.EncodeToString(txs)
+					log.Info(fmt.Sprintf("Received UpdateEtrogSequenceTopic, numBatch: %v, GER:%v, Seq:%v, Txs:%v",
+						numBatch, hexStringLastGlobalExitRoot, hexStringSequencer, hexTx))
+
+					//data := make([]byte, 20+32+8+len(batch))
+					//copy(data, coinbase.Bytes())
+					//copy(data[20:], l1InfoRoot)
+					//copy(data[52:], limitTimestampBytes)
+					//copy(data[60:], batch)
+					////log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
+					//if err := hermezDb.WriteL1BatchData(b, data); err != nil {
+					//	return err
+					//}
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
 				}

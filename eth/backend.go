@@ -786,6 +786,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				contracts.CreateNewRollupTopic,
 				contracts.UpdateRollupTopic,
 				contracts.AddExistingRollupTopic,
+				contracts.UpdateEtrogSequenceTopic,
 			}}
 			l1Contracts = []libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup}
 		} else {

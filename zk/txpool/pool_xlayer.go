@@ -27,37 +27,28 @@ type GPCache interface {
 	SetLatestRawGP(rgp *big.Int)
 }
 
-func (p *TxPool) checkBlockedAddr(addr common.Address) bool {
-	// check from config
-	for _, e := range p.xlayerCfg.BlockedList {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
+// ApolloConfig is the interface for the singleton apollo config instance.
+// This design is necessary to prevent circular dependencies on the txpool
+// with the apollo package
+type ApolloConfig interface {
+	CheckBlockedAddr(localBlockedList []string, addr common.Address) bool
+	GetEnableWhitelist(localEnableWhitelist bool) bool
+	CheckWhitelistAddr(localWhitelist []string, addr common.Address) bool
+	CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr common.Address) bool
 }
 
-func (p *TxPool) checkWhiteAddr(addr common.Address) bool {
-	// check from config
-	for _, e := range p.xlayerCfg.WhiteList {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
+// SetApolloConfig sets the apollo config with the node's apollo config
+// singleton instance
+func (p *TxPool) SetApolloConfig(cfg ApolloConfig) {
+	p.apolloCfg = cfg
 }
 
-func (p *TxPool) isFreeClaimAddr(senderID uint64) bool {
+func (p *TxPool) isFreeClaimAddrXLayer(senderID uint64) bool {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false
 	}
-	for _, e := range p.xlayerCfg.FreeClaimGasAddrs {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
+	return p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr)
 }
 
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {

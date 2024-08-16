@@ -161,12 +161,10 @@ func (l *JsonStreamLogger_ZkEvm) writeOpSnapshot(pc uint64, op vm.OpCode, gas, c
 }
 
 func (l *JsonStreamLogger_ZkEvm) writeError(err error) {
-	if err == nil {
+	if err != nil {
 		l.stream.WriteMore()
 		l.stream.WriteObjectField("error")
-		l.stream.WriteObjectStart()
-		l.stream.WriteObjectEnd()
-		//l.stream.WriteString(err.Error())
+		l.stream.WriteString(err.Error())
 	}
 }
 
@@ -200,26 +198,41 @@ func (l *JsonStreamLogger_ZkEvm) writeMemory(memory *vm.Memory) {
 	if !l.cfg.DisableMemory {
 		memData := memory.Data()
 
-		//[zkevm] don't print empty bytes in memory array
-		isMemoryEmpty := true
-		for i := 0; i < len(memData); i++ {
-			if memData[i] != 0 {
-				isMemoryEmpty = false
-				break
+		//[zkevm] don't print empty bytes in memory array after the last non-empty byte line
+		filteredByteLines := [][]byte{}
+		foundValueLine := false
+		for i := len(memData); i-32 >= 0; i -= 32 {
+			bytes := memData[i-32 : i]
+
+			isEmpty := true
+			if !foundValueLine {
+				for _, b := range bytes {
+					if b != 0 {
+						isEmpty = false
+						foundValueLine = true
+						break
+					}
+				}
+			}
+
+			if !isEmpty || foundValueLine {
+				filteredByteLines = append(filteredByteLines, bytes)
 			}
 		}
 
+		if len(filteredByteLines) == 0 {
+			return
+		}
 		l.stream.WriteMore()
 		l.stream.WriteObjectField("memory")
 		l.stream.WriteArrayStart()
-		if !isMemoryEmpty {
-			for i := 0; i+32 <= len(memData); i += 32 {
-				if i > 0 {
-					l.stream.WriteMore()
-				}
-				l.stream.WriteString(string(l.hexEncodeBuf[0:hex.Encode(l.hexEncodeBuf[:], memData[i:i+32])]))
+		for i := len(filteredByteLines) - 1; i >= 0; i-- {
+			if i != len(filteredByteLines)-1 {
+				l.stream.WriteMore()
 			}
+			l.stream.WriteString(string(l.hexEncodeBuf[0:hex.Encode(l.hexEncodeBuf[:], filteredByteLines[i])]))
 		}
+
 		l.stream.WriteArrayEnd()
 	}
 }

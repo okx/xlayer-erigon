@@ -3,6 +3,7 @@ package ethconfig
 import (
 	"time"
 
+	"github.com/c2h5oh/datasize"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 )
 
@@ -28,15 +29,17 @@ type Zk struct {
 	L1FirstBlock                           uint64
 	RpcRateLimits                          int
 	DatastreamVersion                      int
-	SequencerInitialForkId                 uint64
 	SequencerBlockSealTime                 time.Duration
 	SequencerBatchSealTime                 time.Duration
 	SequencerNonEmptyBatchSealTime         time.Duration
+	SequencerHaltOnBatchNumber             uint64
 	ExecutorUrls                           []string
 	ExecutorStrictMode                     bool
 	ExecutorRequestTimeout                 time.Duration
 	DatastreamNewBlockTimeout              time.Duration
+	WitnessMemdbSize                       datasize.ByteSize
 	ExecutorMaxConcurrentRequests          int
+	Limbo                                  bool
 	AllowFreeTransactions                  bool
 	AllowPreEIP155Transactions             bool
 	EffectiveGasPriceForEthTransfer        uint8
@@ -49,6 +52,7 @@ type Zk struct {
 	DAUrl                                  string
 	DataStreamHost                         string
 	DataStreamPort                         uint
+	DataStreamWriteTimeout                 time.Duration
 
 	RebuildTreeAfter      uint64
 	IncrementTreeAlways   bool
@@ -57,14 +61,16 @@ type Zk struct {
 	SyncLimit             uint64
 	Gasless               bool
 
+	DebugTimers    bool
 	DebugNoSync    bool
 	DebugLimit     uint64
 	DebugStep      uint64
 	DebugStepAfter uint64
 
-	PoolManagerUrl         string
-	DisableVirtualCounters bool
-	ExecutorPayloadOutput  string
+	PoolManagerUrl              string
+	DisableVirtualCounters      bool
+	VirtualCountersSmtReduction float64
+	ExecutorPayloadOutput       string
 
 	// For X Layer
 	XLayer *XLayerConfig

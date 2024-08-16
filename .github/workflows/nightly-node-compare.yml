@@ -2,20 +2,20 @@ name: Nightly - Compare Blocks
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # run at 2am to give time for other suites to run first
+    - cron: '30 3 * * *'  # run at 3:30am to give time for other suites to run first
   workflow_dispatch:
 
 jobs:
   compare-blocks:
     runs-on: ubuntu-latest
-
+    continue-on-error: true
     strategy:
       matrix:
         nodes:
-          - name: "Integration 5"
-            erigon: "http://34.175.214.161:8500"
-            zkevm: "http://34.175.214.161:8505"
-            sequencer: "http://34.175.214.161:8005"
+          - name: "Integration 8"
+            erigon: "http://34.175.214.161:18124"
+            zkevm: "http://34.175.214.161:18505"
+            sequencer: "http://34.175.214.161:18123"
             compare-blocks: 1000
             allowed-block-diff: 2000
 

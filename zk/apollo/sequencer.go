@@ -56,9 +56,6 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	loadZkConfig(ctx, ethCfg)
 
 	// Load sequencer config
-	if ctx.IsSet(utils.SequencerInitialForkId.Name) {
-		ethCfg.Zk.SequencerInitialForkId = ctx.Uint64(utils.SequencerInitialForkId.Name)
-	}
 	if ctx.IsSet(utils.SequencerBlockSealTime.Name) {
 		ethCfg.Zk.SequencerBlockSealTime = ctx.Duration(utils.SequencerBlockSealTime.Name)
 	}

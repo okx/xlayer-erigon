@@ -9,6 +9,8 @@ import (
 	"testing"
 )
 
+const forkId7BlockGasLimit = 18446744073709551615
+
 func TestBinaryStringToInt64(t *testing.T) {
 	testCases := []struct {
 		binary   string
@@ -18,7 +20,7 @@ func TestBinaryStringToInt64(t *testing.T) {
 		{"110011", 51},
 		{"0", 0},
 		{"11111111", 255},
-		{"1111111111111111111111111111111111111111111111111111111111111111", 18446744073709551615}, // max uint64 value
+		{"1111111111111111111111111111111111111111111111111111111111111111", forkId7BlockGasLimit}, // max uint64 value
 		{"10000000000000000000000000000000000000000000000000000000000000000", 0},                   // overflow scenario
 	}
 
@@ -37,6 +39,13 @@ func TestBinaryStringToInt64(t *testing.T) {
 		if num != tc.expected {
 			t.Errorf("binaryStringToInt64(%q) = %d; want %d", tc.binary, num, tc.expected)
 		}
+	}
+}
+
+func BenchmarkConvertBigIntToHex(b *testing.B) {
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		ConvertBigIntToHex(big.NewInt(int64(n)))
 	}
 }
 
@@ -136,6 +145,13 @@ func TestScalarToArrayBig(t *testing.T) {
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("ScalarToArray = %v; want %v", result, expected)
+	}
+}
+
+func BenchmarkScalarToArrayBig(b *testing.B) {
+	scalar := big.NewInt(0x1234567890ABCDEF)
+	for i := 0; i < b.N; i++ {
+		ScalarToArrayBig(scalar)
 	}
 }
 

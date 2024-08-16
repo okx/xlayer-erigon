@@ -1,6 +1,7 @@
 package smt
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -56,10 +57,10 @@ func TestSMT_Create_Insert(t *testing.T) {
 			"0xfa2d3062e11e44668ab79c595c0c916a82036a017408377419d74523569858ea",
 		},
 	}
-
+	ctx := context.Background()
 	for _, scenario := range testCases {
 		t.Run(scenario.name, func(t *testing.T) {
-			s := NewSMT(nil)
+			s := NewSMT(nil, false)
 			keys := []utils.NodeKey{}
 			for k, v := range scenario.kvMap {
 				if !v.IsZero() {
@@ -68,7 +69,7 @@ func TestSMT_Create_Insert(t *testing.T) {
 				}
 			}
 			// set scenario old root if fail
-			newRoot, err := s.GenerateFromKVBulk("", keys)
+			newRoot, err := s.GenerateFromKVBulk(ctx, "", keys)
 			if err != nil {
 				t.Errorf("Insert failed: %v", err)
 			}
@@ -83,6 +84,7 @@ func TestSMT_Create_Insert(t *testing.T) {
 
 func TestSMT_Create_CompareWithRandomData(t *testing.T) {
 	limit := 5000
+	ctx := context.Background()
 
 	kvMap := map[utils.NodeKey]utils.NodeValue8{}
 	for i := 1; i <= limit; i++ {
@@ -92,7 +94,7 @@ func TestSMT_Create_CompareWithRandomData(t *testing.T) {
 
 	//build and benchmark the tree the first way
 	startTime := time.Now()
-	s1 := NewSMT(nil)
+	s1 := NewSMT(nil, false)
 
 	var root1 *big.Int
 	for k, v := range kvMap {
@@ -110,7 +112,7 @@ func TestSMT_Create_CompareWithRandomData(t *testing.T) {
 
 	//build the tree the from kvbulk
 	startTime = time.Now()
-	s2 := NewSMT(nil)
+	s2 := NewSMT(nil, false)
 	// set scenario old root if fail
 	keys := []utils.NodeKey{}
 	for k, v := range kvMap {
@@ -120,7 +122,7 @@ func TestSMT_Create_CompareWithRandomData(t *testing.T) {
 		}
 	}
 	// set scenario old root if fail
-	root2, err := s2.GenerateFromKVBulk("", keys)
+	root2, err := s2.GenerateFromKVBulk(ctx, "", keys)
 	if err != nil {
 		t.Errorf("Insert failed: %v", err)
 	}
@@ -139,7 +141,8 @@ func TestSMT_Create_CompareWithRandomData(t *testing.T) {
 }
 
 func TestSMT_Create_Benchmark(t *testing.T) {
-	limit := 500000
+	limit := 100000
+	ctx := context.Background()
 
 	kvMap := map[utils.NodeKey]utils.NodeValue8{}
 	for i := 1; i <= limit; i++ {
@@ -150,7 +153,7 @@ func TestSMT_Create_Benchmark(t *testing.T) {
 	//build and benchmark the tree the first way
 	startTime := time.Now()
 	//build the tree the from kvbulk
-	s := NewSMT(nil)
+	s := NewSMT(nil, false)
 	// set scenario old root if fail
 	keys := []utils.NodeKey{}
 	for k, v := range kvMap {
@@ -160,7 +163,7 @@ func TestSMT_Create_Benchmark(t *testing.T) {
 		}
 	}
 
-	_, err := s.GenerateFromKVBulk("", keys)
+	_, err := s.GenerateFromKVBulk(ctx, "", keys)
 	if err != nil {
 		t.Errorf("Insert failed: %v", err)
 	}

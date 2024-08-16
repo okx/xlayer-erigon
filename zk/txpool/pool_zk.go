@@ -2,17 +2,20 @@ package txpool
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/big"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
 	"github.com/gateway-fm/cdk-erigon-lib/common/fixedgas"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/types"
+	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 )
 
@@ -22,7 +25,7 @@ hard compilation fail when rebasing from upstream further down the line.
 */
 
 const (
-	transactionGasLimit = 30_000_000
+	transactionGasLimit = utils.PreForkId7BlockGasLimit
 )
 
 func calcProtocolBaseFee(baseFee uint64) uint64 {
@@ -162,6 +165,10 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
+	if p.isDeniedYieldingTransactions() {
+		return false, 0, nil
+	}
+
 	// First wait for the corresponding block to arrive
 	if p.lastSeenBlock.Load() < onTopOf {
 		return false, 0, nil // Too early
@@ -170,13 +177,13 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 	isShanghai := p.isShanghai()
 	isLondon := p.isLondon()
 	_ = isLondon
-
-	p.pending.EnforceBestInvariants() // it costs about 50ms when pending size reached one million
 	best := p.pending.best
 
 	txs.Resize(uint(cmp.Min(int(n), len(best.ms))))
 	var toRemove []*metaTx
 	count := 0
+
+	p.pending.EnforceBestInvariants()
 
 	for i := 0; count < int(n) && i < len(best.ms); i++ {
 		// if we wouldn't have enough gas for a standard transaction then quit out early
@@ -249,7 +256,7 @@ func (p *TxPool) ForceUpdateLatestBlock(blockNumber uint64) {
 // This function is invoked if a single tx overflow entire zk-counters.
 // In this case there is nothing we can do but to mark is as such
 // and on next "pool iteration" it will be discard
-func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
+func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -261,5 +268,27 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash libcommon.Hash) {
 			p.overflowZkCounters = append(p.overflowZkCounters, mt)
 			break
 		}
+	}
+}
+
+func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx kv.Tx) error {
+	if !p.started.Load() {
+		txPoolDbTx, err := txPoolDb.BeginRo(ctx)
+		if err != nil {
+			return err
+		}
+		defer txPoolDbTx.Rollback()
+
+		if err := p.fromDB(ctx, txPoolDbTx, coreTx); err != nil {
+			return fmt.Errorf("loading txs from DB: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func markAsLocal(txSlots *types2.TxSlots) {
+	for i := range txSlots.IsLocal {
+		txSlots.IsLocal[i] = true
 	}
 }

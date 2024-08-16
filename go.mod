@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/0xPolygonHermez/zkevm-data-streamer v0.2.2
+	github.com/0xPolygonHermez/zkevm-data-streamer v0.2.3-RC4
 	github.com/99designs/gqlgen v0.17.29
 	github.com/Giulio2002/bls v0.0.0-20230217173148-c87a29266b6c
 	github.com/RoaringBitmap/roaring v1.2.3
@@ -39,7 +39,7 @@ require (
 	github.com/emicklei/dot v1.0.0
 	github.com/emirpasic/gods v1.18.1
 	github.com/fjl/gencodec v0.0.0-20220412091415-8bb9e558978c
-	github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240415152010-66aa405ca33f
+	github.com/gateway-fm/cdk-erigon-lib v0.0.0-20240805074757-5e3196248fde
 	github.com/gateway-fm/vectorized-poseidon-gold v1.0.0
 	github.com/gballet/go-verkle v0.0.0-20221121182333-31427a1f2d35
 	github.com/go-stack/stack v1.8.1
@@ -190,6 +190,7 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
+	github.com/ledgerwatch/interfaces v0.0.0-20230412092010-e1c4a1a4279e // indirect
 	github.com/lib/pq v1.10.7 // indirect
 	github.com/libp2p/go-buffer-pool v0.1.0 // indirect
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
@@ -206,6 +207,7 @@ require (
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/marten-seemann/tcp v0.0.0-20210406111302-dfbc87cc63fd // indirect
+	github.com/matryer/moq v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect

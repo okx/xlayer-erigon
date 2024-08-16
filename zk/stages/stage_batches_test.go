@@ -14,8 +14,8 @@ import (
 	"github.com/ledgerwatch/erigon/zk/datastream/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 
-	"github.com/stretchr/testify/require"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUnwindBatches(t *testing.T) {
@@ -35,7 +35,6 @@ func TestUnwindBatches(t *testing.T) {
 			GlobalExitRoot:  common.Hash{byte(i)},
 			Coinbase:        common.Address{byte(i)},
 			ForkId:          uint64(i) / 3,
-			ChainId:         uint64(1),
 			L1BlockHash:     common.Hash{byte(i)},
 			L2Blockhash:     common.Hash{byte(i)},
 			StateRoot:       common.Hash{byte(i)},
@@ -93,7 +92,7 @@ func TestUnwindBatches(t *testing.T) {
 	/////////
 	// ACT //
 	/////////
-	err = SpawnStageBatches(s, u, ctx, tx, cfg, true, true)
+	err = SpawnStageBatches(s, u, ctx, tx, cfg, true)
 	require.NoError(t, err)
 	tx.Commit()
 

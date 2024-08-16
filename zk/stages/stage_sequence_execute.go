@@ -376,16 +376,19 @@ func SpawnSequencingStage(
 				}
 			case <-blockTicker.C:
 				if !isAnyRecovery {
+					log.Info("L1 is any recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			case <-batchTicker.C:
 				if !isAnyRecovery {
 					runLoopBlocks = false
+					log.Info("L1 batch timer break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			case <-nonEmptyBatchTimer.C:
 				if !isAnyRecovery && hasAnyTransactionsInThisBatch {
 					runLoopBlocks = false
+					log.Info("L1 non empty batch timer break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			default:
@@ -465,7 +468,7 @@ func SpawnSequencingStage(
 								log.Trace(fmt.Sprintf("single transaction %s overflow counters", txHash))
 							}
 						}
-
+						log.Info("L1 any overflow break loop transactions")
 						break LOOP_TRANSACTIONS
 					}
 
@@ -489,12 +492,13 @@ func SpawnSequencingStage(
 					if len(blockTransactions) == 0 && !nextBatchData.IsWorkRemaining {
 						log.Info(fmt.Sprintf("[%s] L1 recovery no more transactions to recover", logPrefix))
 					}
-
+					log.Info("L1 recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 
 				if limboRecovery {
 					runLoopBlocks = false
+					log.Info("L1 limbo recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			}

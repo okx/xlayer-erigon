@@ -143,36 +143,19 @@ Loop:
 			DB:       0,                   // Redis 数据库编号，默认是 0
 		})
 
-		execRs := &core.EphemeralExecResultZk{}
-		skipExec := false
-		log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
-		if blockNum == 4 {
-			redisRs, err := rdb.Get(ctx, "execRs").Bytes()
-			if err == nil && len(redisRs) > 0 {
-				if err = json.Unmarshal(redisRs, &execRs); err != nil {
-					panic(err)
-				} else {
-					skipExec = true
-					log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", string(redisRs)))
+		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
+		if err != nil {
+			if !errors.Is(err, context.Canceled) {
+				log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", datastreamBlockHash.Hex(), "err", err)
+				if cfg.hd != nil {
+					cfg.hd.ReportBadHeaderPoS(datastreamBlockHash, block.ParentHash())
+				}
+				if cfg.badBlockHalt {
+					return err
 				}
 			}
-		}
-
-		if !skipExec {
-			execRs, err = executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
-			if err != nil {
-				if !errors.Is(err, context.Canceled) {
-					log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", datastreamBlockHash.Hex(), "err", err)
-					if cfg.hd != nil {
-						cfg.hd.ReportBadHeaderPoS(datastreamBlockHash, block.ParentHash())
-					}
-					if cfg.badBlockHalt {
-						return err
-					}
-				}
-				u.UnwindTo(blockNum-1, datastreamBlockHash)
-				break Loop
-			}
+			u.UnwindTo(blockNum-1, datastreamBlockHash)
+			break Loop
 		}
 
 		if blockNum == 4 {
@@ -187,7 +170,7 @@ Loop:
 				panic("Failed redis execRs")
 			}
 
-			log.Info(fmt.Sprintf("=======fsc:test. execRs:%s", string(jsonData)))
+			log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(jsonData)))
 		}
 		if execRs.BlockInfoTree != nil {
 			if err = hermezDb.WriteBlockInfoRoot(blockNum, *execRs.BlockInfoTree); err != nil {
@@ -473,9 +456,31 @@ func executeBlockZk(
 	vmConfig.Tracer = callTracer
 
 	getHashFn := core.GetHashFn(block.Header(), getHeader)
-	execRs, err := core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
-	if err != nil {
-		return nil, err
+
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "192.168.1.19:6379", // Redis 服务器地址
+		Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
+		DB:       0,                   // Redis 数据库编号，默认是 0
+	})
+	execRs := &core.EphemeralExecResultZk{}
+	skip := false
+	log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
+	if blockNum == 4 {
+		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
+		if err == nil && len(redisRs) > 0 {
+			if err = json.Unmarshal(redisRs, &execRs); err != nil {
+				panic(err)
+			} else {
+				skip = true
+				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", string(redisRs)))
+			}
+		}
+	}
+	if !skip {
+		execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if writeReceipts {

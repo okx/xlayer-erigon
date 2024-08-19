@@ -19,13 +19,14 @@ package state
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sort"
 
 	"encoding/hex"
 
-	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/common/u256"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -688,9 +689,26 @@ func (sdb *IntraBlockState) SoftFinalise() {
 // CommitBlock finalizes the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (sdb *IntraBlockState) CommitBlock(chainRules *chain.Rules, stateWriter StateWriter) error {
+	debug.PrintStack()
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
-			sdb.getStateObject(addr)
+			obj := sdb.getStateObject(addr)
+		}
+	}
+	return sdb.MakeWriteSet(chainRules, stateWriter)
+}
+
+type ddsData struct {
+	addr libcommon.Address `json:"addr"`
+	data []byte            `json:"data"`
+}
+
+func (sdb *IntraBlockState) CommitBlockDDS(chainRules *chain.Rules, stateWriter StateWriter) error {
+	delta := []ddsData{}
+	for addr, bi := range sdb.balanceInc {
+		if !bi.transferred {
+			obj := sdb.getStateObject(addr)
+			delta = append(delta, ddsData{addr, obj})
 		}
 	}
 	return sdb.MakeWriteSet(chainRules, stateWriter)

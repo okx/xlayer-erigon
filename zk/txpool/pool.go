@@ -327,8 +327,9 @@ type TxPool struct {
 	aclDB                   kv.RwDB
 
 	// For X Layer
-	xlayerCfg    XLayerConfig
-	gpCache      GPCache // GPCache will only work in sequencer node, without rpc node
+	xlayerCfg XLayerConfig
+	apolloCfg ApolloConfig
+	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
 	freeGasAddrs map[string]bool
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
@@ -789,21 +790,21 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is blocked
-	if p.checkBlockedAddr(from) {
+	if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx
 	}
 
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
-		if p.checkBlockedAddr(txn.To) {
+		if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, txn.To) {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
 			return ReceiverDisallowedReceiveTx
 		}
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.xlayerCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.apolloCfg.GetEnableWhitelist(p.xlayerCfg.EnableWhitelist) && !p.apolloCfg.CheckWhitelistAddr(p.xlayerCfg.WhiteList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}

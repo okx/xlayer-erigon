@@ -13,6 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// loadL2GasPricer loads the apollo l2gaspricer config cache on startup
 func (c *Client) loadL2GasPricer(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {
@@ -24,7 +25,7 @@ func (c *Client) loadL2GasPricer(value interface{}) {
 	log.Info(fmt.Sprintf("loaded l2gaspricer from apollo config: %+v", value.(string)))
 }
 
-// fireL2GasPricer fires the l2gaspricer config change
+// fireL2GasPricer fires the apollo l2gaspricer config change
 func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
@@ -42,11 +43,11 @@ func (c *Client) fireL2GasPricer(key string, value *storage.ConfigChange) {
 
 // loadL2GasPricerConfig loads the dynamic gas pricer apollo configurations
 func loadL2GasPricerConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	loadNodeL2GasPricerConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
-	loadEthL2GasPricerConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	loadNodeL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthL2GasPricerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeL2GasPricerConfig loads the dynamic gas pricer apollo node configurations
@@ -101,13 +102,13 @@ func loadEthL2GasPricerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 // setL2GasPricerFlag sets the dynamic gas pricer apollo flag
 func setL2GasPricerFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setGPFlag()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().setGPFlag()
 }
 
 func GetApolloGasPricerConfig() gaspricecfg.Config {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	return unsafeGetApolloConfig().EthCfg.GPO
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	return UnsafeGetApolloConfig().EthCfg.GPO
 }

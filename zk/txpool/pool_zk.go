@@ -97,6 +97,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
 		}
 		mt.minTip = minTip
+
 		// For X Layer
 		// free case: 1. is claim tx; 2. new bridge account with the first few tx
 		if claim ||

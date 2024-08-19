@@ -7,6 +7,8 @@ const (
 	Sequencer = "sequencer"
 	// L2GasPricer is the l2gaspricer prefix namespace, the content of the prefix is the configuration for l2gaspricer with yaml format
 	L2GasPricer = "l2gaspricer"
+	// Pool is the pool prefix namespace, the context of the prefix is the configuration for popol with yaml format
+	Pool = "pool"
 	// Halt is the halt suffix namespace. Change the halt to a different value will halt the respective service
 	Halt = "halt"
 )

@@ -40,6 +40,10 @@ func SpawnSequencingStage(
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
 
+	log.Info("[PoolTxCount] Starting Getting Pending Tx Count")
+	pending, basefee, queued := cfg.txPool.CountContent()
+	metrics.AddPoolTxCount(pending, basefee, queued)
+
 	freshTx := tx == nil
 	if freshTx {
 		tx, err = cfg.db.BeginRw(ctx)

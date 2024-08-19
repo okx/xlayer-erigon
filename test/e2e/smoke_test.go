@@ -477,7 +477,7 @@ func sendBridgeAsset(
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	if len(bridgeSCAddr) != 0 {
+	if len(bridgeSCAddr) == 0 {
 		return fmt.Errorf("Bridge address error")
 	}
 

@@ -67,6 +67,10 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 		return types.Response{}, err
 	}
 
+	if httpRes.Body != nil {
+		defer httpRes.Body.Close()
+	}
+
 	if httpRes.StatusCode != http.StatusOK {
 		return types.Response{}, &HTTPError{StatusCode: httpRes.StatusCode}
 	}
@@ -75,7 +79,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	if err != nil {
 		return types.Response{}, err
 	}
-	defer httpRes.Body.Close()
+	//defer httpRes.Body.Close()
 
 	var res types.Response
 	err = json.Unmarshal(resBody, &res)

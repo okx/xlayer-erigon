@@ -25,7 +25,7 @@ func (api *APIImpl) isZkNonSequencer(chainId *big.Int) bool {
 func (api *APIImpl) sendTxZk(rpcUrl string, encodedTx hexutility.Bytes, chainId uint64) (common.Hash, error) {
 	res, err := client.JSONRPCCall(rpcUrl, "eth_sendRawTransaction", encodedTx)
 	if err != nil {
-		return common.Hash{}, errors.Wrap(err, "failed to send transaction")
+		return common.Hash{}, errors.Wrap(err, "failed to send transaction with zk rpc call")
 	}
 
 	if res.Error != nil {

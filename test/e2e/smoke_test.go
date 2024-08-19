@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 	"math/big"
 	"strings"
 	"testing"
@@ -26,6 +27,29 @@ const (
 
 	testVerified = false
 )
+
+// L1Client is the utillity client
+type L1Client struct {
+	// Client ethclient
+	*ethclient.Client
+	Bridge *polygonzkevmbridge.Polygonzkevmbridge
+}
+
+// NewL1Client creates client.
+func NewL1Client(ctx context.Context, nodeURL string, bridgeSCAddr common.Address) (*L1Client, error) {
+	client, err := ethclient.Dial(nodeURL)
+	if err != nil {
+		return nil, err
+	}
+	var br *polygonzkevmbridge.Polygonzkevmbridge
+	if len(bridgeSCAddr) != 0 {
+		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
+	}
+	return &L1Client{
+		Client: client,
+		Bridge: br,
+	}, err
+}
 
 func TestGetBatchSealTime(t *testing.T) {
 	if testing.Short() {
@@ -62,7 +86,7 @@ func TestBridgeTx(t *testing.T) {
 	ctx := context.Background()
 	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
 	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
-	client, err := ethclient.NewL1Client(ctx, operations.DefaultL1NetworkURL, common.HexToAddress(operations.BridgeAddr))
+	client, err := NewL1Client(ctx, operations.DefaultL1NetworkURL, common.HexToAddress(operations.BridgeAddr))
 	require.NoError(t, err)
 
 	amount := new(big.Int).SetUint64(10)
@@ -463,7 +487,7 @@ func TestMinGasPrice(t *testing.T) {
 }
 
 func sendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32,
-	destAddr *common.Address, metadata []byte, auth *bind.TransactOpts, c *ethclient.L1Client,
+	destAddr *common.Address, metadata []byte, auth *bind.TransactOpts, c *L1Client,
 ) error {
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {

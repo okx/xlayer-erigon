@@ -32,7 +32,6 @@ import (
 	"github.com/ledgerwatch/erigon/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/rpc"
-	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 )
 
 var EmptyTxsHash = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421")
@@ -40,29 +39,6 @@ var EmptyTxsHash = common.HexToHash("56e81f171bcc55a6ff8345e692c0f86e5b48e01b996
 // Client defines typed wrappers for the Ethereum RPC API.
 type Client struct {
 	c *rpc.Client
-}
-
-// L1Client is the utillity client
-type L1Client struct {
-	// Client ethclient
-	*Client
-	Bridge *polygonzkevmbridge.Polygonzkevmbridge
-}
-
-// NewL1Client creates client.
-func NewL1Client(ctx context.Context, nodeURL string, bridgeSCAddr common.Address) (*L1Client, error) {
-	client, err := Dial(nodeURL)
-	if err != nil {
-		return nil, err
-	}
-	var br *polygonzkevmbridge.Polygonzkevmbridge
-	if len(bridgeSCAddr) != 0 {
-		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
-	}
-	return &L1Client{
-		Client: client,
-		Bridge: br,
-	}, err
 }
 
 // Dial connects a client to the given URL.

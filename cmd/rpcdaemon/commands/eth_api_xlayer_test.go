@@ -35,7 +35,7 @@ func TestCache_CircularBufferOverwrite(t *testing.T) {
 	cache := NewRawGPCache()
 
 	// Fill the cache to its limit
-	for i := 1; i <= cacheSize; i++ {
+	for i := 1; i <= maxCacheSize; i++ {
 		cache.Add(big.NewInt(int64(i * 10)))
 	}
 
@@ -89,7 +89,7 @@ func TestCache_OverwriteOldValues(t *testing.T) {
 	cache := NewRawGPCache()
 
 	// Add values to fill the buffer
-	for i := 1; i <= cacheSize; i++ {
+	for i := 1; i <= maxCacheSize; i++ {
 		cache.Add(big.NewInt(int64(i * 10)))
 	}
 
@@ -110,7 +110,7 @@ func TestRawGPCache_GetMinGPMoreRecent(t *testing.T) {
 	cache := NewRawGPCache()
 
 	// Fill the cache with initial values
-	for i := 0; i < cacheSize; i++ {
+	for i := 0; i < maxCacheSize; i++ {
 		cache.Add(big.NewInt(int64(i + 1)))
 	}
 
@@ -126,7 +126,7 @@ func TestRawGPCache_GetMinGPMoreRecent_OverwriteOldValues(t *testing.T) {
 	cache := NewRawGPCache()
 
 	// Fill the cache with initial values
-	for i := 0; i < cacheSize; i++ {
+	for i := 0; i < maxCacheSize; i++ {
 		cache.Add(big.NewInt(int64(i + 1)))
 	}
 

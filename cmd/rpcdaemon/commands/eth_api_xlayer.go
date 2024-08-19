@@ -20,34 +20,34 @@ func (apii *APIImpl) runL2GasPricerForXLayer() {
 	go apii.runL2GasPriceSuggester()
 }
 
-// cacheSize = 300sec (TTL) / 10sec (UpdatePeriod) = 30
-const cacheSize = 30 // Circular buffer size
+const (
+	// maxCacheSize = 300sec (TTL) / 10sec (UpdatePeriod) = 30
+	maxCacheSize = 30
 
-// minGPWindowSize defines the number of recent raw GPs to consider
-// when calculating the MinGP from the circular buffer.
-// This value represents the window size within the buffer.
-const minGPWindowSize = 27
+	// minGPWindowSize defines the window size to be used when calculating the
+	// MinGP from the cache
+	minGPWindowSize = 27
+)
 
 type RawGPCache struct {
-	values [cacheSize]*big.Int // Circular buffer
-	head   int                 // Points to the current head of the buffer
+	values [maxCacheSize]*big.Int
+	head   int // Points to the current head of the buffer
 }
 
-// NewRawGPCache initializes a RawGPCache with a fixed size circular buffer
+// NewRawGPCache initializes a RawGPCache with a fixed size cache
 func NewRawGPCache() *RawGPCache {
 	return &RawGPCache{
 		head: 0,
 	}
 }
 
-// Add adds an RGP to the circular buffer and manages the head position
+// Add adds an RGP to the cache and manages the head position
 func (c *RawGPCache) Add(rgp *big.Int) {
-	// Add the new RGP to the circular buffer
 	c.values[c.head] = new(big.Int).Set(rgp)
-	c.head = (c.head + 1) % cacheSize
+	c.head = (c.head + 1) % maxCacheSize
 }
 
-// GetMin returns the minimum RGP in the circular buffer
+// GetMin returns the minimum RGP in the cache
 func (c *RawGPCache) GetMin() (*big.Int, error) {
 	isEmpty := true
 	minRGP := big.NewInt(0).SetInt64(math.MaxInt64) // Initialize to maximum big.Int
@@ -68,20 +68,18 @@ func (c *RawGPCache) GetMin() (*big.Int, error) {
 	return new(big.Int).Set(minRGP), nil
 }
 
-// GetMinGPMoreRecent returns the minimum RGP in the circular buffer for the last minGPWindowSize elements
+// GetMinGPMoreRecent returns the minimum RGP in the cache for the last minGPWindowSize elements
 func (c *RawGPCache) GetMinGPMoreRecent() (*big.Int, error) {
 	isEmpty := true
 	minRGP := big.NewInt(0).SetInt64(math.MaxInt64) // Initialize to maximum big.Int
 
-	// Calculate the start index for the last minGPWindowSize elements
-	start := (c.head - minGPWindowSize + cacheSize) % cacheSize
-
-	for i := 0; i < minGPWindowSize; i++ {
-		index := (start + i) % cacheSize
+	for i := 1; i <= minGPWindowSize; i++ {
+		index := (c.head - i + maxCacheSize) % maxCacheSize
 		value := c.values[index]
 		if value == nil {
-			continue
+			break
 		}
+
 		isEmpty = false
 		if value.Cmp(minRGP) < 0 {
 			minRGP = value

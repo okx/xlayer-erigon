@@ -11,6 +11,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zk/zkchainconfig"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
+	"github.com/pkg/errors"
 )
 
 func (api *APIImpl) isPoolManagerAddressSet() bool {
@@ -24,7 +25,7 @@ func (api *APIImpl) isZkNonSequencer(chainId *big.Int) bool {
 func (api *APIImpl) sendTxZk(rpcUrl string, encodedTx hexutility.Bytes, chainId uint64) (common.Hash, error) {
 	res, err := client.JSONRPCCall(rpcUrl, "eth_sendRawTransaction", encodedTx)
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, errors.Wrap(err, "failed to send transaction")
 	}
 
 	if res.Error != nil {

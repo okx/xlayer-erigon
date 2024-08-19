@@ -572,6 +572,14 @@ func (c *GasPriceCache) GetLatestRawGP() *big.Int {
 	return rgp
 }
 
+func (c *GasPriceCache) GetMinRawGPMoreRecent() *big.Int {
+	rgp, err := c.rawGPCache.GetMinGPMoreRecent()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
+	return rgp
+}
+
 func (c *GasPriceCache) SetLatestRawGP(rgp *big.Int) {
 	c.rawGPCache.Add(rgp)
 }

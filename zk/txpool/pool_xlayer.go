@@ -51,7 +51,6 @@ func (p *TxPool) SetApolloConfig(cfg ApolloConfig) {
 	p.apolloCfg = cfg
 }
 
-
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }

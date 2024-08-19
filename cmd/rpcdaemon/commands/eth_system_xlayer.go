@@ -176,7 +176,7 @@ func getAvgPrice(low *big.Int, high *big.Int) *big.Int {
 func (api *APIImpl) MinGasPrice(ctx context.Context) (*hexutil.Big, error) {
 	var minGP *big.Int
 	if sequencer.IsSequencer() {
-		minGP = api.gasCache.GetLatestRawGP()
+		minGP = api.gasCache.GetMinRawGPMoreRecent()
 		return (*hexutil.Big)(minGP), nil
 	}
 

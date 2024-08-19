@@ -66,13 +66,12 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	if err != nil {
 		return types.Response{}, err
 	}
+	if httpRes.Body != nil {
+		defer httpRes.Body.Close()
+	}
 
 	if httpRes.StatusCode != http.StatusOK {
 		return types.Response{}, &HTTPError{StatusCode: httpRes.StatusCode}
-	}
-
-	if httpRes.Body != nil {
-		defer httpRes.Body.Close()
 	}
 
 	resBody, err := io.ReadAll(httpRes.Body)

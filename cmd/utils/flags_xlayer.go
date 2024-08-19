@@ -295,7 +295,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 		cfg.EnableFreeGasByNonce = ctx.Bool(TxPoolEnableFreeGasByNonce.Name)
 	}
 	if ctx.IsSet(TxPoolFreeGasExAddrs.Name) {
-		addrHexes := SplitAndTrim(ctx.String((TxPoolFreeGasExAddrs.Name)))
+		addrHexes := SplitAndTrim(ctx.String(TxPoolFreeGasExAddrs.Name))
 		cfg.FreeGasExAddrs = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)

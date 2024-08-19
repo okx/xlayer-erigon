@@ -103,18 +103,20 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		if claim ||
 			(p.xlayerCfg.EnableFreeGasByNonce && isfreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
 			// get dynamic gp
-			newGp := new(big.Int).SetInt64(int64(minTip))
+			// here for the case when restart gpCache has not init
+			// use the max uint64 as default because the remain claimTx should handle first
+			newGpBig := new(big.Int).SetUint64(math.MaxUint64)
 			_, dGp := p.gpCache.GetLatest()
 			if dGp != nil {
-				newGp = newGp.Set(dGp)
+				newGpBig.Set(dGp)
+				if claim {
+					newGpBig = newGpBig.Mul(newGpBig, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+					log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGpBig))
+				} else {
+					log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%d", mt.Tx.Nonce, dGp, newGpBig))
+				}
 			}
-			if claim {
-				newGp = newGp.Mul(newGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
-				log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGp))
-			} else {
-				log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%v", mt.Tx.Nonce, dGp, newGp))
-			}
-			mt.minTip = newGp.Uint64()
+			mt.minTip = newGpBig.Uint64()
 			mt.minFeeCap = *uint256.NewInt(mt.minTip)
 		}
 

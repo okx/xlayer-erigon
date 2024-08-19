@@ -2,6 +2,7 @@ package stagedsync
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -30,6 +31,8 @@ import (
 	"github.com/ledgerwatch/erigon/ethdb/olddb"
 	rawdbZk "github.com/ledgerwatch/erigon/zk/rawdb"
 	"github.com/ledgerwatch/erigon/zk/utils"
+
+	"github.com/go-redis/redis/v8"
 )
 
 func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock uint64, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool, quiet bool) (err error) {
@@ -134,21 +137,58 @@ Loop:
 		// For X Layer
 		writeInnerTxs := cfg.zk.XLayer.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
 
-		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
-		if err != nil {
-			if !errors.Is(err, context.Canceled) {
-				log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", datastreamBlockHash.Hex(), "err", err)
-				if cfg.hd != nil {
-					cfg.hd.ReportBadHeaderPoS(datastreamBlockHash, block.ParentHash())
-				}
-				if cfg.badBlockHalt {
-					return err
+		rdb := redis.NewClient(&redis.Options{
+			Addr:     "192.168.1.19:6379", // Redis 服务器地址
+			Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
+			DB:       0,                   // Redis 数据库编号，默认是 0
+		})
+
+		execRs := &core.EphemeralExecResultZk{}
+		skipExec := false
+		log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
+		if blockNum == 4 {
+			redisRs, err := rdb.Get(ctx, "execRs").Bytes()
+			if err == nil && len(redisRs) > 0 {
+				if err = json.Unmarshal(redisRs, &execRs); err != nil {
+					panic(err)
+				} else {
+					skipExec = true
+					log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", string(redisRs)))
 				}
 			}
-			u.UnwindTo(blockNum-1, datastreamBlockHash)
-			break Loop
 		}
 
+		if !skipExec {
+			execRs, err = executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
+			if err != nil {
+				if !errors.Is(err, context.Canceled) {
+					log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", datastreamBlockHash.Hex(), "err", err)
+					if cfg.hd != nil {
+						cfg.hd.ReportBadHeaderPoS(datastreamBlockHash, block.ParentHash())
+					}
+					if cfg.badBlockHalt {
+						return err
+					}
+				}
+				u.UnwindTo(blockNum-1, datastreamBlockHash)
+				break Loop
+			}
+		}
+
+		if blockNum == 4 {
+			jsonData, err := json.Marshal(execRs)
+			if err != nil {
+				panic("Failed to marshal execution result")
+			}
+			if err = rdb.Set(ctx, "blockNum", blockNum, 0).Err(); err != nil {
+				panic("Failed redis blockNum")
+			}
+			if err = rdb.Set(ctx, "execRs", jsonData, 0).Err(); err != nil {
+				panic("Failed redis execRs")
+			}
+
+			log.Info(fmt.Sprintf("=======fsc:test. execRs:%s", string(jsonData)))
+		}
 		if execRs.BlockInfoTree != nil {
 			if err = hermezDb.WriteBlockInfoRoot(blockNum, *execRs.BlockInfoTree); err != nil {
 				return err

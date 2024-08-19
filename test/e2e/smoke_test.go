@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 	"math/big"
 	"strings"
 	"testing"
@@ -17,6 +16,7 @@ import (
 	"github.com/ledgerwatch/erigon/ethclient"
 	"github.com/ledgerwatch/erigon/test/operations"
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
+	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/ledgerwatch/erigon/zkevm/log"
 	"github.com/stretchr/testify/require"
 )

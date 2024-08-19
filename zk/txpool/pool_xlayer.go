@@ -43,6 +43,7 @@ type ApolloConfig interface {
 	GetEnableWhitelist(localEnableWhitelist bool) bool
 	CheckWhitelistAddr(localWhitelist []string, addr common.Address) bool
 	CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr common.Address) bool
+	CheckFreeGasExAddr(localFreeGasExAddrs []string, addr common.Address) bool
 }
 
 // SetApolloConfig sets the apollo config with the node's apollo config
@@ -55,35 +56,28 @@ func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }
 
-func (p *TxPool) checkFreeGasExAddr(senderID uint64) bool {
+func (p *TxPool) checkFreeGasExAddrXLayer(senderID uint64) bool {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false
 	}
-	for _, e := range p.xlayerCfg.FreeGasExAddrs {
-		if common.HexToAddress(e) == addr {
-			return true
-		}
-	}
-	return false
+	return p.apolloCfg.CheckFreeGasExAddr(p.xlayerCfg.FreeGasExAddrs, addr)
 }
 
-func (p *TxPool) checkFreeGasAddr(senderID uint64) (bool, bool) {
+func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64) (bool, bool) {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
 		return false, false
 	}
 	// is claim tx
-	for _, e := range p.xlayerCfg.FreeClaimGasAddrs {
-		if common.HexToAddress(e) == addr {
-			return true, true
-		}
+	if p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr) {
+		return true, true
 	}
 	free := p.freeGasAddrs[addr.String()]
 	return free, false
 }
 
-func (p *TxPool) isFreeGas(senderID uint64) bool {
-	free, _ := p.checkFreeGasAddr(senderID)
+func (p *TxPool) isFreeGasXLayer(senderID uint64) bool {
+	free, _ := p.checkFreeGasAddrXLayer(senderID)
 	return free
 }

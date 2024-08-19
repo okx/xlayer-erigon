@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -27,29 +28,6 @@ const (
 
 	testVerified = false
 )
-
-// L1Client is the utillity client
-type L1Client struct {
-	// Client ethclient
-	*ethclient.Client
-	Bridge *polygonzkevmbridge.Polygonzkevmbridge
-}
-
-// NewL1Client creates client.
-func NewL1Client(ctx context.Context, nodeURL string, bridgeSCAddr common.Address) (*L1Client, error) {
-	client, err := ethclient.Dial(nodeURL)
-	if err != nil {
-		return nil, err
-	}
-	var br *polygonzkevmbridge.Polygonzkevmbridge
-	if len(bridgeSCAddr) != 0 {
-		br, err = polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, client)
-	}
-	return &L1Client{
-		Client: client,
-		Bridge: br,
-	}, err
-}
 
 func TestGetBatchSealTime(t *testing.T) {
 	if testing.Short() {
@@ -84,16 +62,18 @@ func TestGetBatchSealTime(t *testing.T) {
 
 func TestBridgeTx(t *testing.T) {
 	ctx := context.Background()
-	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
-	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
-	client, err := NewL1Client(ctx, operations.DefaultL1NetworkURL, common.HexToAddress(operations.BridgeAddr))
+	l1Client, err := ethclient.Dial(operations.DefaultL1NetworkURL)
 	require.NoError(t, err)
+	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
 
 	amount := new(big.Int).SetUint64(10)
 	var destNetwork uint32 = 1
 	destAddr := common.HexToAddress(operations.DefaultSequencerAddress)
 	auth, err := operations.GetAuth(operations.DefaultSequencerPrivateKey, operations.DefaultL1ChainID)
-	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, client)
+	require.NoError(t, err)
+	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
 	require.NoError(t, err)
 }
 
@@ -486,8 +466,9 @@ func TestMinGasPrice(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func sendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32,
-	destAddr *common.Address, metadata []byte, auth *bind.TransactOpts, c *L1Client,
+func sendBridgeAsset(
+	ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address,
+	metadata []byte, auth *bind.TransactOpts, bridgeSCAddr common.Address, c *ethclient.Client,
 ) error {
 	emptyAddr := common.Address{}
 	if tokenAddr == emptyAddr {
@@ -496,11 +477,19 @@ func sendBridgeAsset(ctx context.Context, tokenAddr common.Address, amount *big.
 	if destAddr == nil {
 		destAddr = &auth.From
 	}
-	tx, err := c.Bridge.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
+	if len(bridgeSCAddr) != 0 {
+		return fmt.Errorf("Bridge address error")
+	}
+
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c)
+	if err != nil {
+		return err
+	}
+	tx, err := br.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
 	if err != nil {
 		return err
 	}
 	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
-	return operations.WaitTxToBeMined(ctx, c.Client, tx, txTimeout)
+	return operations.WaitTxToBeMined(ctx, c, tx, txTimeout)
 }

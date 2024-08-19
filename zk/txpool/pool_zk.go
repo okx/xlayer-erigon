@@ -45,7 +45,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 	minFeeCap := uint256.NewInt(0).SetAllOne()
 	minTip := uint64(math.MaxUint64)
 	var toDel []*metaTx // can't delete items while iterate them
-	isfreeGasAddr, claim := p.checkFreeGasAddr(senderID)
+	isfreeGasAddr, claim := p.checkFreeGasAddrXLayer(senderID)
 	byNonce.ascend(senderID, func(mt *metaTx) bool {
 		if mt.Tx.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: onSenderStateChange loop iteration idHash=%x senderID=%d, senderNonce=%d, txn.nonce=%d, currentSubPool=%s", mt.Tx.IDHash, senderID, senderNonce, mt.Tx.Nonce, mt.currentSubPool))
@@ -70,7 +70,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		}
 		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
 		if p.xlayerCfg.EnableFreeGasByNonce {
-			if p.checkFreeGasExAddr(senderID) {
+			if p.checkFreeGasExAddrXLayer(senderID) {
 				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
 				if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
 					addrHex := "0x" + inputHex[10:74]

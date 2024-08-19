@@ -327,9 +327,9 @@ type TxPool struct {
 	aclDB                   kv.RwDB
 
 	// For X Layer
-	xlayerCfg XLayerConfig
-	apolloCfg ApolloConfig
-	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
+	xlayerCfg    XLayerConfig
+	apolloCfg    ApolloConfig
+	gpCache      GPCache // GPCache will only work in sequencer node, without rpc node
 	freeGasAddrs map[string]bool
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
@@ -741,7 +741,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
 	// X Layer
 	rgp := p.gpCache.GetLatestRawGP()
-	if !p.isFreeGas(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
+	if !p.isFreeGasXLayer(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}

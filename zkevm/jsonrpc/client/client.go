@@ -43,7 +43,7 @@ func printCount() {
 	log.Info(fmt.Sprintf("HTTP requests count"))
 	go func() {
 		for {
-			time.Sleep(60 * time.Second)
+			time.Sleep(10 * time.Second)
 			log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v", inputCount, outCount, errorCount))
 		}
 	}()

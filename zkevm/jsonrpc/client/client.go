@@ -44,14 +44,16 @@ var socketMap map[uintptr]struct{}
 
 func printCount() {
 	log.Info(fmt.Sprintf("HTTP requests count"))
-	for {
-		time.Sleep(60 * time.Second)
-		temp := ""
-		for k := range socketMap {
-			temp += fmt.Sprintf("%d,", k)
+	go func() {
+		for {
+			time.Sleep(60 * time.Second)
+			temp := ""
+			for k := range socketMap {
+				temp += fmt.Sprintf("%d,", k)
+			}
+			log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v, socket map:%v", inputCount, outCount, errorCount, temp))
 		}
-		log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v, socket map:%v", inputCount, outCount, errorCount, temp))
-	}
+	}()
 }
 
 // JSONRPCCall executes a 2.0 JSON RPC HTTP Post Request to the provided URL with

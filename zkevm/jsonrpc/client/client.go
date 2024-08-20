@@ -54,12 +54,12 @@ func printCount() {
 // JSON RPC Server.
 func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response, error) {
 	once.Do(printCount)
-	inputCount += inputCount
+	inputCount += 1
 	const jsonRPCVersion = "2.0"
 
 	params, err := json.Marshal(parameters)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		return types.Response{}, err
 	}
 
@@ -78,7 +78,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---0.1", "method", method, "error", err)
 		return types.Response{}, err
 	}
@@ -86,7 +86,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	reqBodyReader := bytes.NewReader(reqBody)
 	httpReq, err := http.NewRequest(http.MethodPost, url, reqBodyReader)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---0", "method", method, "error", err)
 		return types.Response{}, err
 	}
@@ -99,7 +99,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 
 	httpRes, err := client.Do(httpReq)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---1", "method", method, "error", err)
 		return types.Response{}, err
 	}
@@ -108,14 +108,14 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	}
 
 	if httpRes.StatusCode != http.StatusOK {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---2", "method", method, "error", err)
 		return types.Response{}, &HTTPError{StatusCode: httpRes.StatusCode}
 	}
 
 	resBody, err := io.ReadAll(httpRes.Body)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---3", "method", method, "error", err)
 		return types.Response{}, err
 	}
@@ -124,11 +124,11 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	var res types.Response
 	err = json.Unmarshal(resBody, &res)
 	if err != nil {
-		errorCount += errorCount
+		errorCount += 1
 		log.Info("failed to execute JSON RPC---4", "method", method, "error", err)
 		return types.Response{}, err
 	}
-	outCount += outCount
+	outCount += 1
 	return res, nil
 }
 

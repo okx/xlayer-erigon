@@ -62,41 +62,6 @@ func setRateLimiter(cfg RateLimitConfig) {
 	log.Info(fmt.Sprintf("Set node rate limiter, cfg: %v", cfg))
 }
 
-// ApikeyRateLimit is the struct definition for the API key rate limiter
-type ApikeyRateLimit struct {
-	rlm map[string]map[string]*rate.Limiter
-	sync.RWMutex
-}
-
-// gApikeyRateLimiter is the node's singleton instance for the API key rate limiter
-var gApikeyRateLimiter = &ApikeyRateLimit{
-	rlm: make(map[string]map[string]*rate.Limiter),
-}
-
-// clearApikeyRateLimitMap clears the API key rate limiter map
-func clearApikeyRateLimitMap() {
-	gApikeyRateLimiter.rlm = make(map[string]map[string]*rate.Limiter)
-}
-
-// setApiKeyRateLimit sets the global API key rate limiter
-func setApikeyRateLimit(key string, cfg RateLimitConfig) {
-	gApikeyRateLimiter.Lock()
-	defer gApikeyRateLimiter.Unlock()
-
-	if _, ok := gApikeyRateLimiter.rlm[key]; ok {
-		log.Warn("API key rate limiter already set, skipping")
-		return
-	}
-
-	// Set API key rate limiter map
-	gApikeyRateLimiter.rlm[key] = make(map[string]*rate.Limiter)
-	for _, api := range cfg.RateLimitApis {
-		gApikeyRateLimiter.rlm[key][api] = rate.NewLimiter(rate.Limit(cfg.RateLimitCount), cfg.RateLimitBucket)
-		log.Info(fmt.Sprintf("Rate limiter enabled for key: %v for api method: %v with count: %v and bucket: %v", key, cfg.RateLimitApis, cfg.RateLimitCount, cfg.RateLimitBucket))
-	}
-	log.Info(fmt.Sprintf("Set API key rate limiter for key: %v, cfg: %v", key, cfg))
-}
-
 // checkMethodRateLimit returns true if the method API is allowed by the rate limiter
 func checkMethodRateLimit(method string) bool {
 	gRateLimiter.RLock()
@@ -104,20 +69,6 @@ func checkMethodRateLimit(method string) bool {
 
 	if rl, ok := gRateLimiter.rlm[method]; ok {
 		return rl.Allow()
-	}
-	return true
-}
-
-// checkApikeyMethodRateLimit returns true if the key and the method API is allowed
-// by the API key rate limiter
-func checkApikeyMethodRateLimit(key, method string) bool {
-	gApikeyRateLimiter.RLock()
-	defer gApikeyRateLimiter.RUnlock()
-
-	if rlm, keyFound := gApikeyRateLimiter.rlm[key]; keyFound {
-		if rl, ok := rlm[method]; ok {
-			return rl.Allow()
-		}
 	}
 	return true
 }

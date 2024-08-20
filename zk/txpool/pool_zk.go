@@ -73,8 +73,9 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
 		}
 		mt.minTip = minTip
+
 		// For X Layer
-		isClaimAddr := p.isFreeClaimAddr(senderID)
+		isClaimAddr := p.isFreeClaimAddrXLayer(senderID)
 		if isClaimAddr {
 			// here for the case when restart gpCache has not init
 			// use the max uint64 as default because the remain claimTx should handle first

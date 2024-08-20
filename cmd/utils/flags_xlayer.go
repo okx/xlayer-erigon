@@ -280,3 +280,13 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
 	}
 }
+
+// SetApolloGPOXLayer is a public wrapper function to internally call setGPO
+func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
+	setGPO(ctx, cfg)
+}
+
+// SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
+func SetApolloPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
+	setTxPool(ctx, cfg)
+}

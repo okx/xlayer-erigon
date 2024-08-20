@@ -2,6 +2,10 @@ package e2e
 
 import (
 	"context"
+	"math/big"
+	"strings"
+	"testing"
+
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
@@ -12,9 +16,6 @@ import (
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/erigon/zkevm/log"
 	"github.com/stretchr/testify/require"
-	"math/big"
-	"strings"
-	"testing"
 )
 
 const (
@@ -29,14 +30,15 @@ func TestGetBatchSealTime(t *testing.T) {
 		t.Skip()
 	}
 
-	// TODO Return correct time while batch was closed only
+	// latest batch seal time
 	batchNum, err := operations.GetBatchNumber()
 	require.NoError(t, err)
-	log.Infof("Batch number: %d", batchNum)
 	batchSealTime, err := operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
-	require.NoError(t, err)
-	log.Infof("Batch seal time: %d", batchSealTime)
+	require.Equal(t, batchSealTime, uint64(0))
+	log.Infof("Batch number: %d", batchNum)
 
+	// old batch seal time
+	batchNum = batchNum - 1
 	batch, err := operations.GetBatchByNumber(new(big.Int).SetUint64(batchNum))
 	var maxTime uint64
 	for _, block := range batch.Blocks {
@@ -48,8 +50,10 @@ func TestGetBatchSealTime(t *testing.T) {
 			maxTime = blockTime
 		}
 	}
+	batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
+	require.NoError(t, err)
 	log.Infof("Max block time: %d, batchSealTime: %d", maxTime, batchSealTime)
-	//require.Equal(t, maxTime, batchSealTime) // TODO Fix this
+	require.Equal(t, maxTime, batchSealTime)
 }
 
 func TestClaimTx(t *testing.T) {
@@ -256,8 +260,7 @@ func TestGasPrice(t *testing.T) {
 	}
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)
-	// TODO need to check it
-	//require.Greater(t, gasPrice2, gasPrice1)
+	require.Greater(t, gasPrice2, gasPrice1)
 }
 
 func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amount *uint256.Int, toAddress string) string {
@@ -298,4 +301,69 @@ func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amo
 	require.NoError(t, err)
 
 	return signedTx.Hash().String()
+}
+
+func TestMinGasPrice(t *testing.T) {
+	ctx := context.Background()
+	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	log.Infof("Start TestMinGasPrice")
+	require.NoError(t, err)
+	for i := 1; i < 3; i++ {
+		temp, err := operations.GetMinGasPrice()
+		log.Infof("minGP: [%d]", temp)
+		if temp > 1 {
+			temp = temp - 1
+		}
+		require.NoError(t, err)
+
+		from := common.HexToAddress(operations.DefaultL2AdminAddress)
+		to := common.HexToAddress(operations.DefaultSequencerAddress)
+		nonce, err := client.PendingNonceAt(ctx, from)
+		require.NoError(t, err)
+		var tx types.Transaction = &types.LegacyTx{
+			CommonTx: types.CommonTx{
+				Nonce: nonce,
+				To:    &to,
+				Gas:   21000,
+				Value: uint256.NewInt(0),
+			},
+			GasPrice: uint256.NewInt(temp),
+		}
+		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
+		require.NoError(t, err)
+		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
+		signedTx, err := types.SignTx(tx, *signer, privateKey)
+		require.NoError(t, err)
+		log.Infof("GP:%v", tx.GetPrice())
+		err = client.SendTransaction(ctx, signedTx)
+		require.Error(t, err)
+	}
+	for i := 3; i < 5; i++ {
+		temp, err := operations.GetMinGasPrice()
+		log.Infof("minGP: [%d]", temp)
+		require.NoError(t, err)
+
+		from := common.HexToAddress(operations.DefaultL2AdminAddress)
+		to := common.HexToAddress(operations.DefaultSequencerAddress)
+		nonce, err := client.PendingNonceAt(ctx, from)
+		require.NoError(t, err)
+		var tx types.Transaction = &types.LegacyTx{
+			CommonTx: types.CommonTx{
+				Nonce: nonce,
+				To:    &to,
+				Gas:   21000,
+				Value: uint256.NewInt(0),
+			},
+			GasPrice: uint256.NewInt(temp),
+		}
+		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
+		require.NoError(t, err)
+		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
+		signedTx, err := types.SignTx(tx, *signer, privateKey)
+		require.NoError(t, err)
+		log.Infof("GP:%v", tx.GetPrice())
+		err = client.SendTransaction(ctx, signedTx)
+		require.NoError(t, err)
+	}
+	require.NoError(t, err)
 }

@@ -76,18 +76,22 @@ func (c *Client) LoadConfig() (loaded bool) {
 	}
 	for prefix, namespace := range c.namespaceMap {
 		cache := c.GetConfigCache(namespace)
-		cache.Range(func(key, value interface{}) bool {
-			loaded = true
-			switch prefix {
-			case Sequencer:
-				c.loadSequencer(value)
-			case JsonRPC:
-				c.loadJsonRPC(value)
-			case L2GasPricer:
-				c.loadL2GasPricer(value)
-			}
-			return true
-		})
+		if cache != nil {
+			cache.Range(func(key, value interface{}) bool {
+				loaded = true
+				switch prefix {
+				case Sequencer:
+					c.loadSequencer(value)
+				case JsonRPC:
+					c.loadJsonRPC(value)
+				case L2GasPricer:
+					c.loadL2GasPricer(value)
+				case Pool:
+					c.loadPool(value)
+				}
+				return true
+			})
+		}
 	}
 	return
 }
@@ -124,6 +128,8 @@ func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 				c.fireJsonRPC(key, value)
 			case L2GasPricer:
 				c.fireL2GasPricer(key, value)
+			case Pool:
+				c.firePool(key, value)
 			}
 		}
 	}

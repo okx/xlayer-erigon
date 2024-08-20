@@ -93,11 +93,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 
 	httpReq.Header.Add("Content-type", "application/json")
 
-	client := &http.Client{
-		Timeout: 500 * time.Millisecond,
-	}
-
-	httpRes, err := client.Do(httpReq)
+	httpRes, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		errorCount += 1
 		log.Info("failed to execute JSON RPC---1", "method", method, "error", err)

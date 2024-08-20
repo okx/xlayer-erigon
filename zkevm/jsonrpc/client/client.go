@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/http/httptrace"
 	"sync"
 	"time"
 
@@ -38,12 +40,17 @@ var once sync.Once
 var inputCount = 0
 var outCount = 0
 var errorCount = 0
+var socketMap map[uintptr]struct{}
 
 func printCount() {
 	log.Info(fmt.Sprintf("HTTP requests count"))
 	for {
-		time.Sleep(30 * time.Second)
-		log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v", inputCount, outCount, errorCount))
+		time.Sleep(60 * time.Second)
+		temp := ""
+		for k := range socketMap {
+			temp += fmt.Sprintf("%d,", k)
+		}
+		log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v, socket map:%v", inputCount, outCount, errorCount, temp))
 	}
 }
 
@@ -82,6 +89,25 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	}
 
 	httpReq.Header.Add("Content-type", "application/json")
+
+	trace := &httptrace.ClientTrace{
+		GotConn: func(info httptrace.GotConnInfo) {
+			fmt.Printf("Connection reused: %v\n", info.Reused)
+			conn := info.Conn
+
+			if tcpConn, ok := conn.(*net.TCPConn); ok {
+				connFile, err := tcpConn.File()
+				if err != nil {
+					return
+				}
+				socketID := connFile.Fd()
+				socketMap[socketID] = struct{}{}
+				connFile.Close()
+			}
+		},
+	}
+
+	httpReq = httpReq.WithContext(httptrace.WithClientTrace(httpReq.Context(), trace))
 
 	httpRes, err := http.DefaultClient.Do(httpReq)
 	if err != nil {

@@ -785,6 +785,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				contracts.AddNewRollupTypeTopic,
 				contracts.CreateNewRollupTopic,
 				contracts.UpdateRollupTopic,
+				// For X Layer
 				contracts.AddExistingRollupTopic,
 				contracts.UpdateEtrogSequenceTopic,
 			}}

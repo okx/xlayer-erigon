@@ -155,6 +155,7 @@ func finaliseBlock(
 	if err != nil {
 		return nil, err
 	}
+
 	finalHeader := finalBlock.HeaderNoCopy()
 	finalHeader.Root = newRoot
 	finalHeader.Coinbase = coinbase

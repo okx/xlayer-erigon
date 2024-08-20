@@ -187,6 +187,7 @@ LOOP:
 					copy(data[20:], l1InfoRoot)
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
+
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}

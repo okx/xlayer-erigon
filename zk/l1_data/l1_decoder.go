@@ -2,11 +2,11 @@ package l1_data
 
 import (
 	"context"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"encoding/binary"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/ledgerwatch/erigon/accounts/abi"
@@ -180,6 +180,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 		log.Error("Error getting batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
+
 	if len(batchData) == 0 {
 		log.Error(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
 		// end of the line for batch recovery so return empty
@@ -191,6 +192,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 	tsBytes := batchData[length.Addr+length.Hash : length.Addr+length.Hash+8]
 	decoded.LimitTimestamp = binary.BigEndian.Uint64(tsBytes)
 	batchData = batchData[length.Addr+length.Hash+8:]
+
 	decoded.DecodedData, err = zktx.DecodeBatchL2Blocks(batchData, forkId)
 	if err != nil {
 		log.Error("Error decoding batch data", "batch", batchNo, "error", err)

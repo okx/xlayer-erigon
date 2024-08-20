@@ -467,6 +467,7 @@ func SpawnSequencingStage(
 								log.Trace(fmt.Sprintf("single transaction %s overflow counters", txHash))
 							}
 						}
+
 						break LOOP_TRANSACTIONS
 					}
 
@@ -490,6 +491,7 @@ func SpawnSequencingStage(
 					if len(blockTransactions) == 0 && !nextBatchData.IsWorkRemaining {
 						log.Info(fmt.Sprintf("[%s] L1 recovery no more transactions to recover", logPrefix))
 					}
+
 					break LOOP_TRANSACTIONS
 				}
 

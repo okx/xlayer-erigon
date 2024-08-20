@@ -11,7 +11,6 @@ import (
 
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/node/nodecfg"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/erigon/turbo/debug"
 	"github.com/ledgerwatch/log/v3"
@@ -21,13 +20,11 @@ import (
 type Client struct {
 	*agollo.Client
 	namespaceMap map[string]string
-	ethCfg       *ethconfig.Config
-	nodeCfg      *nodecfg.Config
 	flags        []cli.Flag
 }
 
 // NewClient creates a new apollo client
-func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
+func NewClient(ethCfg *ethconfig.Config) *Client {
 	if ethCfg == nil || !ethCfg.Zk.XLayer.Apollo.Enable || ethCfg.Zk.XLayer.Apollo.IP == "" || ethCfg.Zk.XLayer.Apollo.AppID == "" || ethCfg.Zk.XLayer.Apollo.NamespaceName == "" {
 		log.Info(fmt.Sprintf("apollo is not enabled, config: %+v", ethCfg.Zk.XLayer.Apollo))
 		return nil
@@ -65,8 +62,6 @@ func NewClient(ethCfg *ethconfig.Config, nodeCfg *nodecfg.Config) *Client {
 	apc := &Client{
 		Client:       client,
 		namespaceMap: nsMap,
-		ethCfg:       ethCfg,
-		nodeCfg:      nodeCfg,
 		flags:        append(erigoncli.DefaultFlags, debug.Flags...),
 	}
 	client.AddChangeListener(&CustomChangeListener{apc})
@@ -81,18 +76,22 @@ func (c *Client) LoadConfig() (loaded bool) {
 	}
 	for prefix, namespace := range c.namespaceMap {
 		cache := c.GetConfigCache(namespace)
-		cache.Range(func(key, value interface{}) bool {
-			loaded = true
-			switch prefix {
-			case Sequencer:
-				c.loadSequencer(value)
-			case JsonRPC:
-				c.loadJsonRPC(value)
-			case L2GasPricer:
-				c.loadL2GasPricer(value)
-			}
-			return true
-		})
+		if cache != nil {
+			cache.Range(func(key, value interface{}) bool {
+				loaded = true
+				switch prefix {
+				case Sequencer:
+					c.loadSequencer(value)
+				case JsonRPC:
+					c.loadJsonRPC(value)
+				case L2GasPricer:
+					c.loadL2GasPricer(value)
+				case Pool:
+					c.loadPool(value)
+				}
+				return true
+			})
+		}
 	}
 	return
 }
@@ -129,6 +128,8 @@ func (c *CustomChangeListener) OnChange(changeEvent *storage.ChangeEvent) {
 				c.fireJsonRPC(key, value)
 			case L2GasPricer:
 				c.fireL2GasPricer(key, value)
+			case Pool:
+				c.firePool(key, value)
 			}
 		}
 	}

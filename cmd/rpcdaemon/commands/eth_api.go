@@ -12,6 +12,7 @@ import (
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/gasprice"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/log/v3"
 
@@ -350,7 +351,7 @@ type APIImpl struct {
 	GasPriceFactor              float64
 	L1GasPrice                  L1GasPrice
 	VirtualCountersSmtReduction float64
-	
+
 	// For X Layer
 	L2GasPricer   gasprice.L2GasPricer
 	EnableInnerTx bool
@@ -363,23 +364,23 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	}
 
 	apii := &APIImpl{
-		BaseAPI:                    base,
-		db:                         db,
-		ethBackend:                 eth,
-		txPool:                     txPool,
-		mining:                     mining,
-		gasCache:                   NewGasPriceCache(),
-		GasCap:                     gascap,
-		ReturnDataLimit:            returnDataLimit,
-		ZkRpcUrl:                   ethCfg.L2RpcUrl,
-		PoolManagerUrl:             ethCfg.PoolManagerUrl,
-		AllowFreeTransactions:      ethCfg.AllowFreeTransactions,
-		AllowPreEIP155Transactions: ethCfg.AllowPreEIP155Transactions,
-		L1RpcUrl:                   ethCfg.L1RpcUrl,
-		DefaultGasPrice:            ethCfg.DefaultGasPrice,
-		MaxGasPrice:                ethCfg.MaxGasPrice,
-		GasPriceFactor:             ethCfg.GasPriceFactor,
-		L1GasPrice:                 L1GasPrice{},
+		BaseAPI:                     base,
+		db:                          db,
+		ethBackend:                  eth,
+		txPool:                      txPool,
+		mining:                      mining,
+		gasCache:                    NewGasPriceCache(),
+		GasCap:                      gascap,
+		ReturnDataLimit:             returnDataLimit,
+		ZkRpcUrl:                    ethCfg.L2RpcUrl,
+		PoolManagerUrl:              ethCfg.PoolManagerUrl,
+		AllowFreeTransactions:       ethCfg.AllowFreeTransactions,
+		AllowPreEIP155Transactions:  ethCfg.AllowPreEIP155Transactions,
+		L1RpcUrl:                    ethCfg.L1RpcUrl,
+		DefaultGasPrice:             ethCfg.DefaultGasPrice,
+		MaxGasPrice:                 ethCfg.MaxGasPrice,
+		GasPriceFactor:              ethCfg.GasPriceFactor,
+		L1GasPrice:                  L1GasPrice{},
 		VirtualCountersSmtReduction: ethCfg.VirtualCountersSmtReduction,
 		// For X Layer
 		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
@@ -389,9 +390,11 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	// For X Layer
 	// Only Sequencer requires to calculate dynamic gas price periodically
 	// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
-	if sequencer.IsSequencer() {
-		apii.runL2GasPricerForXLayer()
-	}
+	GasPricerOnce.Do(func() {
+		if sequencer.IsSequencer() {
+			apii.runL2GasPricerForXLayer()
+		}
+	})
 
 	return apii
 }
@@ -535,12 +538,14 @@ type GasPriceCache struct {
 	latestPrice *big.Int
 	latestHash  common.Hash
 	mtx         sync.Mutex
+	rawGPCache  *RawGPCache
 }
 
 func NewGasPriceCache() *GasPriceCache {
 	return &GasPriceCache{
 		latestPrice: big.NewInt(0),
 		latestHash:  common.Hash{},
+		rawGPCache:  NewRawGPCache(),
 	}
 }
 
@@ -557,4 +562,24 @@ func (c *GasPriceCache) SetLatest(hash common.Hash, price *big.Int) {
 	c.latestPrice = price
 	c.latestHash = hash
 	c.mtx.Unlock()
+}
+
+func (c *GasPriceCache) GetLatestRawGP() *big.Int {
+	rgp, err := c.rawGPCache.GetMin()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
+	return rgp
+}
+
+func (c *GasPriceCache) GetMinRawGPMoreRecent() *big.Int {
+	rgp, err := c.rawGPCache.GetMinGPMoreRecent()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
+	return rgp
+}
+
+func (c *GasPriceCache) SetLatestRawGP(rgp *big.Int) {
+	c.rawGPCache.Add(rgp)
 }

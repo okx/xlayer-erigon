@@ -1,4 +1,4 @@
-DOCKER_COMPOSE := docker-compose -f docker-compose.yml
+DOCKER_COMPOSE := docker compose -f docker-compose.yml
 DOCKER_STATELESS_EXECUTOR := erigon-stateless-executor
 DOCKER_STATE_DB := erigon-state-db
 DOCKER_SEQ_SENDER := erigon-seqsender
@@ -19,6 +19,7 @@ DOCKER_DATA_AVAILABILITY := xlayer-data-availability
 DOCKER_DATA_AVAILABILITY_DB := xlayer-data-availability-db
 DOCKER_POOL_DB := erigon-pool-db
 DOCKER_POOL_MANAGER := erigon-pool-manager
+DOCKER_SIGNER := xlayer-signer
 
 RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)
 RUN_DOCKER_STATE_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_STATE_DB)
@@ -40,11 +41,13 @@ RUN_DOCKER_DATA_AVAILABILITY := $(DOCKER_COMPOSE) up -d $(DOCKER_DATA_AVAILABILI
 RUN_DOCKER_DATA_AVAILABILITY_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_DATA_AVAILABILITY_DB)
 RUN_DOCKER_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_DB)
 RUN_DOCKER_POOL_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_MANAGER)
+RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
 .PHONY: run
 run: ## Runs a full node
+	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
 	$(RUN_DOCKER_POOL_DB)
@@ -52,24 +55,23 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR_DB)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+
+	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
 	sleep 3
-	$(RUN_DOCKER_PROVER)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 3
-	$(RUN_DOCKER_APPROVE)
-	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 10
+	$(RUN_DOCKER_SIGNER)
 	$(RUN_DOCKER_SEQ_SENDER)
-	sleep 3
 	$(RUN_DOCKER_AGGREGATOR)
-	sleep 3
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
 
 .PHONY: all
 all: ## Runs a full node
+	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
 	$(RUN_DOCKER_POOL_DB)
@@ -81,22 +83,20 @@ all: ## Runs a full node
 	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+
+	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 3
-	$(RUN_DOCKER_PROVER)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 3
-	$(RUN_DOCKER_APPROVE)
-	sleep 3
+	$(RUN_DOCKER_PROVER)
+	sleep 10
+	$(RUN_DOCKER_SIGNER)
+	$(RUN_DOCKER_SEQ_SENDER)
+	$(RUN_DOCKER_AGGREGATOR)
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
-	sleep 3
-	$(RUN_DOCKER_SEQ_SENDER)
-	sleep 3
-	$(RUN_DOCKER_AGGREGATOR)
 
+	# bridge services
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3

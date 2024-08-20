@@ -350,19 +350,6 @@ var (
 		Usage: "API's offered over the HTTP-RPC interface",
 		Value: "eth,erigon,engine",
 	}
-	HTTPApiKeysFlag = cli.StringFlag{
-		Name: "http.apikeys",
-		Usage: `API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: 
-				{"project":"project1","key":"apikey1","timeout":"2023-12-12"}
-				{"project":"project2","key":"apikey2","timeout":"2023-12-12"}
-				{"project":"project3","key":"apikey3","timeout":"2023-12-12","methods":["method1","method2"],"count":1,"bucket":1}`,
-		Value: "",
-	}
-	MethodRateLimitFlag = cli.StringFlag{
-		Name:  "http.methodratelimit",
-		Usage: "Method rate limit in requests per second, format: {\"method\":[\"method1\",\"method2\"],\"count\":1,\"bucket\":1}, eg. {\"methods\":[\"eth_call\",\"eth_blockNumber\"],\"count\":10,\"bucket\":1}",
-		Value: "",
-	}
 	L2ChainIdFlag = cli.Uint64Flag{
 		Name:  "zkevm.l2-chain-id",
 		Usage: "L2 chain ID",
@@ -628,11 +615,6 @@ var (
 		Name:  "zkevm.da-url",
 		Usage: "The URL of the data availability service",
 		Value: "",
-	}
-	AllowInternalTransactions = cli.BoolFlag{
-		Name:  "zkevm.allow-internal-transactions",
-		Usage: "Allow the sequencer to proceed internal transactions",
-		Value: false,
 	}
 	DebugTimers = cli.BoolFlag{
 		Name:  "debug.timers",

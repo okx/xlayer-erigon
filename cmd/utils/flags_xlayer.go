@@ -77,7 +77,7 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
-	// Gas Price
+	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
 		Usage: "raw gas price strategy type: default, follower, fixed",
@@ -148,11 +148,6 @@ var (
 		Usage: "raw gas price usdt",
 		Value: 0,
 	}
-	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
-		Name:  "gpo.enable-follower-adjust",
-		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
-		Value: true,
-	}
 	GpoCongestionThresholdFlag = cli.IntFlag{
 		Name:  "gpo.congestion-threshold",
 		Usage: "Used to determine whether pending tx has reached the threshold for congestion",
@@ -177,6 +172,26 @@ var (
 	XLMetricsEnabledFlag = cli.StringFlag{
 		Name:  "zkevm.metrics-enabled",
 		Usage: "prometheus metrics enabled",
+		Value: "",
+	}
+	// Sequencer
+	AllowInternalTransactions = cli.BoolFlag{
+		Name:  "zkevm.allow-internal-transactions",
+		Usage: "Allow the sequencer to proceed internal transactions",
+		Value: false,
+	}
+	// RPC
+	HTTPApiKeysFlag = cli.StringFlag{
+		Name: "http.apikeys",
+		Usage: `API keys for the HTTP-RPC server and you can add rate limit to this apikey , format: 
+				{"project":"project1","key":"apikey1","timeout":"2023-12-12"}
+				{"project":"project2","key":"apikey2","timeout":"2023-12-12"}
+				{"project":"project3","key":"apikey3","timeout":"2023-12-12","methods":["method1","method2"],"count":1,"bucket":1}`,
+		Value: "",
+	}
+	MethodRateLimitFlag = cli.StringFlag{
+		Name:  "http.methodratelimit",
+		Usage: "Method rate limit in requests per second, format: {\"method\":[\"method1\",\"method2\"],\"count\":1,\"bucket\":1}, eg. {\"methods\":[\"eth_call\",\"eth_blockNumber\"],\"count\":10,\"bucket\":1}",
 		Value: "",
 	}
 )
@@ -231,16 +246,13 @@ func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	if ctx.IsSet(GpoGasPriceUsdtFlag.Name) {
 		cfg.XLayer.GasPriceUsdt = ctx.Float64(GpoGasPriceUsdtFlag.Name)
 	}
-	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
-		cfg.XLayer.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
-	}
 	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
 		cfg.XLayer.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)
 	}
 
 	// Default price check
 	if cfg.Default == nil || cfg.Default.Int64() <= 0 {
-		cfg.Default = gaspricecfg.DefaultXLayerPrice
+		cfg.Default = new(big.Int).Set(gaspricecfg.DefaultXLayerPrice)
 	}
 }
 
@@ -269,13 +281,23 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolPackBatchSpecialList.Name) {
 		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpecialList.Name))
 
-		cfg.FreeClaimGasAddr = make([]string, len(addrHexes))
+		cfg.FreeClaimGasAddrs = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)
-			cfg.FreeClaimGasAddr[i] = sender.String()
+			cfg.FreeClaimGasAddrs[i] = sender.String()
 		}
 	}
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
 	}
+}
+
+// SetApolloGPOXLayer is a public wrapper function to internally call setGPO
+func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
+	setGPO(ctx, cfg)
+}
+
+// SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
+func SetApolloPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
+	setTxPool(ctx, cfg)
 }

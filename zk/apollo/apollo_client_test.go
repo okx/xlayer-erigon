@@ -22,30 +22,25 @@ func TestApolloClient(t *testing.T) {
 			},
 		},
 	}
-	nc := &nodecfg.Config{}
-	client := NewClient(c, nc)
+	client := NewClient(c)
 
 	// Test load config cache
 	loaded := client.LoadConfig()
 	require.Equal(t, true, loaded)
 
-	logTestNodeConfig(t, nc)
-	logTestEthConfig(t, c)
-	initialHttpConf := nc.Http
+	apolloNodeCfg := &UnsafeGetApolloConfig().NodeCfg
+	apolloEthCfg := &UnsafeGetApolloConfig().EthCfg
 
-	// Fire config changes
+	t.Log("Logging init apollo config")
+	logTestNodeConfig(t, apolloNodeCfg)
+	logTestEthConfig(t, apolloEthCfg)
+
+	// Fire config changes on both ethconfig and nodecfg
 	time.Sleep(30 * time.Second)
 
-	apolloNodeCfg, err := nodecfg.GetApolloConfig()
-	require.NoError(t, err)
-	apolloEthCfg, err := ethconfig.GetApolloConfig()
-	require.NoError(t, err)
-	afterHttpConf := apolloNodeCfg.Http
-	require.Equal(t, initialHttpConf, afterHttpConf)
-	t.Log("Logging apollo config")
-
-	logTestNodeConfig(t, &apolloNodeCfg)
-	logTestEthConfig(t, &apolloEthCfg)
+	t.Log("Logging after apollo config")
+	logTestNodeConfig(t, apolloNodeCfg)
+	logTestEthConfig(t, apolloEthCfg)
 }
 
 func logTestEthConfig(t *testing.T, ethCfg *ethconfig.Config) {
@@ -73,6 +68,6 @@ func logTestNodeConfig(t *testing.T, nodeCfg *nodecfg.Config) {
 	t.Log("http.port: ", nodeCfg.Http.HttpPort)
 	t.Log("http.api: ", nodeCfg.Http.API)
 	t.Log("http.timeouts.read: ", nodeCfg.Http.HTTPTimeouts.ReadTimeout)
-	t.Log("http.timeouts.read: ", nodeCfg.Http.HTTPTimeouts.WriteTimeout)
+	t.Log("http.timeouts.write: ", nodeCfg.Http.HTTPTimeouts.WriteTimeout)
 	t.Log("ws: ", nodeCfg.Http.WebsocketEnabled)
 }

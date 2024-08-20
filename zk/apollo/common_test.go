@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/node/nodecfg"
 )
 
 func TestLoadJsonRPCConfig(t *testing.T) {
@@ -24,16 +23,19 @@ func TestLoadJsonRPCConfig(t *testing.T) {
 				Apollo: ethconfig.ApolloClientConfig{
 					IP:            "0.0.0.0",
 					AppID:         "xlayer-devnet",
-					NamespaceName: "jsonrpc-ro.txt,jsonrpc-roHalt.properties",
+					NamespaceName: "jsonrpc-ro.txt, sequencer-roHalt.properties",
 					Enable:        true,
 				},
 			},
 		},
 	}
-	nc := &nodecfg.Config{}
-	client := NewClient(c, nc)
+	client := NewClient(c)
 	client.loadJsonRPC(value)
 	require.NoError(t, err)
-	logTestNodeConfig(t, client.nodeCfg)
-	logTestEthConfig(t, client.ethCfg)
+
+	apolloNodeCfg := UnsafeGetApolloConfig().NodeCfg
+	apolloEthCfg := UnsafeGetApolloConfig().EthCfg
+
+	logTestNodeConfig(t, &apolloNodeCfg)
+	logTestEthConfig(t, &apolloEthCfg)
 }

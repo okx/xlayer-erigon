@@ -1,6 +1,8 @@
 package ethconfig
 
-import "time"
+import (
+	"time"
+)
 
 // XLayerConfig is the X Layer config used on the eth backend
 type XLayerConfig struct {
@@ -12,7 +14,7 @@ type XLayerConfig struct {
 	SequencerBatchSleepDuration time.Duration
 }
 
-var DefaultXLayerConfig = &XLayerConfig{}
+var DefaultXLayerConfig = XLayerConfig{}
 
 // NacosConfig is the config for nacos
 type NacosConfig struct {

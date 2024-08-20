@@ -225,6 +225,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.PoolManagerUrl,
 	&utils.DisableVirtualCounters,
 	&utils.DAUrl,
+
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
 	&utils.TxPoolPackBatchSpecialList,
@@ -244,7 +245,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.GpoDefaultL1CoinPriceFlag,
 	&utils.GpoDefaultL2CoinPriceFlag,
 	&utils.GpoGasPriceUsdtFlag,
-	&utils.GpoEnableFollowerAdjustByL2L1PriceFlag,
 	&utils.GpoCongestionThresholdFlag,
 	&utils.ApolloEnableFlag,
 	&utils.ApolloIPAddr,

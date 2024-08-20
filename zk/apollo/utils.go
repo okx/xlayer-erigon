@@ -3,7 +3,6 @@ package apollo
 import (
 	"flag"
 	"fmt"
-	"math"
 	"strings"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
@@ -22,6 +21,7 @@ func createMockContext(flags []cli.Flag) *cli.Context {
 	return context
 }
 
+// loadZkConfig loads the generic zkEVM eth apollo configurations
 func loadZkConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ethCfg.Zk == nil {
 		ethCfg.Zk = &ethconfig.Zk{}
@@ -108,39 +108,6 @@ func loadZkConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.AllowPreEIP155Transactions.Name) {
 		ethCfg.Zk.AllowPreEIP155Transactions = ctx.Bool(utils.AllowPreEIP155Transactions.Name)
 	}
-	if ctx.IsSet(utils.EffectiveGasPriceForEthTransfer.Name) {
-		effectiveGasPriceForEthTransferVal := ctx.Float64(utils.EffectiveGasPriceForEthTransfer.Name)
-		effectiveGasPriceForEthTransferVal = math.Max(effectiveGasPriceForEthTransferVal, 0)
-		effectiveGasPriceForEthTransferVal = math.Min(effectiveGasPriceForEthTransferVal, 1)
-		ethCfg.Zk.EffectiveGasPriceForEthTransfer = uint8(math.Round(effectiveGasPriceForEthTransferVal * 255.0))
-	}
-	if ctx.IsSet(utils.EffectiveGasPriceForErc20Transfer.Name) {
-		effectiveGasPriceForErc20TransferVal := ctx.Float64(utils.EffectiveGasPriceForErc20Transfer.Name)
-		effectiveGasPriceForErc20TransferVal = math.Max(effectiveGasPriceForErc20TransferVal, 0)
-		effectiveGasPriceForErc20TransferVal = math.Min(effectiveGasPriceForErc20TransferVal, 1)
-		ethCfg.Zk.EffectiveGasPriceForErc20Transfer = uint8(math.Round(effectiveGasPriceForErc20TransferVal * 255.0))
-	}
-	if ctx.IsSet(utils.EffectiveGasPriceForContractInvocation.Name) {
-		effectiveGasPriceForContractInvocationVal := ctx.Float64(utils.EffectiveGasPriceForContractInvocation.Name)
-		effectiveGasPriceForContractInvocationVal = math.Max(effectiveGasPriceForContractInvocationVal, 0)
-		effectiveGasPriceForContractInvocationVal = math.Min(effectiveGasPriceForContractInvocationVal, 1)
-		ethCfg.Zk.EffectiveGasPriceForContractInvocation = uint8(math.Round(effectiveGasPriceForContractInvocationVal * 255.0))
-	}
-	if ctx.IsSet(utils.EffectiveGasPriceForContractDeployment.Name) {
-		effectiveGasPriceForContractDeploymentVal := ctx.Float64(utils.EffectiveGasPriceForContractDeployment.Name)
-		effectiveGasPriceForContractDeploymentVal = math.Max(effectiveGasPriceForContractDeploymentVal, 0)
-		effectiveGasPriceForContractDeploymentVal = math.Min(effectiveGasPriceForContractDeploymentVal, 1)
-		ethCfg.Zk.EffectiveGasPriceForContractDeployment = uint8(math.Round(effectiveGasPriceForContractDeploymentVal * 255.0))
-	}
-	if ctx.IsSet(utils.DefaultGasPrice.Name) {
-		ethCfg.Zk.DefaultGasPrice = ctx.Uint64(utils.DefaultGasPrice.Name)
-	}
-	if ctx.IsSet(utils.MaxGasPrice.Name) {
-		ethCfg.Zk.MaxGasPrice = ctx.Uint64(utils.MaxGasPrice.Name)
-	}
-	if ctx.IsSet(utils.GasPriceFactor.Name) {
-		ethCfg.Zk.GasPriceFactor = ctx.Float64(utils.GasPriceFactor.Name)
-	}
 	if ctx.IsSet(utils.WitnessFullFlag.Name) {
 		ethCfg.Zk.WitnessFull = ctx.Bool(utils.WitnessFullFlag.Name)
 	}
@@ -191,4 +158,13 @@ func getNamespaceSuffix(namespace string) (string, error) {
 		return "", fmt.Errorf("invalid namespace: %s, no separator \"-\" present, please configure apollo namespace in the correct format \"item-suffix\"", namespace)
 	}
 	return items[len(items)-1], nil
+}
+
+func containsAddress(addresses []string, addr libcommon.Address) bool {
+	for _, item := range addresses {
+		if libcommon.HexToAddress(item) == addr {
+			return true
+		}
+	}
+	return false
 }

@@ -39,9 +39,7 @@ import (
 	"github.com/google/btree"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
-	core_types "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
 
@@ -148,8 +146,9 @@ const (
 	SenderDisallowedDeploy DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 	DiscardByLimbo         DiscardReason = 27
 
-	ReceiverDisallowedReceiveTx DiscardReason = 127 // XLayer receiver is not allowed to receive transactions
-	NoWhiteListedSender         DiscardReason = 128 // XLayer the transaction is sent by a no whitelisted account
+	// For X Layer
+	ReceiverDisallowedReceiveTx DiscardReason = 127 // receiver is not allowed to receive transactions
+	NoWhiteListedSender         DiscardReason = 128 // the transaction is sent by a non-whitelisted account
 )
 
 func (r DiscardReason) String() string {
@@ -327,11 +326,10 @@ type TxPool struct {
 	ethCfg                  *ethconfig.Config
 	aclDB                   kv.RwDB
 
-	wbCfg WBConfig // XLayer config
-
 	// For X Layer
-	// gpCache will only work in sequencer node, without rpc node
-	gpCache GPCache
+	xlayerCfg XLayerConfig
+	apolloCfg ApolloConfig
+	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -340,6 +338,13 @@ type TxPool struct {
 
 	// limbo specific fields where bad batch transactions identified by the executor go
 	limbo *Limbo
+}
+
+func CreateTxPoolBuckets(tx kv.RwTx) error {
+	if err := tx.CreateBucket(TablePoolLimbo); err != nil {
+		return err
+	}
+	return nil
 }
 
 func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, ethCfg *ethconfig.Config, cache kvcache.Cache, chainID uint256.Int, shanghaiTime *big.Int, londonBlock *big.Int, aclDB kv.RwDB) (*TxPool, error) {
@@ -386,12 +391,13 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		flushMtx:                &sync.Mutex{},
 		aclDB:                   aclDB,
 		limbo:                   newLimbo(),
-		wbCfg: WBConfig{ // XLayer config
-			EnableWhitelist:  ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:        ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:      ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddr: ethCfg.DeprecatedTxPool.FreeClaimGasAddr,
-			GasPriceMultiple: ethCfg.DeprecatedTxPool.GasPriceMultiple,
+		// X Layer config
+		xlayerCfg: XLayerConfig{
+			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
 		},
 	}, nil
 }
@@ -726,8 +732,10 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return UnsupportedTx
 	}
 
-	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !isLocal && uint256.NewInt(p.cfg.MinFeeCap).Cmp(&txn.FeeCap) == 1 {
+	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
+	// X Layer
+	rgp := p.gpCache.GetLatestRawGP()
+	if !p.isFreeGas(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}
@@ -776,27 +784,21 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is blocked
-	if p.checkBlockedAddr(from) {
+	if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx
 	}
 
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
-		txnDec, err := core_types.DecodeTransaction(rlp.NewStream(bytes.NewReader(txn.Rlp), uint64(len(txn.Rlp))))
-		if err == nil {
-			to := txnDec.GetTo()
-			if p.checkBlockedAddr(*to) {
-				log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
-				return ReceiverDisallowedReceiveTx
-			}
-		} else {
-			log.Error(fmt.Sprintf("DecodeTransaction error: %v, rlp=%s", err, hex.EncodeToString(txn.Rlp)))
+		if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, txn.To) {
+			log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
+			return ReceiverDisallowedReceiveTx
 		}
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.wbCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.apolloCfg.GetEnableWhitelist(p.xlayerCfg.EnableWhitelist) && !p.apolloCfg.CheckWhitelistAddr(p.xlayerCfg.WhiteList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}
@@ -1669,6 +1671,11 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 	if err != nil {
 		return err
 	}
+
+	if err = p.fromDBLimbo(ctx, tx, cacheView); err != nil {
+		return err
+	}
+
 	it, err := tx.Range(kv.RecentLocalTransaction, nil, nil)
 	if err != nil {
 		return err
@@ -1712,7 +1719,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 
 		// X Layer validate transaction
 		if reason := p.validateTx(txn, isLocalTx, cacheView, addr); reason != NotSet && reason != Success {
-			return nil
+			continue
 		}
 		// X Layer fix transaction RLP nil
 		txn.Rlp = nil // means that we don't need store it in db anymore
@@ -1742,10 +1749,6 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		return err
 	}
 	p.pendingBaseFee.Store(pendingBaseFee)
-
-	if err = p.fromDBLimbo(ctx, tx, cacheView); err != nil {
-		return err
-	}
 
 	return nil
 }

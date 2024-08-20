@@ -463,23 +463,21 @@ func executeBlockZk(
 		DB:       0,                   // Redis 数据库编号，默认是 0
 	})
 	execRs := &core.EphemeralExecResultZk{}
-	skip := false
 	log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
+
+	execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
+	if err != nil {
+		return nil, err
+	}
+
 	if blockNum == 4 {
 		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
 		if err == nil && len(redisRs) > 0 {
 			if err = json.Unmarshal(redisRs, &execRs); err != nil {
 				panic(err)
 			} else {
-				skip = true
 				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", string(redisRs)))
 			}
-		}
-	}
-	if !skip {
-		execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
-		if err != nil {
-			return nil, err
 		}
 	}
 

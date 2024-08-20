@@ -11,13 +11,13 @@ import (
 	"unsafe"
 
 	"github.com/VictoriaMetrics/metrics"
-	"github.com/holiman/uint256"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/common/dbg"
 	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	"github.com/gateway-fm/cdk-erigon-lib/etl"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	libstate "github.com/gateway-fm/cdk-erigon-lib/state"
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/cmd/state/exec22"
 	"github.com/ledgerwatch/erigon/common/dbutils"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
@@ -71,6 +71,8 @@ func (rs *StateV3) put(table string, key, val []byte) {
 }
 
 func (rs *StateV3) puts(table string, key string, val []byte) {
+	log.Info(fmt.Sprintf("=======fsc:test. puts. key:%s, val:%s", key, string(val)))
+
 	switch table {
 	case StorageTable:
 		if old, ok := rs.chStorage.Set(key, val); ok {

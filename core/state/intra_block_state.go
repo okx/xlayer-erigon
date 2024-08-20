@@ -18,8 +18,9 @@
 package state
 
 import (
+	"encoding/json"
 	"fmt"
-	"runtime/debug"
+	"github.com/ledgerwatch/log/v3"
 	"sort"
 
 	"encoding/hex"
@@ -689,27 +690,55 @@ func (sdb *IntraBlockState) SoftFinalise() {
 // CommitBlock finalizes the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (sdb *IntraBlockState) CommitBlock(chainRules *chain.Rules, stateWriter StateWriter) error {
-	debug.PrintStack()
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
-			obj := sdb.getStateObject(addr)
+			sdb.getStateObject(addr)
 		}
 	}
 	return sdb.MakeWriteSet(chainRules, stateWriter)
 }
 
-type ddsData struct {
-	addr libcommon.Address `json:"addr"`
-	data []byte            `json:"data"`
-}
-
-func (sdb *IntraBlockState) CommitBlockDDS(chainRules *chain.Rules, stateWriter StateWriter) error {
+func (sdb *IntraBlockState) CommitBlockDDSProducer(chainRules *chain.Rules, stateWriter StateWriter) ([]byte, error) {
 	delta := []ddsData{}
+	success := true
+	log.Info(fmt.Sprintf("=======fsc:test. CommitBlockDDSProducer len:%d", len(sdb.balanceInc)))
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
 			obj := sdb.getStateObject(addr)
-			delta = append(delta, ddsData{addr, obj})
+			log.Info(fmt.Sprintf("========fsc:test.obj:%v", obj))
+			if success {
+				objJson := obj.SoToJson()
+				if objBytes, err := objJson.Marshal(); err != nil {
+					success = false
+				} else {
+					delta = append(delta, ddsData{addr, objBytes})
+				}
+			}
+
 		}
+	}
+	var deltaBytes []byte
+	if success {
+		deltaBytes, _ = json.Marshal(&delta)
+	}
+	return deltaBytes, sdb.MakeWriteSet(chainRules, stateWriter)
+}
+
+func (sdb *IntraBlockState) CommitBlockDDSConsumer(chainRules *chain.Rules, stateWriter StateWriter, deltaBytes []byte) error {
+	deltas := []ddsData{}
+	if err := json.Unmarshal(deltaBytes, &deltas); err != nil {
+		return err
+	}
+	for _, delta := range deltas {
+		soJson := stateObjectJson{}
+		if err := soJson.Unmarshal(delta.Data); err != nil {
+			return err
+		}
+		so, err := soJson.JsonToSo(sdb)
+		if err != nil {
+			return err
+		}
+		sdb.setStateObject(delta.Addr, so)
 	}
 	return sdb.MakeWriteSet(chainRules, stateWriter)
 }

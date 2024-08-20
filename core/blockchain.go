@@ -18,7 +18,10 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
+	"github.com/ledgerwatch/log/v3"
 	"math/big"
 	"time"
 
@@ -471,9 +474,26 @@ func FinalizeBlockExecution(
 	//	return nil, nil, nil, err
 	//}
 
-	if err := ibs.CommitBlock(cc.Rules(header.Number.Uint64(), header.Time), stateWriter); err != nil {
-		return nil, nil, nil, fmt.Errorf("committing block %d failed: %w", header.Number.Uint64(), err)
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "192.168.1.19:6379", // Redis 服务器地址
+		Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
+		DB:       0,                   // Redis 数据库编号，默认是 0
+	})
+	log.Info(fmt.Sprintf("=========fsc:test. header.num:%d", header.Number.Uint64()))
+	if header.Number.Uint64() == 4 {
+		deltaBytes, err := ibs.CommitBlockDDSProducer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter)
+		if err != nil {
+			panic(err)
+		}
+		if err = rdb.Set(context.Background(), "state", deltaBytes, 0).Err(); err != nil {
+			panic("Failed redis execRs")
+		}
+
+		log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(deltaBytes)))
 	}
+	//if err := ibs.CommitBlock(cc.Rules(header.Number.Uint64(), header.Time), stateWriter); err != nil {
+	//	return nil, nil, nil, fmt.Errorf("committing block %d failed: %w", header.Number.Uint64(), err)
+	//}
 
 	if err := stateWriter.WriteChangeSets(); err != nil {
 		return nil, nil, nil, fmt.Errorf("writing changesets for block %d failed: %w", header.Number.Uint64(), err)

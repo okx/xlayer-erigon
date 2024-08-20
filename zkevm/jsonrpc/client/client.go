@@ -44,6 +44,7 @@ var socketMap map[uintptr]struct{}
 
 func printCount() {
 	log.Info(fmt.Sprintf("HTTP requests count"))
+	socketMap = make(map[uintptr]struct{})
 	go func() {
 		for {
 			time.Sleep(60 * time.Second)

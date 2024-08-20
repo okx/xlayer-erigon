@@ -5,14 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/http/httptrace"
-	"sync"
-	"time"
 
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
-	"github.com/ledgerwatch/log/v3"
 )
 
 // Client defines typed wrappers for the zkEVM RPC API.
@@ -36,38 +31,14 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("invalid status code, expected: %d, found: %d", http.StatusOK, e.StatusCode)
 }
 
-var once sync.Once
-var inputCount = 0
-var outCount = 0
-var errorCount = 0
-var socketMap map[uintptr]struct{}
-
-func printCount() {
-	log.Info(fmt.Sprintf("HTTP requests count"))
-	socketMap = make(map[uintptr]struct{})
-	go func() {
-		for {
-			time.Sleep(60 * time.Second)
-			temp := ""
-			for k := range socketMap {
-				temp += fmt.Sprintf("%d,", k)
-			}
-			log.Info(fmt.Sprintf("HTTP requests inputCount: %d, outCount:%v, errorCount:%v, socket map:%v", inputCount, outCount, errorCount, temp))
-		}
-	}()
-}
-
 // JSONRPCCall executes a 2.0 JSON RPC HTTP Post Request to the provided URL with
 // the provided method and parameters, which is compatible with the Ethereum
 // JSON RPC Server.
 func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response, error) {
-	//once.Do(printCount)
 	const jsonRPCVersion = "2.0"
-	inputCount += inputCount
 
 	params, err := json.Marshal(parameters)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
 
@@ -80,41 +51,19 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
 
 	reqBodyReader := bytes.NewReader(reqBody)
 	httpReq, err := http.NewRequest(http.MethodPost, url, reqBodyReader)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
 
 	httpReq.Header.Add("Content-type", "application/json")
 
-	trace := &httptrace.ClientTrace{
-		GotConn: func(info httptrace.GotConnInfo) {
-			fmt.Printf("Connection reused: %v\n", info.Reused)
-			conn := info.Conn
-
-			if tcpConn, ok := conn.(*net.TCPConn); ok {
-				connFile, err := tcpConn.File()
-				if err != nil {
-					return
-				}
-				socketID := connFile.Fd()
-				socketMap[socketID] = struct{}{}
-				connFile.Close()
-			}
-		},
-	}
-
-	httpReq = httpReq.WithContext(httptrace.WithClientTrace(httpReq.Context(), trace))
-
 	httpRes, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
 	if httpRes.Body != nil {
@@ -122,13 +71,11 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	}
 
 	if httpRes.StatusCode != http.StatusOK {
-		errorCount += errorCount
 		return types.Response{}, &HTTPError{StatusCode: httpRes.StatusCode}
 	}
 
 	resBody, err := io.ReadAll(httpRes.Body)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
 	//defer httpRes.Body.Close()
@@ -136,10 +83,8 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	var res types.Response
 	err = json.Unmarshal(resBody, &res)
 	if err != nil {
-		errorCount += errorCount
 		return types.Response{}, err
 	}
-	outCount += outCount
 	return res, nil
 }
 

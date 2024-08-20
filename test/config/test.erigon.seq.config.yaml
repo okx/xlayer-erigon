@@ -48,8 +48,9 @@ http.addr: 0.0.0.0
 http.port: 8545
 http.vhosts: any
 http.corsdomain: any
-http.timeouts.read: "60s"
-http.timeouts.write: "60s"
+http.timeouts.read: "10s"
+http.timeouts.write: "10s"
+http.timeouts.idle: "10s"
 rpc.batch.concurrency: 2
 rpc.batch.limit: 20
 ws: true

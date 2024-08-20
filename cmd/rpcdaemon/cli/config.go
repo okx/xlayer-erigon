@@ -556,6 +556,7 @@ func startRegularRpcServer(ctx context.Context, cfg httpcfg.HttpCfg, rpcAPI []rp
 	apiHandler = rpc.ApiAuthHandler(apiHandler)
 
 	listener, httpAddr, err := node.StartHTTPEndpoint(httpEndpoint, cfg.HTTPTimeouts, apiHandler)
+	log.Info(fmt.Sprintf("StartHTTPEndpoint, timeouts:%v, http:%v", cfg.HTTPTimeouts, httpEndpoint))
 	if err != nil {
 		return fmt.Errorf("could not start RPC api: %w", err)
 	}

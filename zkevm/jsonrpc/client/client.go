@@ -61,7 +61,7 @@ func printCount() {
 // the provided method and parameters, which is compatible with the Ethereum
 // JSON RPC Server.
 func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response, error) {
-	once.Do(printCount)
+	//once.Do(printCount)
 	const jsonRPCVersion = "2.0"
 	inputCount += inputCount
 

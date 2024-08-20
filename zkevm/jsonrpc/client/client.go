@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/ledgerwatch/log/v3"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 )
@@ -42,6 +44,12 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 		return types.Response{}, err
 	}
 
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("failed to execute JSON RPC, method:%v call: %v", method, err)
+		}
+	}()
+
 	req := types.Request{
 		JSONRPC: jsonRPCVersion,
 		ID:      float64(1),
@@ -51,19 +59,26 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 
 	reqBody, err := json.Marshal(req)
 	if err != nil {
+		log.Info("failed to execute JSON RPC---0.1", "method", method, "error", err)
 		return types.Response{}, err
 	}
 
 	reqBodyReader := bytes.NewReader(reqBody)
 	httpReq, err := http.NewRequest(http.MethodPost, url, reqBodyReader)
 	if err != nil {
+		log.Info("failed to execute JSON RPC---0", "method", method, "error", err)
 		return types.Response{}, err
 	}
 
 	httpReq.Header.Add("Content-type", "application/json")
 
-	httpRes, err := http.DefaultClient.Do(httpReq)
+	client := &http.Client{
+		Timeout: 500 * time.Millisecond,
+	}
+
+	httpRes, err := client.Do(httpReq)
 	if err != nil {
+		log.Info("failed to execute JSON RPC---1", "method", method, "error", err)
 		return types.Response{}, err
 	}
 	if httpRes.Body != nil {
@@ -71,11 +86,13 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	}
 
 	if httpRes.StatusCode != http.StatusOK {
+		log.Info("failed to execute JSON RPC---2", "method", method, "error", err)
 		return types.Response{}, &HTTPError{StatusCode: httpRes.StatusCode}
 	}
 
 	resBody, err := io.ReadAll(httpRes.Body)
 	if err != nil {
+		log.Info("failed to execute JSON RPC---3", "method", method, "error", err)
 		return types.Response{}, err
 	}
 	//defer httpRes.Body.Close()
@@ -83,6 +100,7 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	var res types.Response
 	err = json.Unmarshal(resBody, &res)
 	if err != nil {
+		log.Info("failed to execute JSON RPC---4", "method", method, "error", err)
 		return types.Response{}, err
 	}
 	return res, nil

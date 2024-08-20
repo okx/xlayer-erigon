@@ -88,7 +88,7 @@ Loop:
 			}
 
 			for _, l := range logs {
-				log.Info(fmt.Sprintf("Received log: %v", l.TxHash.String()))
+				log.Info(fmt.Sprintf("Spawn L1 sequencer sync stage, received log: %v", l.TxHash.String()))
 				header := headersMap[l.BlockNumber]
 				switch l.Topics[0] {
 				case contracts.InitialSequenceBatchesTopic:
@@ -107,7 +107,7 @@ Loop:
 					log.Info(fmt.Sprintf("Received CreateNewRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
-						log.Info(fmt.Sprintf("Received CreateNewRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						log.Error(fmt.Sprintf("Received CreateNewRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					rollupTypeBytes := l.Data[0:32]
@@ -126,7 +126,7 @@ Loop:
 					log.Info(fmt.Sprintf("Received UpdateRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
-						log.Info(fmt.Sprintf("Received UpdateRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						log.Error(fmt.Sprintf("Received UpdateRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 					newRollupBytes := l.Data[0:32]
@@ -136,7 +136,7 @@ Loop:
 						return err
 					}
 					if fork == 0 {
-						return fmt.Errorf("Received UpdateRollupTopic for unknown rollup type: %v", newRollup)
+						return fmt.Errorf("received UpdateRollupTopic for unknown rollup type: %v", newRollup)
 					}
 					latestVerifiedBytes := l.Data[32:64]
 					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
@@ -152,7 +152,7 @@ Loop:
 					log.Info(fmt.Sprintf("Received AddExistingRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
-						log.Info(fmt.Sprintf("Received AddExistingRollupTopic for rollupId %v, not the one we are interested in", rollupId))
+						log.Error(fmt.Sprintf("Received AddExistingRollupTopic for rollupId %v, not the one we are interested in", rollupId))
 						continue
 					}
 
@@ -176,16 +176,6 @@ Loop:
 					hexTx := hex.EncodeToString(txs)
 					log.Info(fmt.Sprintf("Received UpdateEtrogSequenceTopic, numBatch: %v, GER:%v, Seq:%v, Txs:%v",
 						numBatch, hexStringLastGlobalExitRoot, hexStringSequencer, hexTx))
-
-					//data := make([]byte, 20+32+8+len(batch))
-					//copy(data, coinbase.Bytes())
-					//copy(data[20:], l1InfoRoot)
-					//copy(data[52:], limitTimestampBytes)
-					//copy(data[60:], batch)
-					////log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
-					//if err := hermezDb.WriteL1BatchData(b, data); err != nil {
-					//	return err
-					//}
 				default:
 					log.Warn("received unexpected topic from l1 sequencer sync stage", "topic", l.Topics[0])
 				}

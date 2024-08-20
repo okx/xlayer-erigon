@@ -193,7 +193,7 @@ func SpawnSequencingStage(
 
 	if l1Recovery {
 		if cfg.zk.L1SyncStopBatch > 0 && thisBatch > cfg.zk.L1SyncStopBatch {
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed! [%v,%v]", logPrefix, cfg.zk.L1SyncStartBlock, thisBatch))
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
 			return nil
 		}
@@ -203,9 +203,10 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
+
 		decodedBlocksSize = uint64(len(nextBatchData.DecodedData))
 		if decodedBlocksSize == 0 {
-			log.Info(fmt.Sprintf("[%s] L1 recovery has completed! Decoded blocks size is 0.", logPrefix), "batch", thisBatch)
+			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", thisBatch)
 			time.Sleep(1 * time.Second)
 			return nil
 		}
@@ -377,19 +378,16 @@ func SpawnSequencingStage(
 				}
 			case <-blockTicker.C:
 				if !isAnyRecovery {
-					log.Info("L1 is any recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			case <-batchTicker.C:
 				if !isAnyRecovery {
 					runLoopBlocks = false
-					log.Info("L1 batch timer break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			case <-nonEmptyBatchTimer.C:
 				if !isAnyRecovery && hasAnyTransactionsInThisBatch {
 					runLoopBlocks = false
-					log.Info("L1 non empty batch timer break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			default:
@@ -469,7 +467,6 @@ func SpawnSequencingStage(
 								log.Trace(fmt.Sprintf("single transaction %s overflow counters", txHash))
 							}
 						}
-						log.Info("L1 any overflow break loop transactions")
 						break LOOP_TRANSACTIONS
 					}
 
@@ -493,13 +490,11 @@ func SpawnSequencingStage(
 					if len(blockTransactions) == 0 && !nextBatchData.IsWorkRemaining {
 						log.Info(fmt.Sprintf("[%s] L1 recovery no more transactions to recover", logPrefix))
 					}
-					log.Info("L1 recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 
 				if limboRecovery {
 					runLoopBlocks = false
-					log.Info("L1 limbo recovery break loop transactions")
 					break LOOP_TRANSACTIONS
 				}
 			}

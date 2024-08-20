@@ -153,9 +153,6 @@ LOOP:
 				lastBatchSequenced := l.Topics[1].Big().Uint64()
 				latestBatch = lastBatchSequenced
 
-				//log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Getting transaction, %v, lastBatchSequenced:%v, latestBatch:%v",
-				//	logPrefix, l.TxHash.String(), lastBatchSequenced, latestBatch))
-
 				l1InfoRoot := l.Data
 				if len(l1InfoRoot) != 32 {
 					log.Error(fmt.Sprintf("[%s] L1 info root is not 32 bytes", logPrefix), "tx-hash", l.TxHash.String())
@@ -164,7 +161,7 @@ LOOP:
 
 				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
 				if err != nil {
-					log.Error(fmt.Sprintf("SpawnSequencerL1BlockSyncStage, DecodeL1BatchData, %v", err))
+					log.Error(fmt.Sprintf("Spawn sequencer L1 blockSync stage, DecodeL1BatchData:%v", err))
 					return err
 				}
 
@@ -175,11 +172,10 @@ LOOP:
 				// from the latest batch in the original event
 				initBatch := lastBatchSequenced - uint64(len(batches)-1)
 
-				log.Info(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
+				log.Debug(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
 					"hash", transaction.Hash().String(),
 					"initBatch", initBatch,
 					"batches", len(batches),
-					"lastBatchSequenced", lastBatchSequenced,
 				)
 
 				// iterate over the batches in reverse order to ensure that the batches are written in the correct order
@@ -191,7 +187,6 @@ LOOP:
 					copy(data[20:], l1InfoRoot)
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
-					//log.Info(fmt.Sprintf("[%s] Writing L1 batch data, %v, %v", logPrefix, b, len(data)))
 					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
 						return err
 					}
@@ -228,7 +223,6 @@ LOOP:
 	}
 
 	if freshTx {
-		log.Info(fmt.Sprintf("[%s] SpawnSequencerL1BlockSyncStage, Committing L1 block sync stage, latestBatch:%v", logPrefix, latestBatch))
 		if err := tx.Commit(); err != nil {
 			return err
 		}

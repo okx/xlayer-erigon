@@ -42,9 +42,11 @@ func BuildSequencesForValidium(data []byte, daUrl string) ([]RollupBaseEtrogBatc
 	var sequences []RollupBaseEtrogBatchData
 	var validiumSequences []ValidiumBatchData
 	err := json.Unmarshal(data, &validiumSequences)
+
 	if err != nil {
 		return nil, err
 	}
+
 	for _, validiumSequence := range validiumSequences {
 		hash := common.BytesToHash(validiumSequence.TransactionsHash[:])
 		data, err := da.GetOffChainData(context.Background(), daUrl, hash)
@@ -54,9 +56,7 @@ func BuildSequencesForValidium(data []byte, daUrl string) ([]RollupBaseEtrogBatc
 		}
 
 		actualTransactionsHash := crypto.Keccak256Hash(data)
-		//log.Info(fmt.Sprintf("BuildSequencesForValidium, data len:%v, hash:%v", len(data), hash.String()))
 		if actualTransactionsHash != hash {
-			log.Info(fmt.Sprintf("BuildSequencesForValidium-----7"))
 			return nil, fmt.Errorf("unable to fetch off chain data for hash %s, got %s intead", hash.String(), actualTransactionsHash.String())
 		}
 
@@ -99,6 +99,7 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	var limitTimstamp uint64
 
 	isValidium := false
+
 	switch idAsString {
 	case contracts.SequenceBatchesIdv5_0:
 		cb, ok := data[1].(common.Address)
@@ -119,25 +120,23 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 		limitTimstamp = ts
 	case contracts.SequenceBatchesValidiumElderBerry:
 		if daUrl == "" {
-			log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----2"))
 			return nil, common.Address{}, 0, fmt.Errorf("data availability url is required for validium")
 		}
 		isValidium = true
 		cb, ok := data[3].(common.Address)
 		if !ok {
-			log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----4"))
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 3 in the l1 call data to be address")
 		}
 		coinbase = cb
 		ts, ok := data[1].(uint64)
 		if !ok {
-			log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----6"))
 			return nil, common.Address{}, 0, fmt.Errorf("expected position 1 in the l1 call data to be the limit timestamp")
 		}
 		limitTimstamp = ts
 	default:
 		return nil, common.Address{}, 0, fmt.Errorf("unknown l1 call data")
 	}
+
 	var sequences []RollupBaseEtrogBatchData
 
 	bytedata, err := json.Marshal(data[0])
@@ -152,7 +151,7 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	}
 
 	if err != nil {
-		log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----11"))
+		log.Info(fmt.Sprintf("DecodeL1BatchData error:%v", err))
 		return nil, coinbase, 0, err
 	}
 
@@ -160,7 +159,7 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	for idx, sequence := range sequences {
 		batchL2Datas[idx] = sequence.Transactions
 	}
-	//log.Info(fmt.Sprintf("SequenceBatchesValidiumElderBerry-----13, batchL2Datas len:%v", len(sequences)))
+
 	return batchL2Datas, coinbase, limitTimstamp, err
 }
 
@@ -182,10 +181,11 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 		return decoded, err
 	}
 	if len(batchData) == 0 {
-		log.Info(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
+		log.Error(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
 		// end of the line for batch recovery so return empty
 		return decoded, nil
 	}
+
 	decoded.Coinbase = common.BytesToAddress(batchData[:length.Addr])
 	decoded.L1InfoRoot = common.BytesToHash(batchData[length.Addr : length.Addr+length.Hash])
 	tsBytes := batchData[length.Addr+length.Hash : length.Addr+length.Hash+8]
@@ -196,6 +196,7 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 		log.Error("Error decoding batch data", "batch", batchNo, "error", err)
 		return decoded, err
 	}
+
 	// no data means no more work to do - end of the line
 	if len(decoded.DecodedData) == 0 {
 		log.Info("No data in batch", "batch", batchNo)

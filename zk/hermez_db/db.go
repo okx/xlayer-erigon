@@ -1300,7 +1300,6 @@ func (db *HermezDbReader) GetBatchCounters(batchNumber uint64) (countersMap map[
 // coinbase = 20 bytes
 // batchL2Data = remaining
 func (db *HermezDb) WriteL1BatchData(batchNumber uint64, data []byte) error {
-	//log.Info(fmt.Sprintf("[HermezDbReader] WriteL1BatchData: %v, %v", batchNumber, len(data)))
 	k := Uint64ToBytes(batchNumber)
 	return db.tx.Put(L1_BATCH_DATA, k, data)
 }
@@ -1309,7 +1308,6 @@ func (db *HermezDb) WriteL1BatchData(batchNumber uint64, data []byte) error {
 // coinbase = 20 bytes
 // batchL2Data = remaining
 func (db *HermezDbReader) GetL1BatchData(batchNumber uint64) ([]byte, error) {
-	//log.Info(fmt.Sprintf("[HermezDbReader] GetL1BatchData: %v", batchNumber))
 	k := Uint64ToBytes(batchNumber)
 	return db.tx.GetOne(L1_BATCH_DATA, k)
 }
@@ -1559,7 +1557,6 @@ func (db *HermezDbReader) GetForkFromRollupType(rollupType uint64) (uint64, erro
 }
 
 func (db *HermezDb) WriteNewForkHistory(forkId, lastVerifiedBatch uint64) error {
-	log.Info(fmt.Sprintf("[HermezDb] WriteNewForkHistory: forkId:%v, lastVerifiedBatch:%v", forkId, lastVerifiedBatch))
 	cursor, err := db.tx.Cursor(FORK_HISTORY)
 	if err != nil {
 		return err

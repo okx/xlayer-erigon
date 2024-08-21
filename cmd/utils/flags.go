@@ -531,7 +531,7 @@ var (
 		Usage: "Define the TCP write timeout when sending data to a datastream client",
 		Value: 5 * time.Second,
 	}
-	DataStreamTruncateBlock = cli.DurationFlag{
+	DataStreamTruncateBlock = cli.Uint64Flag{
 		Name:  "zkevm.data-stream-truncate-block",
 		Usage: "Define a specific block number to truncate the data stream",
 		Value: 0,

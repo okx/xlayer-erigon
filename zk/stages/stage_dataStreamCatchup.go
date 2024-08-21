@@ -160,10 +160,7 @@ func TruncateDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.Strea
 	if err != nil {
 		return err
 	}
-	log.Info(fmt.Sprintf("[%s] Getting progress", logPrefix),
-		"truncateBlockNum", truncateBlockNum,
-		"previousProgress", previousProgress,
-	)
+	log.Info(fmt.Sprintf("[%s] Getting progress, previous block:%v, truncate:%v", logPrefix, previousProgress, truncateBlockNum))
 	if truncateBlockNum >= previousProgress {
 		return fmt.Errorf(fmt.Sprintf("cannot truncate to a block number greater than or equal to the current progress, %v,%v",
 			truncateBlockNum, previousProgress))
@@ -177,5 +174,6 @@ func TruncateDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.Strea
 		return err
 	}
 
+	log.Info(fmt.Sprintf("[%s] Finished truncate block:%v", logPrefix, truncateBlockNum))
 	return nil
 }

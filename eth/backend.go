@@ -744,7 +744,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 			}
 
 			if backend.config.Zk.DataStreamTruncateBlock != 0 {
-				log.Warn(fmt.Sprintf("[dataStream] setting the stream truncated progress"))
+				log.Warn(fmt.Sprintf("[stream-truncate] setting the stream truncated progress"))
 				backend.preStartTasks.TruncateDataStream = true
 				backend.preStartTasks.WarmUpDataStream = true
 			}
@@ -1149,7 +1149,8 @@ func (s *Ethereum) PreStart() error {
 		// so here we loop and take a brief pause waiting for it to be ready
 		attempts := 0
 		for {
-			_, err = zkStages.CatchupDatastream(s.sentryCtx, "stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
+			var block uint64
+			block, err = zkStages.CatchupDatastream(s.sentryCtx, "stream-catchup", tx, s.dataStream, s.chainConfig.ChainID.Uint64(), s.config.DatastreamVersion, s.config.HasExecutors())
 			if err != nil {
 				if errors.Is(err, datastreamer.ErrAtomicOpNotAllowed) {
 					attempts++
@@ -1161,6 +1162,7 @@ func (s *Ethereum) PreStart() error {
 				}
 				return err
 			} else {
+				log.Info(fmt.Sprintf("[stream-catchup] data stream catchup to block %v", block))
 				break
 			}
 		}

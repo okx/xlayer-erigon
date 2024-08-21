@@ -9,8 +9,8 @@ import (
 )
 
 type storageJson struct {
-	hash  libcommon.Hash `json:"hash"`
-	value string         `json:"value"`
+	Hash  libcommon.Hash `json:"hash"`
+	Value []byte         `json:"value"`
 }
 type stateObjectJson struct {
 	Address            libcommon.Address `json:"address"`
@@ -31,19 +31,19 @@ type stateObjectJson struct {
 func (so *stateObject) SoToJson() *stateObjectJson {
 	originStorage := make([]storageJson, 0, len(so.originStorage))
 	for k, v := range so.originStorage {
-		originStorage = append(originStorage, storageJson{k, v.Hex()})
+		originStorage = append(originStorage, storageJson{k, v.Bytes()})
 	}
 	blockOriginStorage := make([]storageJson, 0, len(so.blockOriginStorage))
 	for k, v := range so.blockOriginStorage {
-		blockOriginStorage = append(blockOriginStorage, storageJson{k, v.Hex()})
+		blockOriginStorage = append(blockOriginStorage, storageJson{k, v.Bytes()})
 	}
 	dirtyStorage := make([]storageJson, 0, len(so.dirtyStorage))
 	for k, v := range so.dirtyStorage {
-		dirtyStorage = append(dirtyStorage, storageJson{k, v.Hex()})
+		dirtyStorage = append(dirtyStorage, storageJson{k, v.Bytes()})
 	}
 	fakeStorage := make([]storageJson, 0, len(so.fakeStorage))
 	for k, v := range so.fakeStorage {
-		fakeStorage = append(fakeStorage, storageJson{k, v.Hex()})
+		fakeStorage = append(fakeStorage, storageJson{k, v.Bytes()})
 	}
 	return &stateObjectJson{
 		Address:            so.address,
@@ -65,34 +65,26 @@ func (soj *stateObjectJson) JsonToSo(db *IntraBlockState) (*stateObject, error) 
 	originStorage := make(Storage, len(soj.OriginStorage))
 	for _, ele := range soj.OriginStorage {
 		var st uint256.Int
-		if err := st.SetFromHex(ele.value); err != nil {
-			return nil, err
-		}
-		originStorage[ele.hash] = st
+		st.SetBytes(ele.Value)
+		originStorage[ele.Hash] = st
 	}
 	blockOriginStorage := make(Storage, len(soj.BlockOriginStorage))
 	for _, ele := range soj.BlockOriginStorage {
 		var st uint256.Int
-		if err := st.SetFromHex(ele.value); err != nil {
-			return nil, err
-		}
-		blockOriginStorage[ele.hash] = st
+		st.SetBytes(ele.Value)
+		blockOriginStorage[ele.Hash] = st
 	}
 	dirtyStorage := make(Storage, len(soj.DirtyStorage))
 	for _, ele := range soj.DirtyStorage {
 		var st uint256.Int
-		if err := st.SetFromHex(ele.value); err != nil {
-			return nil, err
-		}
-		dirtyStorage[ele.hash] = st
+		st.SetBytes(ele.Value)
+		dirtyStorage[ele.Hash] = st
 	}
 	fakeStorage := make(Storage, len(soj.FakeStorage))
 	for _, ele := range soj.FakeStorage {
 		var st uint256.Int
-		if err := st.SetFromHex(ele.value); err != nil {
-			return nil, err
-		}
-		fakeStorage[ele.hash] = st
+		st.SetBytes(ele.Value)
+		fakeStorage[ele.Hash] = st
 	}
 	return &stateObject{
 		address:            soj.Address,
@@ -120,6 +112,7 @@ func (soj *stateObjectJson) Unmarshal(data []byte) error {
 }
 
 type ddsData struct {
-	Addr libcommon.Address `json:"addr"`
-	Data []byte            `json:"data"`
+	Addr  libcommon.Address `json:"addr"`
+	Data  []byte            `json:"data"`
+	Dirty bool              `json:"dirty"`
 }

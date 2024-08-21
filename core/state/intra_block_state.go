@@ -298,6 +298,7 @@ func (sdb *IntraBlockState) HasSelfdestructed(addr libcommon.Address) bool {
 // AddBalance adds amount to the account associated with addr.
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) AddBalance(addr libcommon.Address, amount *uint256.Int) {
+	log.Info(fmt.Sprintf("======fsc:test. AddBalance!!!!!!!!!"))
 	if sdb.trace {
 		fmt.Printf("AddBalance %x, %d\n", addr, amount)
 	}
@@ -328,6 +329,8 @@ func (sdb *IntraBlockState) AddBalance(addr libcommon.Address, amount *uint256.I
 // SubBalance subtracts amount from the account associated with addr.
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SubBalance(addr libcommon.Address, amount *uint256.Int) {
+	log.Info(fmt.Sprintf("======fsc:test. SubBalance!!!!!!!!!"))
+
 	if sdb.trace {
 		fmt.Printf("SubBalance %x, %d\n", addr, amount)
 	}
@@ -340,6 +343,8 @@ func (sdb *IntraBlockState) SubBalance(addr libcommon.Address, amount *uint256.I
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetBalance(addr libcommon.Address, amount *uint256.Int) {
+	log.Info(fmt.Sprintf("======fsc:test. SetBalance!!!!!!!!!"))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetBalance(amount)
@@ -348,6 +353,8 @@ func (sdb *IntraBlockState) SetBalance(addr libcommon.Address, amount *uint256.I
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetNonce(addr libcommon.Address, nonce uint64) {
+	log.Info(fmt.Sprintf("======fsc:test. SetNonce!!!!!!!!!"))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetNonce(nonce)
@@ -357,6 +364,8 @@ func (sdb *IntraBlockState) SetNonce(addr libcommon.Address, nonce uint64) {
 // DESCRIBED: docs/programmers_guide/guide.md#code-hash
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetCode(addr libcommon.Address, code []byte) {
+	log.Info(fmt.Sprintf("======fsc:test. SetCode!!!!!!!!!"))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		if len(code) == 0 {
@@ -371,6 +380,8 @@ func (sdb *IntraBlockState) SetCode(addr libcommon.Address, code []byte) {
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetState(addr libcommon.Address, key *libcommon.Hash, value uint256.Int) {
+	log.Info(fmt.Sprintf("======fsc:test. SetState!!!!!!!!! key:%s, val:%v", key, value))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(key, value)
@@ -380,6 +391,8 @@ func (sdb *IntraBlockState) SetState(addr libcommon.Address, key *libcommon.Hash
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
 func (sdb *IntraBlockState) SetStorage(addr libcommon.Address, storage Storage) {
+	log.Info(fmt.Sprintf("======fsc:test. SetStorage!!!!!!!!!"))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetStorage(storage)
@@ -388,6 +401,8 @@ func (sdb *IntraBlockState) SetStorage(addr libcommon.Address, storage Storage) 
 
 // SetIncarnation sets incarnation for account if account exists
 func (sdb *IntraBlockState) SetIncarnation(addr libcommon.Address, incarnation uint64) {
+	log.Info(fmt.Sprintf("======fsc:test. SetIncarnation!!!!!!!!!"))
+
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.setIncarnation(incarnation)
@@ -640,6 +655,8 @@ func printAccount(EIP161Enabled bool, addr libcommon.Address, stateObject *state
 
 // FinalizeTx should be called after every transaction.
 func (sdb *IntraBlockState) FinalizeTx(chainRules *chain.Rules, stateWriter StateWriter) error {
+	log.Info(fmt.Sprintf("=======fsc:test. FinalizeTx len:%d; obLen:%d, obDirtyLen:%d.",
+		len(sdb.balanceInc), len(sdb.stateObjects), len(sdb.stateObjectsDirty)))
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
 			sdb.getStateObject(addr)
@@ -690,6 +707,8 @@ func (sdb *IntraBlockState) SoftFinalise() {
 // CommitBlock finalizes the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (sdb *IntraBlockState) CommitBlock(chainRules *chain.Rules, stateWriter StateWriter) error {
+	log.Info(fmt.Sprintf("=======fsc:test. CommitBlock len:%d; obLen:%d, obDirtyLen:%d.",
+		len(sdb.balanceInc), len(sdb.stateObjects), len(sdb.stateObjectsDirty)))
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
 			sdb.getStateObject(addr)
@@ -701,27 +720,28 @@ func (sdb *IntraBlockState) CommitBlock(chainRules *chain.Rules, stateWriter Sta
 func (sdb *IntraBlockState) CommitBlockDDSProducer(chainRules *chain.Rules, stateWriter StateWriter) ([]byte, error) {
 	delta := []ddsData{}
 	success := true
+	for addr := range sdb.journal.dirties {
+		sdb.stateObjectsDirty[addr] = struct{}{}
+	}
 	log.Info(fmt.Sprintf("=======fsc:test. CommitBlockDDSProducer len:%d", len(sdb.balanceInc)))
-	for addr, bi := range sdb.balanceInc {
-		if !bi.transferred {
-			obj := sdb.getStateObject(addr)
-			log.Info(fmt.Sprintf("========fsc:test.obj:%v", obj))
-			if success {
-				objJson := obj.SoToJson()
-				if objBytes, err := objJson.Marshal(); err != nil {
-					success = false
-				} else {
-					delta = append(delta, ddsData{addr, objBytes})
-				}
+	for addr, obj := range sdb.stateObjects {
+		log.Info(fmt.Sprintf("========fsc:test.obj:%v", obj))
+		if success {
+			objJson := obj.SoToJson()
+			if objBytes, err := objJson.Marshal(); err != nil {
+				success = false
+			} else {
+				_, isDirty := sdb.stateObjectsDirty[addr]
+				delta = append(delta, ddsData{addr, objBytes, isDirty})
 			}
-
 		}
 	}
+
 	var deltaBytes []byte
 	if success {
 		deltaBytes, _ = json.Marshal(&delta)
 	}
-	return deltaBytes, sdb.MakeWriteSet(chainRules, stateWriter)
+	return deltaBytes, sdb.CommitBlock(chainRules, stateWriter)
 }
 
 func (sdb *IntraBlockState) CommitBlockDDSConsumer(chainRules *chain.Rules, stateWriter StateWriter, deltaBytes []byte) error {
@@ -738,7 +758,10 @@ func (sdb *IntraBlockState) CommitBlockDDSConsumer(chainRules *chain.Rules, stat
 		if err != nil {
 			return err
 		}
-		sdb.setStateObject(delta.Addr, so)
+		sdb.stateObjects[delta.Addr] = so
+		if delta.Dirty {
+			sdb.stateObjectsDirty[delta.Addr] = struct{}{}
+		}
 	}
 	return sdb.MakeWriteSet(chainRules, stateWriter)
 }

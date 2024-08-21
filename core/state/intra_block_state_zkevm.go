@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"github.com/ledgerwatch/log/v3"
 
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
@@ -45,6 +46,7 @@ func (sdb *IntraBlockState) GetTxCount() (uint64, error) {
 
 func (sdb *IntraBlockState) PostExecuteStateSet(chainConfig *chain.Config, blockNum uint64, blockInfoRoot *libcommon.Hash) {
 	//ETROG
+	log.Info("=======fsc:test. PostExecuteStateSet!!!")
 	if chainConfig.IsForkID7Etrog(blockNum) {
 		sdb.scalableSetBlockInfoRoot(blockInfoRoot)
 	}
@@ -163,6 +165,8 @@ func (sdb *IntraBlockState) GetBlockStateRoot(blockNum *uint256.Int) *uint256.In
 }
 
 func (sdb *IntraBlockState) ScalableSetSmtRootHash(roHermezDb ReadOnlyHermezDb) error {
+	log.Info("=======fsc:test. ScalableSetSmtRootHash!!!")
+
 	txNum := uint256.NewInt(0)
 	slot0 := libcommon.HexToHash("0x0")
 	sdb.GetState(ADDRESS_SCALABLE_L2, &slot0, txNum)

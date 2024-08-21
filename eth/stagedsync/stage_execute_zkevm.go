@@ -470,13 +470,16 @@ func executeBlockZk(
 		return nil, err
 	}
 
+	execJson, _ := json.Marshal(execRs)
+	log.Info(fmt.Sprintf("=======fsc:test. exe rs:%s", string(execJson)))
+
 	if blockNum == 4 {
 		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
 		if err == nil && len(redisRs) > 0 {
 			if err = json.Unmarshal(redisRs, &execRs); err != nil {
 				panic(err)
 			} else {
-				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", string(redisRs)))
+				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
 			}
 		}
 	}

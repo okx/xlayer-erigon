@@ -42,6 +42,13 @@ func TestBinaryStringToInt64(t *testing.T) {
 	}
 }
 
+func BenchmarkConvertBigIntToHex(b *testing.B) {
+	b.ReportAllocs()
+	for n := 0; n < b.N; n++ {
+		ConvertBigIntToHex(big.NewInt(int64(n)))
+	}
+}
+
 func TestConvertBigIntToHex(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -138,6 +145,13 @@ func TestScalarToArrayBig(t *testing.T) {
 
 	if !reflect.DeepEqual(result, expected) {
 		t.Errorf("ScalarToArray = %v; want %v", result, expected)
+	}
+}
+
+func BenchmarkScalarToArrayBig(b *testing.B) {
+	scalar := big.NewInt(0x1234567890ABCDEF)
+	for i := 0; i < b.N; i++ {
+		ScalarToArrayBig(scalar)
 	}
 }
 

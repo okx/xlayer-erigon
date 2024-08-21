@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/google/go-cmp/cmp"
 	"io"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func getBatchNumber(url string) (*big.Int, error) {
@@ -58,7 +59,7 @@ func getBatchByNumber(url string, number *big.Int) (map[string]interface{}, erro
 	requestBody, _ := json.Marshal(map[string]interface{}{
 		"jsonrpc": "2.0",
 		"method":  "zkevm_getBatchByNumber",
-		"params":  []interface{}{number.String(), true},
+		"params":  []interface{}{number.String(), false},
 		"id":      1,
 	})
 
@@ -104,12 +105,6 @@ func compareBatches(erigonURL, legacyURL string, batchNumber *big.Int) (string, 
 	// ignore list
 	il := []string{
 		"timestamp",
-		"verifyBatchTxHash",
-		"sendSequencesTxHash",
-		"accInputHash",
-		"globalExitRoot",
-		"mainnetExitRoot",
-		"rollupExitRoot",
 	}
 	for _, i := range il {
 		delete(batch1, i)
@@ -162,6 +157,7 @@ func main() {
 	log.Printf("Skipping %d batches\n", *skip)
 
 	for i := 0; i < *numBatches; i++ {
+		log.Println("Checking batch", i+1, "of", *numBatches)
 		batchNumber := new(big.Int).Sub(startBatch, big.NewInt(int64(i**skip)))
 		diff, err := compareBatches(*erigonURL, *legacyURL, batchNumber)
 		if err != nil {

@@ -1,6 +1,7 @@
 package stages
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -126,76 +127,60 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 	}
 
 	shouldRegenerate := to > s.BlockNumber && to-s.BlockNumber > cfg.zk.RebuildTreeAfter
-	eridb := db2.NewEriDb(tx)
-	smt := smt.NewSMT(eridb)
+	shouldIncrementBecauseOfAFlag := cfg.zk.IncrementTreeAlways
+	shouldIncrementBecauseOfExecutionConditions := s.BlockNumber > 0 && !shouldRegenerate
+	shouldIncrement := shouldIncrementBecauseOfAFlag || shouldIncrementBecauseOfExecutionConditions
 
-	if cfg.zk.IncrementTreeAlways {
-		// increment only behaviour
+	eridb := db2.NewEriDb(tx)
+	smt := smt.NewSMT(eridb, false)
+
+	if cfg.zk.SmtRegenerateInMemory {
+		log.Info(fmt.Sprintf("[%s] SMT using mapmutation", logPrefix))
 		eridb.OpenBatch(quit)
-		log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
+	} else {
+		log.Info(fmt.Sprintf("[%s] SMT not using mapmutation", logPrefix))
+	}
+
+	if shouldIncrement {
+		if shouldIncrementBecauseOfAFlag {
+			log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
+		}
 		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 	} else {
-		// default behaviour
-		if s.BlockNumber == 0 || shouldRegenerate {
-			if cfg.zk.SmtRegenerateInMemory {
-				log.Info(fmt.Sprintf("[%s] SMT using mapmutation", logPrefix))
-				eridb.OpenBatch(quit)
-			} else {
-				log.Info(fmt.Sprintf("[%s] SMT not using mapmutation", logPrefix))
-			}
-			if root, err = regenerateIntermediateHashes(logPrefix, tx, eridb, smt, to); err != nil {
-				return trie.EmptyRoot, err
-			}
-		} else {
-			eridb.OpenBatch(quit)
-			if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-				return trie.EmptyRoot, err
-			}
+		if root, err = regenerateIntermediateHashes(ctx, logPrefix, tx, eridb, smt, to); err != nil {
+			return trie.EmptyRoot, err
 		}
 	}
 
 	log.Info(fmt.Sprintf("[%s] Trie root", logPrefix), "hash", root.Hex())
 
 	if cfg.checkRoot {
-		var expectedRootHash common.Hash
-		var headerHash common.Hash
 		var syncHeadHeader *types.Header
-		syncHeadHeader, err = cfg.blockReader.HeaderByNumber(ctx, tx, to)
-		if err != nil {
+		if syncHeadHeader, err = cfg.blockReader.HeaderByNumber(ctx, tx, to); err != nil {
 			return trie.EmptyRoot, err
 		}
 		if syncHeadHeader == nil {
 			return trie.EmptyRoot, fmt.Errorf("no header found with number %d", to)
 		}
-		expectedRootHash = syncHeadHeader.Root
-		headerHash = syncHeadHeader.Hash()
 
+		expectedRootHash := syncHeadHeader.Root
+		headerHash := syncHeadHeader.Hash()
 		if root != expectedRootHash {
 			if cfg.zk.SmtRegenerateInMemory {
 				eridb.RollbackBatch()
 			}
 			panic(fmt.Sprintf("[%s] Wrong trie root of block %d: %x, expected (from header): %x. Block hash: %x", logPrefix, to, root, expectedRootHash, headerHash))
-
-			if cfg.badBlockHalt {
-				return trie.EmptyRoot, fmt.Errorf("wrong trie root")
-			}
-			if cfg.hd != nil {
-				cfg.hd.ReportBadHeaderPoS(headerHash, syncHeadHeader.ParentHash)
-			}
-			// if to > s.BlockNumber {
-			//unwindTo := (to + s.BlockNumber) / 2 // Binary search for the correct block, biased to the lower numbers
-			//log.Warn("Unwinding due to incorrect root hash", "to", unwindTo)
-			//u.UnwindTo(unwindTo, headerHash)
-			// }
-		} else {
-			log.Info(fmt.Sprintf("[%s] State root matches", logPrefix))
 		}
+
+		log.Info(fmt.Sprintf("[%s] State root matches", logPrefix))
 	}
 
-	if err := eridb.CommitBatch(); err != nil {
-		return trie.EmptyRoot, err
+	if cfg.zk.SmtRegenerateInMemory {
+		if err := eridb.CommitBatch(); err != nil {
+			return trie.EmptyRoot, err
+		}
 	}
 
 	if err = s.Update(tx, to); err != nil {
@@ -211,7 +196,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 	return root, err
 }
 
-func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.StageState, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context) (err error) {
+func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.StageState, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context, silent bool) (err error) {
 	quit := ctx.Done()
 	useExternalTx := tx != nil
 	if !useExternalTx {
@@ -221,7 +206,9 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 		}
 		defer tx.Rollback()
 	}
-	log.Debug(fmt.Sprintf("[%s] Unwinding intermediate hashes", s.LogPrefix()), "from", s.BlockNumber, "to", u.UnwindPoint)
+	if !silent {
+		log.Debug(fmt.Sprintf("[%s] Unwinding intermediate hashes", s.LogPrefix()), "from", s.BlockNumber, "to", u.UnwindPoint)
+	}
 
 	var expectedRootHash common.Hash
 	syncHeadHeader := rawdb.ReadHeaderByNumber(tx, u.UnwindPoint)
@@ -234,7 +221,7 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 		expectedRootHash = syncHeadHeader.Root
 	}
 
-	root, err := unwindZkSMT(ctx, s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, true, &expectedRootHash, quit)
+	root, err := unwindZkSMT(ctx, s.LogPrefix(), s.BlockNumber, u.UnwindPoint, tx, cfg.checkRoot, &expectedRootHash, silent, quit)
 	if err != nil {
 		return err
 	}
@@ -256,7 +243,7 @@ func UnwindZkIntermediateHashesStage(u *stagedsync.UnwindState, s *stagedsync.St
 	return nil
 }
 
-func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb, smtIn *smt.SMT, toBlock uint64) (common.Hash, error) {
+func regenerateIntermediateHashes(ctx context.Context, logPrefix string, db kv.RwTx, eridb *db2.EriDb, smtIn *smt.SMT, toBlock uint64) (common.Hash, error) {
 	log.Info(fmt.Sprintf("[%s] Regeneration trie hashes started", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Regeneration ended", logPrefix))
 
@@ -319,7 +306,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 			sk := fmt.Sprintf("0x%032x", key)
 			v := fmt.Sprintf("0x%032x", acc)
 
-			as[sk] = fmt.Sprint(TrimHexString(v))
+			as[sk] = TrimHexString(v)
 		}
 		return nil
 	})
@@ -340,7 +327,7 @@ func regenerateIntermediateHashes(logPrefix string, db kv.RwTx, eridb *db2.EriDb
 	log.Info(fmt.Sprintf("[%s] Collecting account data finished in %v", logPrefix, dataCollectTime))
 
 	// generate tree
-	if _, err := smtIn.GenerateFromKVBulk(logPrefix, keys); err != nil {
+	if _, err := smtIn.GenerateFromKVBulk(ctx, logPrefix, keys); err != nil {
 		return trie.EmptyRoot, err
 	}
 
@@ -389,11 +376,13 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 
 	// NB: changeset tables are zero indexed
 	// changeset tables contain historical value at N-1, so we look up values from plainstate
+	// i+1 to get state at the beginning of the next batch
+	psr := state2.NewPlainState(db, from+1, systemcontracts.SystemContractCodeLookup["Hermez"])
+	defer psr.Close()
+
 	for i := from; i <= to; i++ {
 		dupSortKey := dbutils.EncodeBlockNumber(i)
-
-		// i+1 to get state at the beginning of the next batch
-		psr := state2.NewPlainState(db, i+1, systemcontracts.SystemContractCodeLookup["Hermez"])
+		psr.SetBlockNr(i + 1)
 
 		// collect changes to accounts and code
 		for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
@@ -414,7 +403,7 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 
 			ach := hexutils.BytesToHex(cc)
 			if len(ach) > 0 {
-				hexcc := fmt.Sprintf("0x%s", ach)
+				hexcc := "0x" + ach
 				codeChanges[addr] = hexcc
 				if err != nil {
 					return trie.EmptyRoot, err
@@ -470,14 +459,18 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 	return hash, nil
 }
 
-func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *common.Hash, quit <-chan struct{}) (common.Hash, error) {
-	log.Info(fmt.Sprintf("[%s] Unwind trie hashes started", logPrefix))
-	defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))
+func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *common.Hash, quiet bool, quit <-chan struct{}) (common.Hash, error) {
+	if !quiet {
+		log.Info(fmt.Sprintf("[%s] Unwind trie hashes started", logPrefix))
+		defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))
+	}
 
 	eridb := db2.NewEriDb(db)
-	dbSmt := smt.NewSMT(eridb)
+	dbSmt := smt.NewSMT(eridb, false)
 
-	log.Info(fmt.Sprintf("[%s]", logPrefix), "last root", common.BigToHash(dbSmt.LastRoot()))
+	if !quiet {
+		log.Info(fmt.Sprintf("[%s]", logPrefix), "last root", common.BigToHash(dbSmt.LastRoot()))
+	}
 
 	if quit == nil {
 		log.Warn("quit channel is nil, creating a new one")
@@ -505,7 +498,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 
 	total := uint64(math.Abs(float64(from) - float64(to) + 1))
 	printerStopped := false
-	progressChan, stopPrinter := zk.ProgressPrinter(fmt.Sprintf("[%s] Progress unwinding", logPrefix), total)
+	progressChan, stopPrinter := zk.ProgressPrinter(fmt.Sprintf("[%s] Progress unwinding", logPrefix), total, quiet)
 	defer func() {
 		if !printerStopped {
 			stopPrinter()
@@ -526,14 +519,17 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		accChanges[addr] = deletedAcc
 	}
 
+	psr := state2.NewPlainState(db, from, systemcontracts.SystemContractCodeLookup["Hermez"])
+	defer psr.Close()
+
 	for i := from; i >= to+1; i-- {
 		select {
 		case <-ctx.Done():
-			return trie.EmptyRoot, fmt.Errorf(fmt.Sprintf("[%s] Context done", logPrefix))
+			return trie.EmptyRoot, errors.New(fmt.Sprintf("[%s] Context done", logPrefix))
 		default:
 		}
 
-		psr := state2.NewPlainState(db, i, systemcontracts.SystemContractCodeLookup["Hermez"])
+		psr.SetBlockNr(i)
 
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 
@@ -582,7 +578,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 				ach := hexutils.BytesToHex(cc)
 				hexcc := ""
 				if len(ach) > 0 {
-					hexcc = fmt.Sprintf("0x%s", ach)
+					hexcc = "0x" + ach
 				}
 				codeChanges[addr] = hexcc
 			}
@@ -617,7 +613,6 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		}
 
 		progressChan <- 1
-		psr.Close()
 	}
 
 	stopPrinter()
@@ -627,7 +622,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 		return trie.EmptyRoot, err
 	}
 
-	if err := verifyLastHash(dbSmt, expectedRootHash, checkRoot, logPrefix); err != nil {
+	if err := verifyLastHash(dbSmt, expectedRootHash, checkRoot, logPrefix, quiet); err != nil {
 		log.Error("failed to verify hash")
 		eridb.RollbackBatch()
 		return trie.EmptyRoot, err
@@ -643,13 +638,15 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 	return hash, nil
 }
 
-func verifyLastHash(dbSmt *smt.SMT, expectedRootHash *common.Hash, checkRoot bool, logPrefix string) error {
+func verifyLastHash(dbSmt *smt.SMT, expectedRootHash *common.Hash, checkRoot bool, logPrefix string, quiet bool) error {
 	hash := common.BigToHash(dbSmt.LastRoot())
 
 	if checkRoot && hash != *expectedRootHash {
 		panic(fmt.Sprintf("[%s] Wrong trie root: %x, expected (from header): %x", logPrefix, hash, expectedRootHash))
 	}
-	log.Info(fmt.Sprintf("[%s] Trie root matches", logPrefix), "hash", hash.Hex())
+	if !quiet {
+		log.Info(fmt.Sprintf("[%s] Trie root matches", logPrefix), "hash", hash.Hex())
+	}
 	return nil
 }
 
@@ -668,7 +665,7 @@ func processAccount(db smt.DB, a *accounts.Account, as map[string]string, inc ui
 
 	ach := hexutils.BytesToHex(cc)
 	if len(ach) > 0 {
-		hexcc := fmt.Sprintf("0x%s", ach)
+		hexcc := "0x" + ach
 		keys, err = insertContractBytecodeToKV(db, keys, addr.String(), hexcc)
 		if err != nil {
 			return []utils.NodeKey{}, err

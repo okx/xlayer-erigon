@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/ledgerwatch/log/v3"
@@ -40,7 +41,7 @@ type IL1Syncer interface {
 	Stop()
 }
 
-var ErrStateRootMismatch = fmt.Errorf("state root mismatch")
+var ErrStateRootMismatch = errors.New("state root mismatch")
 
 type L1SyncerCfg struct {
 	db     kv.RwDB
@@ -117,20 +118,18 @@ func SpawnStageL1Syncer(
 
 	newVerificationsCount := 0
 	newSequencesCount := 0
+	highestWrittenL1BlockNo := uint64(0)
 Loop:
 	for {
 		select {
 		case logs := <-logsChan:
-			logsForQueryBlocks := make([]ethTypes.Log, 0, len(logs))
 			infos := make([]*types.L1BatchInfo, 0, len(logs))
 			batchLogTypes := make([]BatchLogType, 0, len(logs))
 			for _, l := range logs {
+				l := l
 				info, batchLogType := parseLogType(cfg.zkCfg.L1RollupId, &l)
 				infos = append(infos, &info)
 				batchLogTypes = append(batchLogTypes, batchLogType)
-				if batchLogType == logL1InfoTreeUpdate {
-					logsForQueryBlocks = append(logsForQueryBlocks, l)
-				}
 			}
 
 			for i, l := range logs {
@@ -141,6 +140,9 @@ Loop:
 					if err := hermezDb.WriteSequence(info.L1BlockNo, info.BatchNo, info.L1TxHash, info.StateRoot); err != nil {
 						return fmt.Errorf("failed to write batch info, %w", err)
 					}
+					if info.L1BlockNo > highestWrittenL1BlockNo {
+						highestWrittenL1BlockNo = info.L1BlockNo
+					}
 					newSequencesCount++
 				case logVerify:
 					if info.BatchNo > highestVerification.BatchNo {
@@ -148,6 +150,9 @@ Loop:
 					}
 					if err := hermezDb.WriteVerification(info.L1BlockNo, info.BatchNo, info.L1TxHash, info.StateRoot); err != nil {
 						return fmt.Errorf("failed to write verification for block %d, %w", info.L1BlockNo, err)
+					}
+					if info.L1BlockNo > highestWrittenL1BlockNo {
+						highestWrittenL1BlockNo = info.L1BlockNo
 					}
 					newVerificationsCount++
 				case logIncompatible:
@@ -162,14 +167,15 @@ Loop:
 			if !cfg.syncer.IsDownloading() {
 				break Loop
 			}
+			time.Sleep(10 * time.Millisecond)
 		}
 	}
 
 	latestCheckedBlock := cfg.syncer.GetLastCheckedL1Block()
-	if latestCheckedBlock > l1BlockProgress {
-		log.Info(fmt.Sprintf("[%s] Saving L1 syncer progress", logPrefix), "latestCheckedBlock", latestCheckedBlock, "newVerificationsCount", newVerificationsCount, "newSequencesCount", newSequencesCount)
+	if highestWrittenL1BlockNo > l1BlockProgress {
+		log.Info(fmt.Sprintf("[%s] Saving L1 syncer progress", logPrefix), "latestCheckedBlock", latestCheckedBlock, "newVerificationsCount", newVerificationsCount, "newSequencesCount", newSequencesCount, "highestWrittenL1BlockNo", highestWrittenL1BlockNo)
 
-		if err := stages.SaveStageProgress(tx, stages.L1Syncer, latestCheckedBlock); err != nil {
+		if err := stages.SaveStageProgress(tx, stages.L1Syncer, highestWrittenL1BlockNo); err != nil {
 			return fmt.Errorf("failed to save stage progress, %w", err)
 		}
 		if highestVerification.BatchNo > 0 {
@@ -216,8 +222,10 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 	bigRollupId := new(big.Int).SetUint64(l1RollupId)
 	isRollupIdMatching := log.Topics[1] == common.BigToHash(bigRollupId)
 
-	var batchNum uint64
-	var stateRoot, l1InfoRoot common.Hash
+	var (
+		batchNum              uint64
+		stateRoot, l1InfoRoot common.Hash
+	)
 
 	switch log.Topics[0] {
 	case contracts.SequencedBatchTopicPreEtrog:
@@ -313,9 +321,6 @@ func UnwindL1SyncerStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg L1SyncerCfg,
 		return fmt.Errorf("failed to save stage progress, %w", err)
 	}
 
-	if err := u.Done(tx); err != nil {
-		return err
-	}
 	if !useExternalTx {
 		if err := tx.Commit(); err != nil {
 			return err

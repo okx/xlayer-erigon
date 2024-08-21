@@ -10,6 +10,7 @@ import (
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/core/types"
 	dstypes "github.com/ledgerwatch/erigon/zk/datastream/types"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 var (
@@ -33,6 +34,14 @@ type ReadOnlyHermezDb interface {
 	GetGerForL1BlockHash(l1BlockHash libcommon.Hash) (libcommon.Hash, error)
 	GetIntermediateTxStateRoot(blockNum uint64, txhash libcommon.Hash) (libcommon.Hash, error)
 	GetReusedL1InfoTreeIndex(blockNum uint64) (bool, error)
+	GetSequenceByBatchNo(batchNo uint64) (*zktypes.L1BatchInfo, error)
+	GetHighestBlockInBatch(batchNo uint64) (uint64, error)
+	GetLowestBlockInBatch(batchNo uint64) (uint64, bool, error)
+	GetL2BlockNosByBatch(batchNo uint64) ([]uint64, error)
+	GetBatchGlobalExitRoot(batchNum uint64) (*dstypes.GerUpdate, error)
+	GetVerificationByBatchNo(batchNo uint64) (*zktypes.L1BatchInfo, error)
+	GetL1BatchData(batchNumber uint64) ([]byte, error)
+	GetL1InfoTreeUpdateByGer(ger libcommon.Hash) (*zktypes.L1InfoTreeUpdate, error)
 }
 
 func (sdb *IntraBlockState) GetTxCount() (uint64, error) {
@@ -152,14 +161,14 @@ func (sdb *IntraBlockState) scalableSetBlockHash(blockNum uint64, blockHash *lib
 	sdb.SetState(ADDRESS_SCALABLE_L2, &mkh, *hashAsBigU)
 }
 
-func (sdb *IntraBlockState) GetBlockStateRoot(blockNum uint64) libcommon.Hash {
-	d1 := common.LeftPadBytes(uint256.NewInt(blockNum).Bytes(), 32)
+func (sdb *IntraBlockState) GetBlockStateRoot(blockNum *uint256.Int) *uint256.Int {
+	d1 := common.LeftPadBytes(blockNum.Bytes(), 32)
 	d2 := common.LeftPadBytes(STATE_ROOT_STORAGE_POS.Bytes(), 32)
 	mapKey := keccak256.Hash(d1, d2)
 	mkh := libcommon.BytesToHash(mapKey)
 	hash := uint256.NewInt(0)
 	sdb.GetState(ADDRESS_SCALABLE_L2, &mkh, hash)
-	return libcommon.BytesToHash(hash.Bytes())
+	return hash
 }
 
 func (sdb *IntraBlockState) ScalableSetSmtRootHash(roHermezDb ReadOnlyHermezDb) error {

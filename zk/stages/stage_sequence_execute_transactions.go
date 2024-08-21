@@ -2,8 +2,6 @@ package stages
 
 import (
 	"context"
-	"encoding/binary"
-	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
@@ -12,7 +10,6 @@ import (
 	"io"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/gateway-fm/cdk-erigon-lib/common/length"
 	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/state"
@@ -20,134 +17,62 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/rlp"
-	"github.com/ledgerwatch/erigon/zk/hermez_db"
-	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 )
 
-func getNextPoolTransactions(cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
+func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, error) {
+	cfg.txPool.LockFlusher()
+	defer cfg.txPool.UnlockFlusher()
+
 	var transactions []types.Transaction
 	var err error
-	var count int
-	killer := time.NewTicker(50 * time.Millisecond)
-LOOP:
-	for {
-		// ensure we don't spin forever looking for transactions, attempt for a while then exit up to the caller
-		select {
-		case <-killer.C:
-			break LOOP
-		default:
-		}
-		if err := cfg.txPoolDb.View(context.Background(), func(poolTx kv.Tx) error {
-			slots := types2.TxsRlp{}
-			_, count, err = cfg.txPool.YieldBest(yieldSize, &slots, poolTx, executionAt, utils.GetBlockGasLimitForFork(forkId), alreadyYielded)
-			if err != nil {
-				return err
-			}
-			if count == 0 {
-				time.Sleep(500 * time.Microsecond)
-				return nil
-			}
-			transactions, err = extractTransactionsFromSlot(&slots)
-			if err != nil {
-				return err
-			}
-			return nil
-		}); err != nil {
-			return nil, err
-		}
 
-		if len(transactions) > 0 {
-			break
+	gasLimit := utils.GetBlockGasLimitForFork(forkId)
+
+	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
+		slots := types2.TxsRlp{}
+		if _, _, err = cfg.txPool.YieldBest(cfg.yieldSize, &slots, poolTx, executionAt, gasLimit, alreadyYielded); err != nil {
+			return err
 		}
+		yieldedTxs, err := extractTransactionsFromSlot(&slots)
+		if err != nil {
+			return err
+		}
+		transactions = append(transactions, yieldedTxs...)
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return transactions, err
 }
 
-func getLimboTransaction(cfg SequenceBlockCfg, txHash *common.Hash) ([]types.Transaction, error) {
-	var transactions []types.Transaction
+func getLimboTransaction(ctx context.Context, cfg SequenceBlockCfg, txHash *common.Hash) ([]types.Transaction, error) {
+	cfg.txPool.LockFlusher()
+	defer cfg.txPool.UnlockFlusher()
 
-	for {
-		// ensure we don't spin forever looking for transactions, attempt for a while then exit up to the caller
-		if err := cfg.txPoolDb.View(context.Background(), func(poolTx kv.Tx) error {
-			slots, err := cfg.txPool.GetLimboTxRplsByHash(poolTx, txHash)
+	var transactions []types.Transaction
+	// ensure we don't spin forever looking for transactions, attempt for a while then exit up to the caller
+	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
+		slots, err := cfg.txPool.GetLimboTxRplsByHash(poolTx, txHash)
+		if err != nil {
+			return err
+		}
+
+		if slots != nil {
+			transactions, err = extractTransactionsFromSlot(slots)
 			if err != nil {
 				return err
 			}
-
-			if slots != nil {
-				transactions, err = extractTransactionsFromSlot(slots)
-				if err != nil {
-					return err
-				}
-			}
-
-			return nil
-		}); err != nil {
-			return nil, err
 		}
 
-		if len(transactions) == 0 {
-			time.Sleep(250 * time.Millisecond)
-		} else {
-			break
-		}
-
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return transactions, nil
-}
-
-func getNextL1BatchData(batchNumber uint64, forkId uint64, hermezDb *hermez_db.HermezDb) (*nextBatchL1Data, error) {
-	nextData := &nextBatchL1Data{}
-	// we expect that the batch we're going to load in next should be in the db already because of the l1 block sync
-	// stage, if it is not there we need to panic as we're in a bad state
-	batchL2Data, err := hermezDb.GetL1BatchData(batchNumber)
-	if err != nil {
-		return nextData, err
-	}
-
-	if len(batchL2Data) == 0 {
-		// end of the line for batch recovery so return empty
-		return nextData, nil
-	}
-
-	nextData.Coinbase = common.BytesToAddress(batchL2Data[:length.Addr])
-	nextData.L1InfoRoot = common.BytesToHash(batchL2Data[length.Addr : length.Addr+length.Hash])
-	tsBytes := batchL2Data[length.Addr+length.Hash : length.Addr+length.Hash+8]
-	nextData.LimitTimestamp = binary.BigEndian.Uint64(tsBytes)
-	batchL2Data = batchL2Data[length.Addr+length.Hash+8:]
-
-	nextData.DecodedData, err = zktx.DecodeBatchL2Blocks(batchL2Data, forkId)
-	if err != nil {
-		return nextData, err
-	}
-
-	// no data means no more work to do - end of the line
-	if len(nextData.DecodedData) == 0 {
-		return nextData, nil
-	}
-
-	nextData.IsWorkRemaining = true
-	transactionsInBatch := 0
-	for _, batch := range nextData.DecodedData {
-		transactionsInBatch += len(batch.Transactions)
-	}
-	if transactionsInBatch == 0 {
-		// we need to check if this batch should simply be empty or not so we need to check against the
-		// highest known batch number to see if we have work to do still
-		highestKnown, err := hermezDb.GetLastL1BatchData()
-		if err != nil {
-			return nextData, err
-		}
-		if batchNumber >= highestKnown {
-			nextData.IsWorkRemaining = false
-		}
-	}
-
-	return nextData, err
 }
 
 func extractTransactionsFromSlot(slot *types2.TxsRlp) ([]types.Transaction, error) {
@@ -245,6 +170,7 @@ func attemptAddTransaction(
 		return nil, nil, false, err
 	}
 
+	batchCounters.UpdateExecutionAndProcessingCountersCache(txCounters)
 	// now that we have executed we can check again for an overflow
 	if overflow, err = batchCounters.CheckForOverflow(l1InfoIndex != 0); err != nil {
 		return nil, nil, false, err
@@ -252,7 +178,7 @@ func attemptAddTransaction(
 
 	if overflow {
 		ibs.RevertToSnapshot(snapshot)
-		return nil, nil, true, err
+		return nil, nil, true, nil
 	}
 
 	// add the gas only if not reverted. This should not be moved above the overflow check
@@ -266,5 +192,5 @@ func attemptAddTransaction(
 
 	ibs.FinalizeTx(evm.ChainRules(), noop)
 
-	return receipt, execResult, overflow, err
+	return receipt, execResult, false, nil
 }

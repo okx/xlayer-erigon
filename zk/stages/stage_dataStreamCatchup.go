@@ -153,3 +153,29 @@ func CatchupDatastream(ctx context.Context, logPrefix string, tx kv.RwTx, stream
 
 	return finalBlockNumber, nil
 }
+
+func TruncateDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.StreamServer, chainId uint64, streamVersion int, truncateBlockNum uint64) error {
+	srv := server.NewDataStreamServer(stream, chainId)
+	previousProgress, err := stages.GetStageProgress(tx, stages.DataStream)
+	if err != nil {
+		return err
+	}
+	log.Info(fmt.Sprintf("[%s] Getting progress", logPrefix),
+		"truncateBlockNum", truncateBlockNum,
+		"previousProgress", previousProgress,
+	)
+	if truncateBlockNum >= previousProgress {
+		return fmt.Errorf(fmt.Sprintf("cannot truncate to a block number greater than or equal to the current progress, %v,%v",
+			truncateBlockNum, previousProgress))
+	}
+
+	if err = srv.TruncateBlock(truncateBlockNum); err != nil {
+		return err
+	}
+
+	if err = stages.SaveStageProgress(tx, stages.DataStream, truncateBlockNum); err != nil {
+		return err
+	}
+
+	return nil
+}

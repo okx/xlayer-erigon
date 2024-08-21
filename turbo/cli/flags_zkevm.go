@@ -158,6 +158,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DataStreamHost:                         ctx.String(utils.DataStreamHost.Name),
 		DataStreamPort:                         ctx.Uint(utils.DataStreamPort.Name),
 		DataStreamWriteTimeout:                 ctx.Duration(utils.DataStreamWriteTimeout.Name),
+		DataStreamTruncateBlock:                ctx.Uint64(utils.DataStreamTruncateBlock.Name),
 	}
 
 	// For X Layer
@@ -174,6 +175,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		checkFlag(utils.DataStreamHost.Name, cfg.DataStreamHost)
 		checkFlag(utils.DataStreamPort.Name, cfg.DataStreamPort)
 		checkFlag(utils.DataStreamWriteTimeout.Name, cfg.DataStreamWriteTimeout)
+		checkFlag(utils.DataStreamTruncateBlock.Name, cfg.DataStreamTruncateBlock)
 
 		if cfg.DeprecatedTxPool.Disable {
 			panic("You need tx-pool in order to run a sequencer. Enable it using txpool.disable: false")

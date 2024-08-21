@@ -51,6 +51,7 @@ type Zk struct {
 	DataStreamHost                         string
 	DataStreamPort                         uint
 	DataStreamWriteTimeout                 time.Duration
+	DataStreamTruncateBlock                uint64
 
 	RebuildTreeAfter      uint64
 	IncrementTreeAlways   bool

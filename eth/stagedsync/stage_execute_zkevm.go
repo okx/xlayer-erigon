@@ -137,12 +137,6 @@ Loop:
 		// For X Layer
 		writeInnerTxs := cfg.zk.XLayer.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
 
-		rdb := redis.NewClient(&redis.Options{
-			Addr:     "192.168.1.19:6379", // Redis 服务器地址
-			Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
-			DB:       0,                   // Redis 数据库编号，默认是 0
-		})
-
 		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
@@ -158,20 +152,6 @@ Loop:
 			break Loop
 		}
 
-		if blockNum == 4 {
-			jsonData, err := json.Marshal(execRs)
-			if err != nil {
-				panic("Failed to marshal execution result")
-			}
-			if err = rdb.Set(ctx, "blockNum", blockNum, 0).Err(); err != nil {
-				panic("Failed redis blockNum")
-			}
-			if err = rdb.Set(ctx, "execRs", jsonData, 0).Err(); err != nil {
-				panic("Failed redis execRs")
-			}
-
-			log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(jsonData)))
-		}
 		if execRs.BlockInfoTree != nil {
 			if err = hermezDb.WriteBlockInfoRoot(blockNum, *execRs.BlockInfoTree); err != nil {
 				return err
@@ -464,24 +444,32 @@ func executeBlockZk(
 	})
 	execRs := &core.EphemeralExecResultZk{}
 	log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
-
-	execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
-	if err != nil {
-		return nil, err
-	}
-
-	execJson, _ := json.Marshal(execRs)
-	log.Info(fmt.Sprintf("=======fsc:test. exe rs:%s", string(execJson)))
-
+	dds := false
 	if blockNum == 4 {
 		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
 		if err == nil && len(redisRs) > 0 {
 			if err = json.Unmarshal(redisRs, &execRs); err != nil {
 				panic(err)
 			} else {
+				dds = true
 				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
 			}
 		}
+	}
+	if !dds {
+		execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		core.ExecuteBlockEphemerallyZkDDS(cfg.chainConfig, block, stateReader, stateWriter)
+	}
+
+	execJson, _ := json.Marshal(execRs)
+	log.Info(fmt.Sprintf("=======fsc:test. exe rs:%s", string(execJson)))
+
+	if blockNum == 4 {
+		rdb.Set(context.Background(), "execRs", execJson, 0)
 	}
 
 	if writeReceipts {

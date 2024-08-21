@@ -482,28 +482,18 @@ func FinalizeBlockExecution(
 	log.Info(fmt.Sprintf("=========fsc:test. header.num:%d", header.Number.Uint64()))
 
 	if header.Number.Uint64() == 4 {
-		// consumer
-		log.Info(fmt.Sprintf("=========fsc:test. Consumer!!!!!!!!!!!"))
+		// producer
+		log.Info(fmt.Sprintf("=========fsc:test. Producer!!!!!!!!!!!"))
 
-		redisRs, err := rdb.Get(context.Background(), "state").Bytes()
-		if err == nil && len(redisRs) > 0 {
-			log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
-			if err = ibs.CommitBlockDDSConsumer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter, redisRs); err != nil {
-				panic(err)
-			}
-		} else {
-			// producer
-			log.Info(fmt.Sprintf("=========fsc:test. Producer!!!!!!!!!!!"))
-
-			deltaBytes, err := ibs.CommitBlockDDSProducer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter)
-			if err != nil {
-				panic(err)
-			}
-			if err = rdb.Set(context.Background(), "state", deltaBytes, 0).Err(); err != nil {
-				panic("Failed redis execRs")
-			}
-			log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(deltaBytes)))
+		deltaBytes, err := ibs.CommitBlockDDSProducer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter)
+		if err != nil {
+			panic(err)
 		}
+		if err = rdb.Set(context.Background(), "state", deltaBytes, 0).Err(); err != nil {
+			panic("Failed redis execRs")
+		}
+		log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(deltaBytes)))
+
 	} else {
 		if err := ibs.CommitBlock(cc.Rules(header.Number.Uint64(), header.Time), stateWriter); err != nil {
 			return nil, nil, nil, fmt.Errorf("committing block %d failed: %w", header.Number.Uint64(), err)

@@ -18,7 +18,9 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"github.com/ledgerwatch/log/v3"
 	"math/big"
 	"time"
@@ -44,6 +46,25 @@ import (
 type EphemeralExecResultZk struct {
 	*EphemeralExecResult
 	BlockInfoTree *common.Hash `json:"blockInfoTree,omitempty"`
+}
+
+func ExecuteBlockEphemerallyZkDDS(cc *chain.Config, block *types.Block, stateReader state.StateReader, stateWriter state.WriterWithChangeSets) {
+	log.Info(fmt.Sprintf("=========fsc:test. Consumer!!!!!!!!!!!"))
+	ibs := state.New(stateReader)
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "192.168.1.19:6379", // Redis 服务器地址
+		Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
+		DB:       0,                   // Redis 数据库编号，默认是 0
+	})
+	header := block.Header()
+	redisRs, err := rdb.Get(context.Background(), "state").Bytes()
+	if err == nil && len(redisRs) > 0 {
+		// consumer
+		log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
+		if err = ibs.CommitBlockDDSConsumer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter, redisRs); err != nil {
+			panic(err)
+		}
+	}
 }
 
 // ExecuteBlockEphemerally runs a block from provided stateReader and

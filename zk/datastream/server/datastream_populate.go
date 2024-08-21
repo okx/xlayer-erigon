@@ -396,30 +396,22 @@ func (srv *DataStreamServer) WriteGenesisToStream(
 }
 
 func (srv *DataStreamServer) TruncateBlock(blockNum uint64) error {
-	err := srv.stream.StartAtomicOp()
-	if err != nil {
-		return err
-	}
-	defer srv.stream.RollbackAtomicOp()
-
 	bookmark := types.NewBookmarkProto(blockNum, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
 	marshalled, err := bookmark.Marshal()
 	if err != nil {
+		log.Error("Failed to marshal bookmark", "err", err)
 		return err
 	}
 
 	entryNum, err := srv.stream.GetBookmark(marshalled)
 	if err != nil {
+		log.Error("Failed to get bookmark", "err", err)
 		return err
 	}
 
 	err = srv.stream.TruncateFile(entryNum)
 	if err != nil {
-		return err
-	}
-
-	err = srv.stream.CommitAtomicOp()
-	if err != nil {
+		log.Error("Failed to truncate file", "err", err)
 		return err
 	}
 	return nil

@@ -170,7 +170,7 @@ func TruncateDatastream(logPrefix string, tx kv.RwTx, stream *datastreamer.Strea
 		return err
 	}
 
-	if err = stages.SaveStageProgress(tx, stages.DataStream, truncateBlockNum); err != nil {
+	if err = stages.SaveStageProgress(tx, stages.DataStream, truncateBlockNum-1); err != nil {
 		return err
 	}
 

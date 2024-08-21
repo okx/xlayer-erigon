@@ -66,11 +66,10 @@ type HttpCfg struct {
 	ReturnDataLimit int // Maximum number of bytes returned from calls (like eth_call)
 
 	// zkevm
-	DataStreamPort          int
-	DataStreamHost          string
-	DataStreamWriteTimeout  time.Duration
-	DataStreamTruncateBlock uint64
-	L2RpcUrl                string
+	DataStreamPort         int
+	DataStreamHost         string
+	DataStreamWriteTimeout time.Duration
+	L2RpcUrl               string
 
 	// For X Layer
 	HttpApiKeys     string

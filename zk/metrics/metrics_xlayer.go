@@ -18,9 +18,10 @@ const (
 )
 
 const (
-	CounterOverflow = "BatchCounterOverflow"
-	EmptyTimeOut    = "EmptyBatchTimeOut"
-	NonEmptyTimeOut = "NonEmptyBatchTimeOut"
+	BlockTickerTimeOut = "blockTickerTimeOut"
+	CounterOverflow    = "BatchCounterOverflow"
+	EmptyTimeOut       = "EmptyBatchTimeOut"
+	NonEmptyTimeOut    = "NonEmptyBatchTimeOut"
 )
 
 var (

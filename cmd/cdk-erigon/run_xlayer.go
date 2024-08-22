@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	MetricsEndpoint = "/metrics"
+	MetricsEndpoint             = "/metrics"
+	MetricsServerDefaultTimeOut = 10
 )
 
 func initRunForXLayer(ethCfg *ethconfig.Config) {
@@ -30,7 +31,6 @@ func initRunForXLayer(ethCfg *ethconfig.Config) {
 }
 
 func startMetricsHttpServer(c ethconfig.MetricsConfig) {
-	const ten = 10
 	mux := http.NewServeMux()
 	address := fmt.Sprintf("%s:%d", c.Host, c.Port)
 	lis, err := net.Listen("tcp", address)
@@ -42,8 +42,8 @@ func startMetricsHttpServer(c ethconfig.MetricsConfig) {
 
 	metricsServer := &http.Server{
 		Handler:           mux,
-		ReadHeaderTimeout: ten * time.Second,
-		ReadTimeout:       ten * time.Second,
+		ReadHeaderTimeout: MetricsServerDefaultTimeOut * time.Second,
+		ReadTimeout:       MetricsServerDefaultTimeOut * time.Second,
 	}
 	log.Info("metrics server listening on port", c.Port)
 	if err := metricsServer.Serve(lis); err != nil {

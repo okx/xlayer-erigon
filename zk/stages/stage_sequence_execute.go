@@ -41,6 +41,7 @@ func SpawnSequencingStage(
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
 
+	// For X Layer metrics
 	log.Info("[PoolTxCount] Starting Getting Pending Tx Count")
 	pending, basefee, queued := cfg.txPool.CountContent()
 	metrics.AddPoolTxCount(pending, basefee, queued)
@@ -390,7 +391,7 @@ func SpawnSequencingStage(
 				}
 			case <-blockTicker.C:
 				if !isAnyRecovery {
-					blockCloseReason = "blockTickerTimeOut"
+					blockCloseReason = metrics.BlockTickerTimeOut
 					break LOOP_TRANSACTIONS
 				}
 			case <-batchTicker.C:
@@ -518,7 +519,7 @@ func SpawnSequencingStage(
 				}
 			}
 		}
-		if blockCloseReason != "" {
+		if blockCloseReason == metrics.BlockTickerTimeOut {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBlockTimeOut, time.Since(addTxsStart))
 		} else if batchCloseReason == metrics.EmptyTimeOut {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBatchTimeOut, time.Since(addTxsStart))
@@ -650,6 +651,7 @@ func SpawnSequencingStage(
 	seqlog.GetBatchLogger().AppendCommitLog(time.Since(commitStart))
 	batchTime := time.Since(batchStart)
 	seqlog.GetBatchLogger().SetTotalDuration(batchTime)
+	// For X Layer metrics
 	metrics.BatchExecuteTime(batchCloseReason, batchTime)
 	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 

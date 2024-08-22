@@ -311,6 +311,9 @@ func (srv *DataStreamServer) UnwindIfNecessary(logPrefix string, reader DbReader
 				return err
 			}
 		}
+	} else if highestDatastreamBlock+1 != blockNum {
+		err := fmt.Errorf("datastream must unwind to block: %d, but it would corrupt the datastream:%v", blockNum, highestDatastreamBlock)
+		utils.HaltNode(err)
 	}
 
 	return nil

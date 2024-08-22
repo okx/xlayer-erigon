@@ -312,6 +312,7 @@ func (srv *DataStreamServer) UnwindIfNecessary(logPrefix string, reader DbReader
 			}
 		}
 	} else if highestDatastreamBlock+1 != blockNum {
+		// The error will not actually occur. If it does, the site can be preserved to investigate the cause.
 		err := fmt.Errorf("datastream must unwind to block: %d, but it would corrupt the datastream:%v", blockNum, highestDatastreamBlock)
 		utils.HaltNode(err)
 	}

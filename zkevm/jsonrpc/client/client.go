@@ -3,7 +3,6 @@ package client
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -154,16 +153,16 @@ func JSONRPCBatchCall(url string, methods []string, parameterGroups ...[]interfa
 
 // For X Layer
 func JSONRPCCallWhitLimit(l2RpcLimit types.L2RpcLimit, url, method string, parameters ...interface{}) (types.Response, error) {
-	if url == l2RpcLimit.L2Url {
-		if l2RpcLimit.CallLimit > 0 && l2RpcCallCount.Load() >= l2RpcLimit.CallLimit {
-			return types.Response{}, errors.New("rpc is too busy")
-		}
-
-		l2RpcCallCount.Add(1)
-		defer func() {
-			l2RpcCallCount.Add(-1)
-		}()
-	}
+	//if url == l2RpcLimit.L2Url {
+	//	if l2RpcLimit.CallLimit > 0 && l2RpcCallCount.Load() >= l2RpcLimit.CallLimit {
+	//		return types.Response{}, errors.New("rpc is too busy")
+	//	}
+	//
+	//	l2RpcCallCount.Add(1)
+	//	defer func() {
+	//		l2RpcCallCount.Add(-1)
+	//	}()
+	//}
 
 	return JSONRPCCall(url, method, parameters)
 }

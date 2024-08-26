@@ -106,7 +106,7 @@ func GetSequencerHalt(localHaltBatchNumber uint64) uint64 {
 }
 
 func GetDDSType(localDDSType int) int {
-	if IsApolloConfigRPCEnabled() {
+	if IsApolloConfigSequencerEnabled() {
 		UnsafeGetApolloConfig().RLock()
 		defer UnsafeGetApolloConfig().RUnlock()
 		return UnsafeGetApolloConfig().EthCfg.Zk.XLayer.DDSType

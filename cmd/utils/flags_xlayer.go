@@ -77,6 +77,23 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
+	TxPoolEnableFreeGasByNonce = cli.BoolFlag{
+		Name:  "txpool.enablefreegasbynonce",
+		Usage: "EnableFreeGasByNonce enable free gas",
+		Value: false,
+	}
+	TxPoolFreeGasExAddrs = cli.StringFlag{
+		Name:  "txpool.freegasexaddress",
+		Usage: "FreeGasExAddress is the ex address which can be free gas for the transfer receiver",
+	}
+	TxPoolFreeGasCountPerAddr = cli.Uint64Flag{
+		Name:  "txpool.freegascountperaddr",
+		Usage: "FreeGasCountPerAddr is the count limit of free gas tx per address",
+	}
+	TxPoolFreeGasLimit = cli.Uint64Flag{
+		Name:  "txpool.freegaslimit",
+		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
+	}
 	TxPoolOkPayAccountList = cli.StringFlag{
 		Name:  "txpool.okpay-account-list",
 		Usage: "Comma separated list of addresses, who send ok pay tx",
@@ -157,11 +174,6 @@ var (
 		Name:  "gpo.gas-price-usdt",
 		Usage: "raw gas price usdt",
 		Value: 0,
-	}
-	GpoEnableFollowerAdjustByL2L1PriceFlag = cli.BoolFlag{
-		Name:  "gpo.enable-follower-adjust",
-		Usage: "enable dynamic adjust the factor through the L1 and L2 coins price in follower strategy",
-		Value: true,
 	}
 	GpoCongestionThresholdFlag = cli.IntFlag{
 		Name:  "gpo.congestion-threshold",
@@ -245,16 +257,13 @@ func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	if ctx.IsSet(GpoGasPriceUsdtFlag.Name) {
 		cfg.XLayer.GasPriceUsdt = ctx.Float64(GpoGasPriceUsdtFlag.Name)
 	}
-	if ctx.IsSet(GpoEnableFollowerAdjustByL2L1PriceFlag.Name) {
-		cfg.XLayer.EnableFollowerAdjustByL2L1Price = ctx.Bool(GpoEnableFollowerAdjustByL2L1PriceFlag.Name)
-	}
 	if ctx.IsSet(GpoCongestionThresholdFlag.Name) {
 		cfg.XLayer.CongestionThreshold = ctx.Int(GpoCongestionThresholdFlag.Name)
 	}
 
 	// Default price check
 	if cfg.Default == nil || cfg.Default.Int64() <= 0 {
-		cfg.Default = gaspricecfg.DefaultXLayerPrice
+		cfg.Default = new(big.Int).Set(gaspricecfg.DefaultXLayerPrice)
 	}
 }
 
@@ -292,6 +301,23 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
 	}
+	if ctx.IsSet(TxPoolEnableFreeGasByNonce.Name) {
+		cfg.EnableFreeGasByNonce = ctx.Bool(TxPoolEnableFreeGasByNonce.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasExAddrs.Name) {
+		addrHexes := SplitAndTrim(ctx.String(TxPoolFreeGasExAddrs.Name))
+		cfg.FreeGasExAddrs = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.FreeGasExAddrs[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolFreeGasCountPerAddr.Name) {
+		cfg.FreeGasCountPerAddr = ctx.Uint64(TxPoolFreeGasCountPerAddr.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
+		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
+	}
 	if ctx.IsSet(TxPoolOkPayAccountList.Name) {
 		// Parse the command separated flag
 		addrHexes := SplitAndTrim(ctx.String(TxPoolOkPayAccountList.Name))
@@ -304,4 +330,14 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolOkPayGasLimitPerBlock.Name) {
 		cfg.OkPayGasLimitPerBlock = ctx.Uint64(TxPoolOkPayGasLimitPerBlock.Name)
 	}
+}
+
+// SetApolloGPOXLayer is a public wrapper function to internally call setGPO
+func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
+	setGPO(ctx, cfg)
+}
+
+// SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
+func SetApolloPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
+	setTxPool(ctx, cfg)
 }

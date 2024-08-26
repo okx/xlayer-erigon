@@ -245,7 +245,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.GpoDefaultL1CoinPriceFlag,
 	&utils.GpoDefaultL2CoinPriceFlag,
 	&utils.GpoGasPriceUsdtFlag,
-	&utils.GpoEnableFollowerAdjustByL2L1PriceFlag,
 	&utils.GpoCongestionThresholdFlag,
 	&utils.ApolloEnableFlag,
 	&utils.ApolloIPAddr,
@@ -259,6 +258,10 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolWhiteList,
 	&utils.TxPoolBlockedList,
 	&utils.SequencerBatchSleepDuration,
+	&utils.TxPoolEnableFreeGasByNonce,
+	&utils.TxPoolFreeGasCountPerAddr,
+	&utils.TxPoolFreeGasExAddrs,
+	&utils.TxPoolFreeGasLimit,
 	&utils.TxPoolOkPayAccountList,
 	&utils.TxPoolOkPayGasLimitPerBlock,
 }

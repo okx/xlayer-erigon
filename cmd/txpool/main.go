@@ -62,6 +62,10 @@ var (
 	blockList             []string
 	freeClaimGasAddrs     []string
 	gasPriceMultiple      uint64
+	enableFreeGasByNonce  bool
+	freeGasExAddrs        []string
+	freeGasCountPerAddr   uint64
+	freeGasLimit          uint64
 	okPayAccountList      []string
 	okPayGasLimitPerBlock uint64
 )
@@ -93,6 +97,10 @@ func init() {
 	rootCmd.Flags().BoolVar(&enableWhiteList, utils.TxPoolEnableWhitelistFlag.Name, ethconfig.DeprecatedDefaultTxPoolConfig.EnableWhitelist, utils.TxPoolEnableWhitelistFlag.Usage)
 	rootCmd.Flags().StringSliceVar(&whiteList, utils.TxPoolWhiteList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.WhiteList, utils.TxPoolWhiteList.Usage)
 	rootCmd.Flags().StringSliceVar(&blockList, utils.TxPoolBlockedList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.BlockedList, utils.TxPoolBlockedList.Usage)
+	rootCmd.Flags().BoolVar(&enableFreeGasByNonce, utils.TxPoolEnableFreeGasByNonce.Name, ethconfig.DeprecatedDefaultTxPoolConfig.EnableFreeGasByNonce, utils.TxPoolEnableFreeGasByNonce.Usage)
+	rootCmd.Flags().StringSliceVar(&freeGasExAddrs, utils.TxPoolFreeGasExAddrs.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasExAddrs, utils.TxPoolFreeGasExAddrs.Usage)
+	rootCmd.PersistentFlags().Uint64Var(&freeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Usage)
+	rootCmd.PersistentFlags().Uint64Var(&freeGasLimit, utils.TxPoolFreeGasLimit.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasLimit, utils.TxPoolFreeGasLimit.Usage)
 	rootCmd.Flags().Uint64Var(&okPayGasLimitPerBlock, utils.TxPoolOkPayGasLimitPerBlock.Name, 0, utils.TxPoolOkPayGasLimitPerBlock.Usage)
 	rootCmd.Flags().StringSliceVar(&okPayAccountList, utils.TxPoolOkPayAccountList.Name, []string{}, utils.TxPoolOkPayAccountList.Usage)
 }
@@ -191,6 +199,15 @@ func doTxpool(ctx context.Context) error {
 		ethCfg.DeprecatedTxPool.FreeClaimGasAddrs[i] = addr.String()
 	}
 	ethCfg.DeprecatedTxPool.GasPriceMultiple = gasPriceMultiple
+	ethCfg.DeprecatedTxPool.EnableFreeGasByNonce = enableFreeGasByNonce
+	ethCfg.DeprecatedTxPool.FreeGasExAddrs = make([]string, len(freeGasExAddrs))
+	for i, addrHex := range freeGasExAddrs {
+		addr := common.HexToAddress(addrHex)
+		ethCfg.DeprecatedTxPool.FreeGasExAddrs[i] = addr.String()
+	}
+	ethCfg.DeprecatedTxPool.FreeGasCountPerAddr = freeGasCountPerAddr
+	ethCfg.DeprecatedTxPool.FreeGasLimit = freeGasLimit
+
 	ethCfg.DeprecatedTxPool.OkPayAccountList = make([]string, len(okPayAccountList))
 	for i, addrHex := range okPayAccountList {
 		addr := common.HexToAddress(addrHex)

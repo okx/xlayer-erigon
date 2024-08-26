@@ -201,13 +201,6 @@ func (rp *KafkaProcessor) updateL2CoinPrice(price float64) {
 	rp.l2Price = price
 }
 
-// GetL2CoinPrice get L2 coin price
-func (rp *KafkaProcessor) GetL2CoinPrice() float64 {
-	rp.rwLock.RLock()
-	defer rp.rwLock.RUnlock()
-	return rp.l2Price
-}
-
 func (rp *KafkaProcessor) updateL1L2CoinPrice(prices map[int]float64) {
 	if len(prices) == 0 {
 		return
@@ -229,13 +222,6 @@ func (rp *KafkaProcessor) updateL1L2CoinPrice(prices map[int]float64) {
 		rp.tmpPrices.l2Update = false
 		return
 	}
-}
-
-// GetL1L2CoinPrice get l1, L2 coin price
-func (rp *KafkaProcessor) GetL1L2CoinPrice() (float64, float64) {
-	rp.rwLock.RLock()
-	defer rp.rwLock.RUnlock()
-	return rp.l1Price, rp.l2Price
 }
 
 func (rp *KafkaProcessor) parseCoinPrice(value []byte, coinIds []int) (map[int]float64, error) {
@@ -267,4 +253,18 @@ func (rp *KafkaProcessor) parseCoinPrice(value []byte, coinIds []int) (map[int]f
 		return results, ErrNotFindCoinPrice
 	}
 	return results, nil
+}
+
+// GetL2CoinPrice gets the L2 coin price in USDT
+func (rp *KafkaProcessor) GetL2CoinPrice() float64 {
+	rp.rwLock.RLock()
+	defer rp.rwLock.RUnlock()
+	return rp.l2Price
+}
+
+// GetL1L2CoinPrice gets both l1 and L2 coin prices in USDT
+func (rp *KafkaProcessor) GetL1L2CoinPrice() (float64, float64) {
+	rp.rwLock.RLock()
+	defer rp.rwLock.RUnlock()
+	return rp.l1Price, rp.l2Price
 }

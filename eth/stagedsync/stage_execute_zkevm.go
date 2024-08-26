@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zk/apollo"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -446,7 +445,8 @@ func executeBlockZk(
 	})
 	execRs := &core.EphemeralExecResultZk{}
 	dds := false
-	ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)
+	//ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)
+	ddsType := cfg.zk.XLayer.DDSType
 	if ddsType == 1 {
 		dds = true
 		execRs, err = core.ExecuteBlockEphemerallyZkDDSProducer(rdb, cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)

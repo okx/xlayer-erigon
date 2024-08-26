@@ -460,9 +460,9 @@ func executeBlockZk(
 				panic(err)
 			} else {
 				dds = true
+				core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)
 			}
 		}
-		core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)
 	}
 	if !dds {
 		execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)

@@ -11,6 +11,8 @@ type XLayerConfig struct {
 	EnableInnerTx bool
 	// Sequencer
 	SequencerBatchSleepDuration time.Duration
+	// RPC
+	DDSType int // 0:normal(disable dds); 1:producer; 2:consumer
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

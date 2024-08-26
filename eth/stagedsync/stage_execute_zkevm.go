@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -437,6 +438,7 @@ func executeBlockZk(
 
 	getHashFn := core.GetHashFn(block.Header(), getHeader)
 
+	// for XLayer
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "192.168.1.19:6379", // Redis 服务器地址
 		Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
@@ -445,7 +447,13 @@ func executeBlockZk(
 	execRs := &core.EphemeralExecResultZk{}
 	log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
 	dds := false
-	if blockNum == 4 {
+	ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)
+	if ddsType == 1 {
+		dds = true
+		execRs, err = core.ExecuteBlockEphemerallyZkDDSProducer(rdb, cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
+		execJson, _ := json.Marshal(execRs)
+		rdb.Set(context.Background(), "execRs", execJson, 0)
+	} else if ddsType == 2 {
 		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
 		if err == nil && len(redisRs) > 0 {
 			if err = json.Unmarshal(redisRs, &execRs); err != nil {
@@ -455,21 +463,13 @@ func executeBlockZk(
 				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
 			}
 		}
+		core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)
 	}
 	if !dds {
 		execRs, err = core.ExecuteBlockEphemerallyZk(cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		core.ExecuteBlockEphemerallyZkDDS(cfg.chainConfig, block, stateReader, stateWriter)
 	}
-
-	execJson, _ := json.Marshal(execRs)
-	log.Info(fmt.Sprintf("=======fsc:test. exe rs:%s", string(execJson)))
-
-	if blockNum == 4 {
-		rdb.Set(context.Background(), "execRs", execJson, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	if writeReceipts {

@@ -24,6 +24,7 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		},
 		EnableInnerTx:               ctx.Bool(utils.AllowInternalTransactions.Name),
 		SequencerBatchSleepDuration: ctx.Duration(utils.SequencerBatchSleepDuration.Name),
+		DDSType:                     ctx.Int(utils.DDSType.Name),
 	}
 
 	if ctx.IsSet(utils.ApolloNamespaceName.Name) {

@@ -258,4 +258,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolWhiteList,
 	&utils.TxPoolBlockedList,
 	&utils.SequencerBatchSleepDuration,
+	&utils.TxPoolEnableFreeGasByNonce,
+	&utils.TxPoolFreeGasCountPerAddr,
+	&utils.TxPoolFreeGasExAddrs,
+	&utils.TxPoolFreeGasLimit,
 }

@@ -19,7 +19,6 @@ package state
 
 import (
 	"fmt"
-	"github.com/ledgerwatch/log/v3"
 	"sort"
 
 	"encoding/hex"
@@ -297,7 +296,6 @@ func (sdb *IntraBlockState) HasSelfdestructed(addr libcommon.Address) bool {
 // AddBalance adds amount to the account associated with addr.
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) AddBalance(addr libcommon.Address, amount *uint256.Int) {
-	log.Info(fmt.Sprintf("======fsc:test. AddBalance!!!!!!!!!"))
 	if sdb.trace {
 		fmt.Printf("AddBalance %x, %d\n", addr, amount)
 	}
@@ -328,8 +326,6 @@ func (sdb *IntraBlockState) AddBalance(addr libcommon.Address, amount *uint256.I
 // SubBalance subtracts amount from the account associated with addr.
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SubBalance(addr libcommon.Address, amount *uint256.Int) {
-	log.Info(fmt.Sprintf("======fsc:test. SubBalance!!!!!!!!!"))
-
 	if sdb.trace {
 		fmt.Printf("SubBalance %x, %d\n", addr, amount)
 	}
@@ -342,8 +338,6 @@ func (sdb *IntraBlockState) SubBalance(addr libcommon.Address, amount *uint256.I
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetBalance(addr libcommon.Address, amount *uint256.Int) {
-	log.Info(fmt.Sprintf("======fsc:test. SetBalance!!!!!!!!!"))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetBalance(amount)
@@ -352,8 +346,6 @@ func (sdb *IntraBlockState) SetBalance(addr libcommon.Address, amount *uint256.I
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetNonce(addr libcommon.Address, nonce uint64) {
-	log.Info(fmt.Sprintf("======fsc:test. SetNonce!!!!!!!!!"))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetNonce(nonce)
@@ -363,8 +355,6 @@ func (sdb *IntraBlockState) SetNonce(addr libcommon.Address, nonce uint64) {
 // DESCRIBED: docs/programmers_guide/guide.md#code-hash
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetCode(addr libcommon.Address, code []byte) {
-	log.Info(fmt.Sprintf("======fsc:test. SetCode!!!!!!!!!"))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		if len(code) == 0 {
@@ -379,8 +369,6 @@ func (sdb *IntraBlockState) SetCode(addr libcommon.Address, code []byte) {
 
 // DESCRIBED: docs/programmers_guide/guide.md#address---identifier-of-an-account
 func (sdb *IntraBlockState) SetState(addr libcommon.Address, key *libcommon.Hash, value uint256.Int) {
-	log.Info(fmt.Sprintf("======fsc:test. SetState!!!!!!!!! key:%s, val:%v", key, value))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(key, value)
@@ -390,8 +378,6 @@ func (sdb *IntraBlockState) SetState(addr libcommon.Address, key *libcommon.Hash
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
 func (sdb *IntraBlockState) SetStorage(addr libcommon.Address, storage Storage) {
-	log.Info(fmt.Sprintf("======fsc:test. SetStorage!!!!!!!!!"))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetStorage(storage)
@@ -400,8 +386,6 @@ func (sdb *IntraBlockState) SetStorage(addr libcommon.Address, storage Storage) 
 
 // SetIncarnation sets incarnation for account if account exists
 func (sdb *IntraBlockState) SetIncarnation(addr libcommon.Address, incarnation uint64) {
-	log.Info(fmt.Sprintf("======fsc:test. SetIncarnation!!!!!!!!!"))
-
 	stateObject := sdb.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.setIncarnation(incarnation)
@@ -654,8 +638,6 @@ func printAccount(EIP161Enabled bool, addr libcommon.Address, stateObject *state
 
 // FinalizeTx should be called after every transaction.
 func (sdb *IntraBlockState) FinalizeTx(chainRules *chain.Rules, stateWriter StateWriter) error {
-	log.Info(fmt.Sprintf("=======fsc:test. FinalizeTx len:%d; obLen:%d, obDirtyLen:%d.",
-		len(sdb.balanceInc), len(sdb.stateObjects), len(sdb.stateObjectsDirty)))
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
 			sdb.getStateObject(addr)
@@ -706,8 +688,6 @@ func (sdb *IntraBlockState) SoftFinalise() {
 // CommitBlock finalizes the state by removing the self destructed objects
 // and clears the journal as well as the refunds.
 func (sdb *IntraBlockState) CommitBlock(chainRules *chain.Rules, stateWriter StateWriter) error {
-	log.Info(fmt.Sprintf("=======fsc:test. CommitBlock len:%d; obLen:%d, obDirtyLen:%d.",
-		len(sdb.balanceInc), len(sdb.stateObjects), len(sdb.stateObjectsDirty)))
 	for addr, bi := range sdb.balanceInc {
 		if !bi.transferred {
 			sdb.getStateObject(addr)

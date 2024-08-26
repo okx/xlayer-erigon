@@ -17,7 +17,6 @@
 package core
 
 import (
-	"github.com/ledgerwatch/log/v3"
 	"math/big"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -77,7 +76,6 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 	// Update the evm with the new transaction context.
 	evm.Reset(txContext, ibs)
 
-	log.Info("==========fsc:test. ApplyMessage")
 	result, err := ApplyMessage(evm, msg, gp, true /* refunds */, false /* gasBailout */)
 	if err != nil {
 		return nil, nil, nil, err
@@ -85,7 +83,6 @@ func ApplyMessageWithTxContext(msg types.Message, txContext evmtypes.TxContext, 
 
 	// Update the state with pending changes
 	if shouldFinalizeIbs {
-		log.Info("==========fsc:test. shouldFinalizeIbs.")
 		if err = ibs.FinalizeTx(rules, stateWriter); err != nil {
 			return nil, nil, nil, err
 		}

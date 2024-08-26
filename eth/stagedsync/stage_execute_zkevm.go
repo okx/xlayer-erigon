@@ -445,7 +445,6 @@ func executeBlockZk(
 		DB:       0,                   // Redis 数据库编号，默认是 0
 	})
 	execRs := &core.EphemeralExecResultZk{}
-	log.Info(fmt.Sprintf("=======fsc:test. blockNum:%d", blockNum))
 	dds := false
 	ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)
 	if ddsType == 1 {
@@ -460,7 +459,6 @@ func executeBlockZk(
 				panic(err)
 			} else {
 				dds = true
-				log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
 			}
 		}
 		core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)

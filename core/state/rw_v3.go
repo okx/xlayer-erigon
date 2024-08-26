@@ -71,8 +71,6 @@ func (rs *StateV3) put(table string, key, val []byte) {
 }
 
 func (rs *StateV3) puts(table string, key string, val []byte) {
-	log.Info(fmt.Sprintf("=======fsc:test. puts. key:%s, val:%s", key, string(val)))
-
 	switch table {
 	case StorageTable:
 		if old, ok := rs.chStorage.Set(key, val); ok {

@@ -14,7 +14,6 @@ import (
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/log/v3"
 	"math/big"
 	"time"
 )
@@ -41,8 +40,6 @@ func FinalizeBlockExecutionDDSProducer(
 	}
 
 	// producer
-	log.Info(fmt.Sprintf("=========fsc:test. Producer!!!!!!!!!!!"))
-
 	deltaBytes, err := ibs.CommitBlockDDSProducer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter)
 	if err != nil {
 		panic(err)
@@ -50,7 +47,6 @@ func FinalizeBlockExecutionDDSProducer(
 	if err = rdb.Set(context.Background(), "state", deltaBytes, 0).Err(); err != nil {
 		panic("Failed redis execRs")
 	}
-	log.Info(fmt.Sprintf("=======fsc:test. write execRs:%s", string(deltaBytes)))
 
 	if err := stateWriter.WriteChangeSets(); err != nil {
 		return nil, nil, nil, fmt.Errorf("writing changesets for block %d failed: %w", header.Number.Uint64(), err)
@@ -239,13 +235,11 @@ func ExecuteBlockEphemerallyZkDDSProducer(
 }
 
 func ExecuteBlockEphemerallyZkDDSConsumer(rdb *redis.Client, cc *chain.Config, block *types.Block, stateReader state.StateReader, stateWriter state.WriterWithChangeSets) {
-	log.Info(fmt.Sprintf("=========fsc:test. Consumer!!!!!!!!!!!"))
 	ibs := state.New(stateReader)
 	header := block.Header()
 	redisRs, err := rdb.Get(context.Background(), "state").Bytes()
 	if err == nil && len(redisRs) > 0 {
 		// consumer
-		log.Info(fmt.Sprintf("=======fsc:test. get rs:%s", redisRs))
 		if err = ibs.CommitBlockDDSConsumer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter, redisRs); err != nil {
 			panic(err)
 		}

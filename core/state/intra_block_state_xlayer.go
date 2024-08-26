@@ -2,10 +2,7 @@ package state
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"github.com/ledgerwatch/erigon/chain"
-	"github.com/ledgerwatch/log/v3"
 )
 
 func (sdb *IntraBlockState) CommitBlockDDSProducer(chainRules *chain.Rules, stateWriter StateWriter) ([]byte, error) {
@@ -14,9 +11,7 @@ func (sdb *IntraBlockState) CommitBlockDDSProducer(chainRules *chain.Rules, stat
 	for addr := range sdb.journal.dirties {
 		sdb.stateObjectsDirty[addr] = struct{}{}
 	}
-	log.Info(fmt.Sprintf("=======fsc:test. CommitBlockDDSProducer len:%d", len(sdb.balanceInc)))
 	for addr, obj := range sdb.stateObjects {
-		log.Info(fmt.Sprintf("========fsc:test.obj:%v", obj))
 		if success {
 			objJson := obj.SoToJson()
 			if objBytes, err := objJson.Marshal(); err != nil {

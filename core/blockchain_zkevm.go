@@ -19,7 +19,6 @@ package core
 
 import (
 	"fmt"
-	"github.com/ledgerwatch/log/v3"
 	"math/big"
 	"time"
 
@@ -84,7 +83,6 @@ func ExecuteBlockEphemerallyZk(
 		blockInnerTxs [][]*zktypes.InnerTx
 	)
 
-	log.Info("======fsc:test. PrepareBlockTxExecution")
 	blockContext, excessDataGas, ger, l1Blockhash, err := PrepareBlockTxExecution(chainConfig, vmConfig, blockHashFunc, nil, engine, chainReader, block, ibs, roHermezDb, blockGasLimit)
 	if err != nil {
 		return nil, err
@@ -105,7 +103,6 @@ func ExecuteBlockEphemerallyZk(
 			writeTrace = true
 		}
 		txHash := tx.Hash()
-		log.Info("======fsc:test. PrepareForTxExecution")
 		evm, effectiveGasPricePercentage, err := PrepareForTxExecution(chainConfig, vmConfig, blockContext, roHermezDb, ibs, block, &txHash, txIndex)
 		if err != nil {
 			return nil, err

@@ -18,6 +18,14 @@ type XLayerConfig struct {
 	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
+	// EnableFreeGasByNonce enable free gas
+	EnableFreeGasByNonce bool
+	// FreeGasExAddrs is the ex address which can be free gas for the transfer receiver
+	FreeGasExAddrs []string
+	// FreeGasCountPerAddr is the count limit of free gas tx per address
+	FreeGasCountPerAddr uint64
+	// FreeGasLimit is the max gas allowed use to do a free gas tx
+	FreeGasLimit uint64
 }
 
 type GPCache interface {
@@ -35,6 +43,7 @@ type ApolloConfig interface {
 	GetEnableWhitelist(localEnableWhitelist bool) bool
 	CheckWhitelistAddr(localWhitelist []string, addr common.Address) bool
 	CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr common.Address) bool
+	CheckFreeGasExAddr(localFreeGasExAddrs []string, addr common.Address) bool
 }
 
 // SetApolloConfig sets the apollo config with the node's apollo config
@@ -43,18 +52,32 @@ func (p *TxPool) SetApolloConfig(cfg ApolloConfig) {
 	p.apolloCfg = cfg
 }
 
-func (p *TxPool) isFreeClaimAddrXLayer(senderID uint64) bool {
-	addr, ok := p.senders.senderID2Addr[senderID]
-	if !ok {
-		return false
-	}
-	return p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr)
-}
-
 func (p *TxPool) SetGpCacheForXLayer(gpCache GPCache) {
 	p.gpCache = gpCache
 }
 
-func (p *TxPool) isFreeGas(senderID uint64) bool {
-	return p.isFreeClaimAddrXLayer(senderID)
+func (p *TxPool) checkFreeGasExAddrXLayer(senderID uint64) bool {
+	addr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false
+	}
+	return p.apolloCfg.CheckFreeGasExAddr(p.xlayerCfg.FreeGasExAddrs, addr)
+}
+
+func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64) (bool, bool) {
+	addr, ok := p.senders.senderID2Addr[senderID]
+	if !ok {
+		return false, false
+	}
+	// is claim tx
+	if p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr) {
+		return true, true
+	}
+	free := p.freeGasAddrs[addr.String()]
+	return free, false
+}
+
+func (p *TxPool) isFreeGasXLayer(senderID uint64) bool {
+	free, _ := p.checkFreeGasAddrXLayer(senderID)
+	return free
 }

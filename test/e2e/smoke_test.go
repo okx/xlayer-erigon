@@ -2,18 +2,22 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	ethereum "github.com/ledgerwatch/erigon"
+	"github.com/ledgerwatch/erigon/accounts/abi/bind"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/ethclient"
 	"github.com/ledgerwatch/erigon/test/operations"
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
+	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/ledgerwatch/erigon/zkevm/log"
 	"github.com/stretchr/testify/require"
 )
@@ -56,6 +60,23 @@ func TestGetBatchSealTime(t *testing.T) {
 	require.Equal(t, maxTime, batchSealTime)
 }
 
+func TestBridgeTx(t *testing.T) {
+	ctx := context.Background()
+	l1Client, err := ethclient.Dial(operations.DefaultL1NetworkURL)
+	require.NoError(t, err)
+	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+
+	amount := new(big.Int).SetUint64(10)
+	var destNetwork uint32 = 1
+	destAddr := common.HexToAddress(operations.DefaultSequencerAddress)
+	auth, err := operations.GetAuth(operations.DefaultSequencerPrivateKey, operations.DefaultL1ChainID)
+	require.NoError(t, err)
+	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
+	require.NoError(t, err)
+}
+
 func TestClaimTx(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
@@ -90,6 +111,83 @@ func TestClaimTx(t *testing.T) {
 	err = client.SendTransaction(ctx, signedTx)
 	require.NoError(t, err)
 
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+	require.NoError(t, err)
+}
+
+func TestNewAccFreeGas(t *testing.T) {
+	ctx := context.Background()
+	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	var gas uint64 = 21000
+
+	// newAcc transfer failed
+	from := common.HexToAddress(operations.DefaultL2NewAcc1Address)
+	to := common.HexToAddress(operations.DefaultSequencerAddress)
+	nonce, err := client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+	var tx types.Transaction = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &to,
+			Gas:   gas,
+			Value: uint256.NewInt(0),
+		},
+		GasPrice: uint256.MustFromBig(big.NewInt(0)),
+	}
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc1PrivateKey, "0x"))
+	require.NoError(t, err)
+	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
+	signedTx, err := types.SignTx(tx, *signer, privateKey)
+	require.NoError(t, err)
+	err = client.SendTransaction(ctx, signedTx)
+	require.Error(t, err)
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, 5)
+	require.Error(t, err)
+
+	// seq -> newAcc
+	from = common.HexToAddress(operations.DefaultSequencerAddress)
+	to = common.HexToAddress(operations.DefaultL2NewAcc1Address)
+	nonce, err = client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+	tx = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &to,
+			Gas:   gas,
+			Value: uint256.NewInt(10),
+		},
+		GasPrice: uint256.MustFromBig(big.NewInt(0)),
+	}
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultSequencerPrivateKey, "0x"))
+	require.NoError(t, err)
+	signedTx, err = types.SignTx(tx, *signer, privateKey)
+	require.NoError(t, err)
+	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
+	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+	require.NoError(t, err)
+
+	// newAcc transfer success
+	from = common.HexToAddress(operations.DefaultL2NewAcc1Address)
+	to = common.HexToAddress(operations.DefaultSequencerAddress)
+	nonce, err = client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+	tx = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &to,
+			Gas:   gas,
+			Value: uint256.NewInt(0),
+		},
+		GasPrice: uint256.MustFromBig(big.NewInt(0)),
+	}
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc1PrivateKey, "0x"))
+	require.NoError(t, err)
+	signedTx, err = types.SignTx(tx, *signer, privateKey)
+	require.NoError(t, err)
+	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 	require.NoError(t, err)
 }
@@ -316,7 +414,7 @@ func TestMinGasPrice(t *testing.T) {
 		}
 		require.NoError(t, err)
 
-		from := common.HexToAddress(operations.DefaultL2AdminAddress)
+		from := common.HexToAddress(operations.DefaultL2NewAcc2Address)
 		to := common.HexToAddress(operations.DefaultSequencerAddress)
 		nonce, err := client.PendingNonceAt(ctx, from)
 		require.NoError(t, err)
@@ -329,7 +427,7 @@ func TestMinGasPrice(t *testing.T) {
 			},
 			GasPrice: uint256.NewInt(temp),
 		}
-		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
+		privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2NewAcc2PrivateKey, "0x"))
 		require.NoError(t, err)
 		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
 		signedTx, err := types.SignTx(tx, *signer, privateKey)
@@ -366,4 +464,32 @@ func TestMinGasPrice(t *testing.T) {
 		require.NoError(t, err)
 	}
 	require.NoError(t, err)
+}
+
+func sendBridgeAsset(
+	ctx context.Context, tokenAddr common.Address, amount *big.Int, destNetwork uint32, destAddr *common.Address,
+	metadata []byte, auth *bind.TransactOpts, bridgeSCAddr common.Address, c *ethclient.Client,
+) error {
+	emptyAddr := common.Address{}
+	if tokenAddr == emptyAddr {
+		auth.Value = amount
+	}
+	if destAddr == nil {
+		destAddr = &auth.From
+	}
+	if len(bridgeSCAddr) == 0 {
+		return fmt.Errorf("Bridge address error")
+	}
+
+	br, err := polygonzkevmbridge.NewPolygonzkevmbridge(bridgeSCAddr, c)
+	if err != nil {
+		return err
+	}
+	tx, err := br.BridgeAsset(auth, destNetwork, *destAddr, amount, tokenAddr, true, metadata)
+	if err != nil {
+		return err
+	}
+	// wait transfer to be included in a batch
+	const txTimeout = 60 * time.Second
+	return operations.WaitTxToBeMined(ctx, c, tx, txTimeout)
 }

@@ -44,8 +44,8 @@ func FinalizeBlockExecutionDDSProducer(
 	if err != nil {
 		panic(err)
 	}
-	if err = rdb.Set(context.Background(), "state", deltaBytes, 0).Err(); err != nil {
-		panic("Failed redis execRs")
+	if err = rdb.Set(context.Background(), GenDDSKey("state", header.Number.Uint64()), deltaBytes, 0).Err(); err != nil {
+		panic("Failed redis state_" + header.Number.String())
 	}
 
 	if err := stateWriter.WriteChangeSets(); err != nil {
@@ -237,11 +237,15 @@ func ExecuteBlockEphemerallyZkDDSProducer(
 func ExecuteBlockEphemerallyZkDDSConsumer(rdb *redis.Client, cc *chain.Config, block *types.Block, stateReader state.StateReader, stateWriter state.WriterWithChangeSets) {
 	ibs := state.New(stateReader)
 	header := block.Header()
-	redisRs, err := rdb.Get(context.Background(), "state").Bytes()
+	redisRs, err := rdb.Get(context.Background(), GenDDSKey("state", header.Number.Uint64())).Bytes()
 	if err == nil && len(redisRs) > 0 {
 		// consumer
 		if err = ibs.CommitBlockDDSConsumer(cc.Rules(header.Number.Uint64(), header.Time), stateWriter, redisRs); err != nil {
 			panic(err)
 		}
 	}
+}
+
+func GenDDSKey(key string, blockNum uint64) string {
+	return fmt.Sprintf("%s_%d", key, blockNum)
 }

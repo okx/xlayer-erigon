@@ -447,13 +447,14 @@ func executeBlockZk(
 	dds := false
 	//ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)
 	ddsType := cfg.zk.XLayer.DDSType
+	execRsKey := core.GenDDSKey("execRs", blockNum)
 	if ddsType == 1 {
 		dds = true
 		execRs, err = core.ExecuteBlockEphemerallyZkDDSProducer(rdb, cfg.chainConfig, &vmConfig, getHashFn, cfg.engine, block, stateReader, stateWriter, ChainReaderImpl{config: cfg.chainConfig, tx: tx, blockReader: cfg.blockReader}, getTracer, hermezDb, prevBlockRoot)
 		execJson, _ := json.Marshal(execRs)
-		rdb.Set(context.Background(), "execRs", execJson, 0)
+		rdb.Set(context.Background(), execRsKey, execJson, 0)
 	} else if ddsType == 2 {
-		redisRs, err := rdb.Get(context.Background(), "execRs").Bytes()
+		redisRs, err := rdb.Get(context.Background(), execRsKey).Bytes()
 		if err == nil && len(redisRs) > 0 {
 			if err = json.Unmarshal(redisRs, &execRs); err != nil {
 				panic(err)

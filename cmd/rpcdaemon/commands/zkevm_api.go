@@ -33,6 +33,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/witness"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
+	jsonrpc "github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 )
 
 var sha3UncleHash = common.HexToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")
@@ -1083,7 +1084,7 @@ func (api *ZkEvmAPIImpl) GetExitRootTable(ctx context.Context) ([]l1InfoTreeData
 }
 
 func (api *ZkEvmAPIImpl) sendGetBatchWitness(rpcUrl string, batchNumber uint64, mode *WitnessMode) (json.RawMessage, error) {
-	res, err := client.JSONRPCCall(rpcUrl, "zkevm_getBatchWitness", batchNumber, mode)
+	res, err := client.JSONRPCCallWhitLimit(jsonrpc.L2RpcLimit{rpcUrl, api.ethApi.l2RpcLimit}, rpcUrl, "zkevm_getBatchWitness", batchNumber, mode)
 	if err != nil {
 		return nil, err
 	}

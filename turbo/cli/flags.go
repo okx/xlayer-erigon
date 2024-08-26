@@ -406,6 +406,7 @@ func setEmbeddedRpcDaemon(ctx *cli.Context, cfg *nodecfg.Config) {
 		DataStreamHost:         ctx.String(utils.DataStreamHost.Name),
 		DataStreamWriteTimeout: ctx.Duration(utils.DataStreamWriteTimeout.Name),
 		L2RpcUrl:               ctx.String(utils.L2RpcUrlFlag.Name),
+		L2RpcLimit:             ctx.Int64(utils.L2RpcLimitFlag.Name),
 	}
 	if ctx.IsSet(utils.HttpCompressionFlag.Name) {
 		c.HttpCompression = ctx.Bool(utils.HttpCompressionFlag.Name)

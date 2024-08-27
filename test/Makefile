@@ -87,6 +87,7 @@ all: ## Runs a full node
 	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
+	sleep 3
 	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROVER)
 	sleep 10
@@ -124,4 +125,6 @@ test: test-1 ## Runs all e2e tests
 test-1: stop all ## Runs group 1 e2e tests checking race conditions
 	sleep 3
 	docker ps -a
+	docker logs erigon-aggregator
+	docker logs xlayer-signer
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...

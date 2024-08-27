@@ -125,6 +125,7 @@ test: test-1 ## Runs all e2e tests
 test-1: stop all ## Runs group 1 e2e tests checking race conditions
 	sleep 3
 	docker ps -a
-	docker logs erigon-aggregator
+	echo "xlayer-signer start"
 	docker logs xlayer-signer
+	echo "xlayer-signer end"
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...

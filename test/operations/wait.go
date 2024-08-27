@@ -272,6 +272,7 @@ func l2BlockConsolidationCondition(l2Block *big.Int) (bool, error) {
 	}
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
+	log.Info(fmt.Sprintf("Block %s is consolidated: %v", l2Block.String(), result))
 	if err != nil {
 		return false, err
 	}

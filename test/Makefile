@@ -87,7 +87,6 @@ all: ## Runs a full node
 	# app services
 	#sleep 3
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROVER)
 	sleep 10

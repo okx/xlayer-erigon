@@ -29,8 +29,8 @@ zkevm.executor-urls: ""
 zkevm.executor-strict: false
 zkevm.witness-full: true
 
-zkevm.sequencer-block-seal-time: "2s"
-zkevm.sequencer-batch-seal-time: "5s"
+zkevm.sequencer-block-seal-time: "3s"
+zkevm.sequencer-batch-seal-time: "10s"
 zkevm.sequencer-batch-sleep-duration: "0s"
 
 zkevm.data-stream-host: "localhost"

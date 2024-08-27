@@ -106,10 +106,12 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (free
 	if !ok {
 		return
 	}
+
 	// is claim tx
 	if p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr) {
 		return claim, p.xlayerCfg.GasPriceMultiple
 	}
+
 	// special project
 	if p.apolloCfg.GetEnableFreeGasList(p.xlayerCfg.EnableFreeGasList) {
 		fromToName, freeGpList := p.xlayerCfg.FreeGasFromNameMap, p.xlayerCfg.FreeGasList

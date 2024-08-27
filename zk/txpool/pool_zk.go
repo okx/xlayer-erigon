@@ -75,15 +75,14 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 		mt.minTip = minTip
 
 		// For X Layer
-		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
-		freeType, gpMul := p.checkFreeGasAddrXLayer(senderID, mt.Tx)
-		p.setFreeGasByNonceCache(senderID, mt, freeType == claim)
-		// free case:
+		// free type:
+		// 0. not free
 		// 1. is claim tx;
 		// 2. new bridge account with the first few tx
 		// 3. special project
-		//if claim ||
-		//	(p.xlayerCfg.EnableFreeGasByNonce && isFreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
+		freeType, gpMul := p.checkFreeGasAddrXLayer(senderID, mt.Tx)
+		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
+		p.setFreeGasByNonceCache(senderID, mt, freeType == claim)
 		if freeType > notFree {
 			// get dynamic gp
 			// here for the case when restart gpCache has not init

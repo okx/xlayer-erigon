@@ -21,7 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/ethclient"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
-	"github.com/ledgerwatch/log/v3"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -59,7 +59,7 @@ func Poll(interval, deadline time.Duration, condition ConditionFunc) error {
 	for {
 		select {
 		case <-timeout:
-			log.Info(fmt.Sprintf("timeout reached after %s", deadline))
+			log.Infof("timeout reached after %v", deadline)
 			return ErrTimeoutReached
 		case <-tick.C:
 			ok, err := condition()
@@ -87,7 +87,7 @@ func WaitTxToBeMined(parentCtx context.Context, client ethClienter, tx types.Tra
 	if errors.Is(err, context.DeadlineExceeded) {
 		return err
 	} else if err != nil {
-		log.Error(fmt.Sprintf("error waiting tx %s to be mined: %w", tx.Hash(), err))
+		log.Errorf("error waiting tx %s to be mined: %v", tx.Hash(), err)
 		return err
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
@@ -98,7 +98,7 @@ func WaitTxToBeMined(parentCtx context.Context, client ethClienter, tx types.Tra
 		}
 		return fmt.Errorf("transaction has failed, reason: %s, receipt: %+v. tx: %+v, gas: %v", reason, receipt, tx, tx.GetGas())
 	}
-	log.Debug("Transaction successfully mined: ", tx.Hash())
+	log.Debugf("Transaction successfully mined: %v", tx.Hash())
 	return nil
 }
 
@@ -124,7 +124,7 @@ func RevertReason(ctx context.Context, c ethClienter, tx types.Transaction, bloc
 
 	unpackedMsg, err := abi.UnpackRevert(hex)
 	if err != nil {
-		log.Warn(fmt.Sprintf("failed to get the revert message for tx %v: %v", tx.Hash(), err))
+		log.Warnf("failed to get the revert message for tx %v: %v", tx.Hash(), err)
 		return "", errors.New("execution reverted")
 	}
 
@@ -272,7 +272,7 @@ func l2BlockConsolidationCondition(l2Block *big.Int) (bool, error) {
 	}
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
-	log.Info(fmt.Sprintf("Block %s is consolidated: %v", l2Block.String(), result))
+	log.Infof("Block %v is consolidated: %v", l2Block.String(), result)
 	if err != nil {
 		return false, err
 	}
@@ -291,7 +291,7 @@ func l2BlockVirtualizationCondition(l2Block *big.Int, l2NetworkURL string) (bool
 
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
-	log.Info(fmt.Sprintf("Block %s is virtualized: %v", l2Block.String(), result))
+	log.Infof("Block %v is virtualized: %v", l2Block.String(), result)
 	if err != nil {
 		return false, err
 	}
@@ -307,7 +307,7 @@ func WaitSignal(cleanupFuncs ...func()) {
 	for sig := range signals {
 		switch sig {
 		case os.Interrupt, os.Kill:
-			log.Info("terminating application gracefully...")
+			log.Infof("terminating application gracefully...")
 			for _, cleanup := range cleanupFuncs {
 				cleanup()
 			}

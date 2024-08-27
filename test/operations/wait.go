@@ -21,7 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/ethclient"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
-	"github.com/ledgerwatch/erigon/zkevm/log"
+	"github.com/ledgerwatch/log/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
@@ -29,7 +29,7 @@ import (
 
 const (
 	// DefaultInterval is a time interval
-	DefaultInterval = 2 * time.Millisecond
+	DefaultInterval = 1 * time.Second
 	// DefaultDeadline is a time interval
 	DefaultDeadline = 2 * time.Minute
 	// DefaultTxMinedDeadline is a time interval
@@ -59,6 +59,7 @@ func Poll(interval, deadline time.Duration, condition ConditionFunc) error {
 	for {
 		select {
 		case <-timeout:
+			log.Info(fmt.Sprintf("timeout reached after %s", deadline))
 			return ErrTimeoutReached
 		case <-tick.C:
 			ok, err := condition()
@@ -86,7 +87,7 @@ func WaitTxToBeMined(parentCtx context.Context, client ethClienter, tx types.Tra
 	if errors.Is(err, context.DeadlineExceeded) {
 		return err
 	} else if err != nil {
-		log.Errorf("error waiting tx %s to be mined: %w", tx.Hash(), err)
+		log.Error(fmt.Sprintf("error waiting tx %s to be mined: %w", tx.Hash(), err))
 		return err
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
@@ -123,7 +124,7 @@ func RevertReason(ctx context.Context, c ethClienter, tx types.Transaction, bloc
 
 	unpackedMsg, err := abi.UnpackRevert(hex)
 	if err != nil {
-		log.Warnf("failed to get the revert message for tx %v: %v", tx.Hash(), err)
+		log.Warn(fmt.Sprintf("failed to get the revert message for tx %v: %v", tx.Hash(), err))
 		return "", errors.New("execution reverted")
 	}
 
@@ -286,8 +287,10 @@ func l2BlockVirtualizationCondition(l2Block *big.Int, l2NetworkURL string) (bool
 	if response.Error != nil {
 		return false, fmt.Errorf("%d - %s", response.Error.Code, response.Error.Message)
 	}
+
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
+	log.Info(fmt.Sprintf("Block %s is virtualized: %v", l2Block.String(), result))
 	if err != nil {
 		return false, err
 	}

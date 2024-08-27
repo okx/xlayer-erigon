@@ -1,10 +1,22 @@
 package txpool
 
 import (
+	"github.com/gateway-fm/cdk-erigon-lib/types"
 	"math/big"
+	"strings"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	ecommon "github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/zkevm/hex"
+)
+
+// free gas tx type
+const (
+	notFree = iota
+	claim
+	freeByNonce
+	specialProject
 )
 
 // XLayerConfig contains the X Layer configs for the txpool
@@ -50,6 +62,25 @@ type ApolloConfig interface {
 	CheckWhitelistAddr(localWhitelist []string, addr common.Address) bool
 	CheckFreeClaimAddr(localFreeClaimGasAddrs []string, addr common.Address) bool
 	CheckFreeGasExAddr(localFreeGasExAddrs []string, addr common.Address) bool
+	GetEnableFreeGasList(localEnableFreeGasList bool) bool
+}
+
+func contains(addresses []string, addr common.Address) bool {
+	for _, item := range addresses {
+		if common.HexToAddress(item) == addr {
+			return true
+		}
+	}
+	return false
+}
+
+func containsMethod(data string, methods []string) bool {
+	for _, m := range methods {
+		if strings.HasPrefix(data, m) {
+			return true
+		}
+	}
+	return false
 }
 
 // SetApolloConfig sets the apollo config with the node's apollo config
@@ -70,20 +101,58 @@ func (p *TxPool) checkFreeGasExAddrXLayer(senderID uint64) bool {
 	return p.apolloCfg.CheckFreeGasExAddr(p.xlayerCfg.FreeGasExAddrs, addr)
 }
 
-func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64) (bool, bool) {
+func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (freeType int, gpMul uint64) {
 	addr, ok := p.senders.senderID2Addr[senderID]
 	if !ok {
-		return false, false
+		return
 	}
 	// is claim tx
 	if p.apolloCfg.CheckFreeClaimAddr(p.xlayerCfg.FreeClaimGasAddrs, addr) {
-		return true, true
+		return claim, p.xlayerCfg.GasPriceMultiple
 	}
+	// special project
+	if p.apolloCfg.GetEnableFreeGasList(p.xlayerCfg.EnableFreeGasList) {
+		fromToName, freeGpList := p.xlayerCfg.FreeGasFromNameMap, p.xlayerCfg.FreeGasList
+		info := freeGpList[fromToName[addr.String()]]
+		if info != nil &&
+			contains(info.ToList, tx.To) &&
+			containsMethod("0x"+ecommon.Bytes2Hex(tx.Rlp), info.MethodSigs) {
+			return specialProject, info.GasPriceMultiple
+		}
+	}
+
+	// new bridge address
 	free := p.freeGasAddrs[addr.String()]
-	return free, false
+	if free {
+		return freeByNonce, 1
+	}
+
+	return notFree, 0
 }
 
-func (p *TxPool) isFreeGasXLayer(senderID uint64) bool {
-	free, _ := p.checkFreeGasAddrXLayer(senderID)
-	return free
+func (p *TxPool) setFreeGasByNonceCache(senderID uint64, mt *metaTx, isClaim bool) {
+	if p.xlayerCfg.EnableFreeGasByNonce {
+		if p.checkFreeGasExAddrXLayer(senderID) {
+			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+			if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
+				addrHex := "0x" + inputHex[10:74]
+				p.freeGasAddrs[addrHex] = true
+			} else {
+				p.freeGasAddrs[mt.Tx.To.Hex()] = true
+			}
+		} else if isClaim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
+			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+			if len(inputHex) > 4554 {
+				addrHex := "0x" + inputHex[4490:4554]
+				p.freeGasAddrs[addrHex] = true
+			} else {
+				p.freeGasAddrs[mt.Tx.To.Hex()] = true
+			}
+		}
+	}
+}
+
+func (p *TxPool) isFreeGasXLayer(senderID uint64, tx *types.TxSlot) bool {
+	freeType, _ := p.checkFreeGasAddrXLayer(senderID, tx)
+	return freeType > notFree
 }

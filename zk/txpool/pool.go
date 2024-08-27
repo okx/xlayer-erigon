@@ -396,16 +396,16 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		limbo:                   newLimbo(),
 		// X Layer config
 		xlayerCfg: XLayerConfig{
-			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
-			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
-			EnableFreeGasList: ethCfg.DeprecatedTxPool.EnableFreeGasList,
+			EnableWhitelist:      ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:            ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:          ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs:    ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:     ethCfg.DeprecatedTxPool.GasPriceMultiple,
 			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
 			FreeGasExAddrs:       ethCfg.DeprecatedTxPool.FreeGasExAddrs,
 			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
 			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
+			EnableFreeGasList:    ethCfg.DeprecatedTxPool.EnableFreeGasList,
 		},
 		freeGasAddrs: map[string]bool{},
 	}
@@ -761,7 +761,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	if p.gpCache != nil {
 		rgp = p.gpCache.GetLatestRawGP()
 	}
-	if !p.isFreeGasXLayer(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
+	if !p.isFreeGasXLayer(txn.SenderID, txn) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}

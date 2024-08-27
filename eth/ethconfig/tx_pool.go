@@ -102,6 +102,7 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 	FreeGasExAddrs:       []string{},
 	FreeGasCountPerAddr:  3,
 	FreeGasLimit:         21000,
+	EnableFreeGasList:    false,
 }
 
 var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Config {

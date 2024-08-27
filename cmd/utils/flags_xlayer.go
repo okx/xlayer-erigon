@@ -94,6 +94,10 @@ var (
 		Name:  "txpool.freegaslimit",
 		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
 	}
+	TxPoolEnableFreeGasList = cli.BoolFlag{
+		Name:  "txpool.enablefreegaslist",
+		Usage: "Enable or disable free gas for a special project",
+	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
@@ -307,6 +311,9 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
 		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
+	}
+	if ctx.IsSet(TxPoolEnableFreeGasList.Name) {
+		cfg.EnableFreeGasList = ctx.Bool(TxPoolEnableFreeGasList.Name)
 	}
 }
 

@@ -66,6 +66,7 @@ var (
 	freeGasExAddrs       []string
 	freeGasCountPerAddr  uint64
 	freeGasLimit         uint64
+	enableFreeGasList    bool
 )
 
 func init() {
@@ -99,6 +100,7 @@ func init() {
 	rootCmd.Flags().StringSliceVar(&freeGasExAddrs, utils.TxPoolFreeGasExAddrs.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasExAddrs, utils.TxPoolFreeGasExAddrs.Usage)
 	rootCmd.PersistentFlags().Uint64Var(&freeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasCountPerAddr, utils.TxPoolFreeGasCountPerAddr.Usage)
 	rootCmd.PersistentFlags().Uint64Var(&freeGasLimit, utils.TxPoolFreeGasLimit.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasLimit, utils.TxPoolFreeGasLimit.Usage)
+	rootCmd.Flags().BoolVar(&enableFreeGasList, utils.TxPoolEnableFreeGasList.Name, ethconfig.DeprecatedDefaultTxPoolConfig.EnableFreeGasList, utils.TxPoolEnableFreeGasList.Usage)
 }
 
 var rootCmd = &cobra.Command{
@@ -203,6 +205,7 @@ func doTxpool(ctx context.Context) error {
 	}
 	ethCfg.DeprecatedTxPool.FreeGasCountPerAddr = freeGasCountPerAddr
 	ethCfg.DeprecatedTxPool.FreeGasLimit = freeGasLimit
+	ethCfg.DeprecatedTxPool.EnableFreeGasList = enableFreeGasList
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)

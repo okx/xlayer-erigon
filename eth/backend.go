@@ -123,9 +123,9 @@ import (
 	zkStages "github.com/ledgerwatch/erigon/zk/stages"
 	"github.com/ledgerwatch/erigon/zk/syncer"
 	txpool2 "github.com/ledgerwatch/erigon/zk/txpool"
+	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zk/witness"
 	"github.com/ledgerwatch/erigon/zkevm/etherman"
-	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
 // Config contains the configuration options of the ETH protocol.
@@ -823,6 +823,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 				contracts.AddNewRollupTypeTopic,
 				contracts.CreateNewRollupTopic,
 				contracts.UpdateRollupTopic,
+				// For X Layer
+				contracts.AddExistingRollupTopic,
+				contracts.UpdateEtrogSequenceTopic,
 			}}
 			l1Contracts = []libcommon.Address{cfg.AddressZkevm, cfg.AddressRollup}
 		} else {

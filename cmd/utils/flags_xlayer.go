@@ -195,6 +195,11 @@ var (
 		Usage: "Method rate limit in requests per second, format: {\"method\":[\"method1\",\"method2\"],\"count\":1,\"bucket\":1}, eg. {\"methods\":[\"eth_call\",\"eth_blockNumber\"],\"count\":10,\"bucket\":1}",
 		Value: "",
 	}
+	L2Fork9UpgradeBatchFlag = cli.Uint64Flag{
+		Name:  "zkevm.l2-fork9-upgrade-batch",
+		Usage: "L2 fork9 upgrade batch",
+		Value: 0,
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {

@@ -46,7 +46,7 @@ func SpawnSequencerL1BlockSyncStage(
 	quiet bool,
 ) error {
 	logPrefix := s.LogPrefix()
-	log.Info(fmt.Sprintf("[%s] Starting L1 block sync stage", logPrefix))
+	log.Info(fmt.Sprintf("[%s] Starting L1 block sync stage, stop:%v", logPrefix, cfg.zkCfg.L1SyncStopBatch))
 	defer log.Info(fmt.Sprintf("[%s] Finished L1 block sync stage", logPrefix))
 
 	if cfg.zkCfg.L1SyncStartBlock == 0 {
@@ -161,6 +161,7 @@ LOOP:
 
 				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
 				if err != nil {
+					log.Error(fmt.Sprintf("Spawn sequencer L1 blockSync stage, DecodeL1BatchData:%v", err))
 					return err
 				}
 

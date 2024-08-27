@@ -34,6 +34,7 @@ import (
 	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
 	"github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/erigon/zk/txpool"
 )
 
@@ -131,6 +132,14 @@ func AllComponents(ctx context.Context, cfg txpoolcfg.Config, ethCfg *ethconfig.
 
 	txPool, err := txpool.New(newTxs, chainDB, cfg, ethCfg, cache, *chainID, shanghaiTime, chainConfig.LondonBlock, aclDB)
 	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	// For X Layer
+	txPool.SetApolloConfig(apollo.UnsafeGetApolloConfig())
+
+	if err = txPoolDB.Update(ctx, func(tx kv.RwTx) error {
+		return txpool.CreateTxPoolBuckets(tx)
+	}); err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
 

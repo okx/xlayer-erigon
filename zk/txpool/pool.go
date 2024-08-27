@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
 
@@ -327,8 +328,10 @@ type TxPool struct {
 	aclDB                   kv.RwDB
 
 	// For X Layer
-	xlayerCfg XLayerConfig
-	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
+	xlayerCfg    XLayerConfig
+	apolloCfg    ApolloConfig
+	gpCache      GPCache // GPCache will only work in sequencer node, without rpc node
+	freeGasAddrs map[string]bool
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -399,7 +402,12 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
 			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
 			EnableFreeGasList: ethCfg.DeprecatedTxPool.EnableFreeGasList,
+			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
+			FreeGasExAddrs:       ethCfg.DeprecatedTxPool.FreeGasExAddrs,
+			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
+			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
 		},
+		freeGasAddrs: map[string]bool{},
 	}
 	tp.setFreeGasList(ethCfg.DeprecatedTxPool.FreeGasList)
 	return tp, nil
@@ -747,8 +755,13 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return UnsupportedTx
 	}
 
-	// Drop non-local transactions under our own minimal accepted gas price or tip
-	if !isLocal && uint256.NewInt(p.cfg.MinFeeCap).Cmp(&txn.FeeCap) == 1 {
+	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
+	// X Layer
+	rgp := gaspricecfg.DefaultXLayerPrice
+	if p.gpCache != nil {
+		rgp = p.gpCache.GetLatestRawGP()
+	}
+	if !p.isFreeGasXLayer(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}
@@ -797,21 +810,21 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	}
 
 	// X Layer check if sender is blocked
-	if p.checkBlockedAddr(from) {
+	if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is blocked idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return SenderDisallowedSendTx
 	}
 
 	// X Layer check if receiver is blocked
 	if !txn.Creation {
-		if p.checkBlockedAddr(txn.To) {
+		if p.apolloCfg.CheckBlockedAddr(p.xlayerCfg.BlockedList, txn.To) {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx receiver is blocked idHash=%x, txn.receiver=%s", txn.IDHash, from))
 			return ReceiverDisallowedReceiveTx
 		}
 	}
 
 	// X Layer check if sender is whitelisted
-	if p.xlayerCfg.EnableWhitelist && !p.checkWhiteAddr(from) {
+	if p.apolloCfg.GetEnableWhitelist(p.xlayerCfg.EnableWhitelist) && !p.apolloCfg.CheckWhitelistAddr(p.xlayerCfg.WhiteList, from) {
 		log.Info(fmt.Sprintf("TX TRACING: validateTx sender is not whitelisted idHash=%x, txn.sender=%s", txn.IDHash, from))
 		return NoWhiteListedSender
 	}

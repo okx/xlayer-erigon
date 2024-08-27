@@ -18,18 +18,25 @@ import (
 
 // Public shared
 const (
-	DefaultSequencerAddress           = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	DefaultSequencerPrivateKey        = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	DefaultL1NetworkURL               = "http://localhost:8545"
-	DefaultL1ChainID           uint64 = 1337
+	DefaultL1NetworkURL             = "http://localhost:8545"
+	DefaultL1ChainID         uint64 = 1337
+	DefaultL1AdminAddress           = "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
+	DefaultL1AdminPrivateKey        = "0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
 
 	DefaultL2NetworkURL        = "http://localhost:8124"
 	DefaultL2ChainID    uint64 = 195
+
+	BridgeAddr = "0x1089Af36bD72553008FAd0A1240B4D5641208494"
 
 	DefaultTimeoutTxToBeMined = 1 * time.Minute
 
 	DefaultL2AdminAddress    = "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 	DefaultL2AdminPrivateKey = "0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
+
+	DefaultL2NewAcc1Address    = "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"
+	DefaultL2NewAcc1PrivateKey = "5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a"
+	DefaultL2NewAcc2Address    = "0xAed6892D56AAB5DA8FBcd85b924C3bE63c74Cc29"
+	DefaultL2NewAcc2PrivateKey = "bc362a16d3dedd6cdba639eb8fa91b2f6d9f929eb490ca2e5a748ba041c6a131"
 )
 
 // Manager controls operations and has knowledge about how to set up and tear
@@ -67,7 +74,7 @@ const VerifiedConfirmationLevel ConfirmationLevel = 3
 func ApplyL2Txs(ctx context.Context, txs []*types.Transaction, auth *bind.TransactOpts, client *ethclient.Client, confirmationLevel ConfirmationLevel) ([]*big.Int, error) {
 	var err error
 	if auth == nil {
-		auth, err = GetAuth(DefaultSequencerPrivateKey, DefaultL2ChainID)
+		auth, err = GetAuth(DefaultL2AdminPrivateKey, DefaultL2ChainID)
 		if err != nil {
 			return nil, err
 		}

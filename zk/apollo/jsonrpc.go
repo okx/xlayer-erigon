@@ -7,11 +7,13 @@ import (
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
+	"github.com/ledgerwatch/erigon/rpc"
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/urfave/cli/v2"
 )
 
+// loadJsonRPC loads the apollo jsonrpc config cache on startup
 func (c *Client) loadJsonRPC(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {
@@ -23,7 +25,7 @@ func (c *Client) loadJsonRPC(value interface{}) {
 	log.Info(fmt.Sprintf("loaded jsonrpc from apollo config: %+v", value.(string)))
 }
 
-// fireJsonRPC fires the jsonrpc config change
+// fireJsonRPC fires the apollo jsonrpc config change
 func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
@@ -35,17 +37,20 @@ func (c *Client) fireJsonRPC(key string, value *storage.ConfigChange) {
 	log.Info(fmt.Sprintf("apollo jsonrpc old config : %+v", value.OldValue.(string)))
 	log.Info(fmt.Sprintf("apollo jsonrpc config changed: %+v", value.NewValue.(string)))
 
+	// Fire rate limiter configurations
+	setRateLimiterConfig(ctx)
+
 	// Set rpc flag on fire configuration changes
 	setJsonRPCFlag()
 }
 
 // loadJsonRPCConfig loads the dynamic json rpc apollo configurations
 func loadJsonRPCConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	loadNodeJsonRPCConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
-	loadEthJsonRPCConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	loadNodeJsonRPCConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthJsonRPCConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeJsonRPCConfig loads the dynamic json rpc apollo node configurations
@@ -75,6 +80,12 @@ func loadNodeJsonRPCConfig(ctx *cli.Context, nodeCfg *nodecfg.Config) {
 	if ctx.IsSet(utils.WSEnabledFlag.Name) {
 		nodeCfg.Http.WebsocketEnabled = true
 	}
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		nodeCfg.Http.HttpApiKeys = ctx.String(utils.HTTPApiKeysFlag.Name)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		nodeCfg.Http.MethodRateLimit = ctx.String(utils.MethodRateLimitFlag.Name)
+	}
 }
 
 // loadEthJsonRPCConfig loads the dynamic json rpc apollo eth configurations
@@ -87,7 +98,19 @@ func loadEthJsonRPCConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 
 // setJsonRPCFlag sets the dynamic json rpc apollo flag
 func setJsonRPCFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setRPCFlag()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().setRPCFlag()
+}
+
+func setRateLimiterConfig(ctx *cli.Context) {
+	UnsafeGetApolloConfig().RLock()
+	defer UnsafeGetApolloConfig().RUnlock()
+
+	if ctx.IsSet(utils.HTTPApiKeysFlag.Name) {
+		rpc.SetApiAuth(UnsafeGetApolloConfig().NodeCfg.Http.HttpApiKeys)
+	}
+	if ctx.IsSet(utils.MethodRateLimitFlag.Name) {
+		rpc.SetRateLimit(UnsafeGetApolloConfig().NodeCfg.Http.MethodRateLimit)
+	}
 }

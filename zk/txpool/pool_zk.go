@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"math/big"
+	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
@@ -16,7 +18,7 @@ import (
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/log/v3"
+	"github.com/ledgerwatch/erigon/zkevm/hex"
 )
 
 /*
@@ -43,6 +45,8 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 	minFeeCap := uint256.NewInt(0).SetAllOne()
 	minTip := uint64(math.MaxUint64)
 	var toDel []*metaTx // can't delete items while iterate them
+	// For X Layer
+	isfreeGasAddr, claim := p.checkFreeGasAddrXLayer(senderID)
 	byNonce.ascend(senderID, func(mt *metaTx) bool {
 		if mt.Tx.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: onSenderStateChange loop iteration idHash=%x senderID=%d, senderNonce=%d, txn.nonce=%d, currentSubPool=%s", mt.Tx.IDHash, senderID, senderNonce, mt.Tx.Nonce, mt.currentSubPool))
@@ -65,6 +69,28 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			toDel = append(toDel, mt)
 			return true
 		}
+		// For X Layer
+		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
+		if p.xlayerCfg.EnableFreeGasByNonce {
+			if p.checkFreeGasExAddrXLayer(senderID) {
+				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+				if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
+					addrHex := "0x" + inputHex[10:74]
+					p.freeGasAddrs[addrHex] = true
+				} else {
+					p.freeGasAddrs[mt.Tx.To.Hex()] = true
+				}
+			} else if claim && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr {
+				inputHex := hex.EncodeToHex(mt.Tx.Rlp)
+				if len(inputHex) > 4554 {
+					addrHex := "0x" + inputHex[4490:4554]
+					p.freeGasAddrs[addrHex] = true
+				} else {
+					p.freeGasAddrs[mt.Tx.To.Hex()] = true
+				}
+			}
+		}
+
 		if minFeeCap.Gt(&mt.Tx.FeeCap) {
 			*minFeeCap = mt.Tx.FeeCap
 		}
@@ -73,20 +99,29 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			minTip = cmp.Min(minTip, mt.Tx.Tip.Uint64())
 		}
 		mt.minTip = minTip
+
 		// For X Layer
-		isClaimAddr := p.isFreeClaimAddr(senderID)
-		if isClaimAddr {
+		// free case: 1. is claim tx; 2. new bridge account with the first few tx
+		if claim ||
+			(p.xlayerCfg.EnableFreeGasByNonce && isfreeGasAddr && mt.Tx.Nonce < p.xlayerCfg.FreeGasCountPerAddr) {
+			// get dynamic gp
 			// here for the case when restart gpCache has not init
 			// use the max uint64 as default because the remain claimTx should handle first
-			newGp := uint64(math.MaxUint64)
+			newGpBig := new(big.Int).SetUint64(math.MaxUint64)
 			if p.gpCache != nil {
 				_, dGp := p.gpCache.GetLatest()
 				if dGp != nil {
-					newGpBig := new(big.Int).Mul(dGp, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
-					newGp = newGpBig.Uint64()
+					newGpBig.Set(dGp)
+					if claim {
+						newGpBig = newGpBig.Mul(newGpBig, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
+						log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGpBig))
+					} else {
+						log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%d", mt.Tx.Nonce, dGp, newGpBig))
+					}
 				}
 			}
-			mt.minTip = newGp
+
+			mt.minTip = newGpBig.Uint64()
 			mt.minFeeCap = *uint256.NewInt(mt.minTip)
 		}
 
@@ -289,7 +324,6 @@ func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx
 		if err := p.fromDB(ctx, txPoolDbTx, coreTx); err != nil {
 			return fmt.Errorf("loading txs from DB: %w", err)
 		}
-
 		if p.started.CompareAndSwap(false, true) {
 			log.Info("[txpool] Start if not started")
 		}

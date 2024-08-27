@@ -12,6 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// loadSequencer loads the apollo sequencer config cache on startup
 func (c *Client) loadSequencer(value interface{}) {
 	ctx, err := c.getConfigContext(value)
 	if err != nil {
@@ -23,7 +24,7 @@ func (c *Client) loadSequencer(value interface{}) {
 	log.Info(fmt.Sprintf("loaded sequencer from apollo config: %+v", value.(string)))
 }
 
-// fireSequencer fires the sequencer config change
+// fireSequencer fires the apollo sequencer config change
 func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 	ctx, err := c.getConfigContext(value.NewValue)
 	if err != nil {
@@ -41,11 +42,11 @@ func (c *Client) fireSequencer(key string, value *storage.ConfigChange) {
 
 // loadSequencerConfig loads the dynamic sequencer apollo configurations
 func loadSequencerConfig(ctx *cli.Context) {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
 
-	loadNodeSequencerConfig(ctx, &unsafeGetApolloConfig().NodeCfg)
-	loadEthSequencerConfig(ctx, &unsafeGetApolloConfig().EthCfg)
+	loadNodeSequencerConfig(ctx, &UnsafeGetApolloConfig().NodeCfg)
+	loadEthSequencerConfig(ctx, &UnsafeGetApolloConfig().EthCfg)
 }
 
 // loadNodeSequencerConfig loads the dynamic sequencer apollo node configurations
@@ -65,26 +66,35 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.SequencerBatchSealTime.Name) {
 		ethCfg.Zk.SequencerBatchSealTime = ctx.Duration(utils.SequencerBatchSealTime.Name)
 	}
-	if ctx.IsSet(utils.SequencerNonEmptyBatchSealTime.Name) {
-		ethCfg.Zk.SequencerNonEmptyBatchSealTime = ctx.Duration(utils.SequencerNonEmptyBatchSealTime.Name)
-	}
 	if ctx.IsSet(utils.SequencerBatchSleepDuration.Name) {
 		ethCfg.Zk.XLayer.SequencerBatchSleepDuration = ctx.Duration(utils.SequencerBatchSleepDuration.Name)
+	}
+	if ctx.IsSet(utils.SequencerHaltOnBatchNumber.Name) {
+		ethCfg.Zk.SequencerHaltOnBatchNumber = ctx.Uint64(utils.SequencerHaltOnBatchNumber.Name)
 	}
 }
 
 // setSequencerFlag sets the dynamic sequencer apollo flag
 func setSequencerFlag() {
-	unsafeGetApolloConfig().Lock()
-	defer unsafeGetApolloConfig().Unlock()
-	unsafeGetApolloConfig().setSequencerFlag()
+	UnsafeGetApolloConfig().Lock()
+	defer UnsafeGetApolloConfig().Unlock()
+	UnsafeGetApolloConfig().setSequencerFlag()
 }
 
 func GetFullBatchSleepDuration(localDuration time.Duration) time.Duration {
 	if IsApolloConfigSequencerEnabled() {
-		unsafeGetApolloConfig().RLock()
-		defer unsafeGetApolloConfig().RUnlock()
-		return unsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
+		UnsafeGetApolloConfig().RLock()
+		defer UnsafeGetApolloConfig().RUnlock()
+		return UnsafeGetApolloConfig().EthCfg.Zk.XLayer.SequencerBatchSleepDuration
 	}
 	return localDuration
+}
+
+func GetSequencerHalt(localHaltBatchNumber uint64) uint64 {
+	if IsApolloConfigSequencerEnabled() {
+		UnsafeGetApolloConfig().RLock()
+		defer UnsafeGetApolloConfig().RUnlock()
+		return UnsafeGetApolloConfig().EthCfg.Zk.SequencerHaltOnBatchNumber
+	}
+	return localHaltBatchNumber
 }

@@ -55,6 +55,14 @@ type DeprecatedTxPoolConfig struct {
 	FreeClaimGasAddrs []string
 	// GasPriceMultiple is the factor claim tx gas price should mul
 	GasPriceMultiple uint64
+	// EnableFreeGasByNonce enable free gas
+	EnableFreeGasByNonce bool
+	// FreeGasExAddrs is the ex address which can be free gas for the transfer receiver
+	FreeGasExAddrs []string
+	// FreeGasCountPerAddr is the count limit of free gas tx per address
+	FreeGasCountPerAddr uint64
+	// FreeGasLimit is the max gas allowed use to do a free gas tx
+	FreeGasLimit uint64
 	// EnableFreeGasList enable the special project of XLayer for free gas
 	EnableFreeGasList bool
 	// FreeGasList is the special project of XLayer
@@ -85,11 +93,15 @@ var DeprecatedDefaultTxPoolConfig = DeprecatedTxPoolConfig{
 	Lifetime: 3 * time.Hour,
 
 	// X Layer config
-	BlockedList:       []string{},
-	EnableWhitelist:   false,
-	WhiteList:         []string{},
-	FreeClaimGasAddrs: []string{},
-	GasPriceMultiple:  2,
+	BlockedList:          []string{},
+	EnableWhitelist:      false,
+	WhiteList:            []string{},
+	FreeClaimGasAddrs:    []string{},
+	GasPriceMultiple:     2,
+	EnableFreeGasByNonce: false,
+	FreeGasExAddrs:       []string{},
+	FreeGasCountPerAddr:  3,
+	FreeGasLimit:         21000,
 }
 
 var DefaultTxPool2Config = func(pool1Cfg DeprecatedTxPoolConfig) txpoolcfg.Config {

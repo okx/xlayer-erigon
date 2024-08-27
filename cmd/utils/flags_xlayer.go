@@ -77,6 +77,23 @@ var (
 		Usage: "GasPriceMultiple is the factor claim tx gas price should mul",
 		Value: "",
 	}
+	TxPoolEnableFreeGasByNonce = cli.BoolFlag{
+		Name:  "txpool.enablefreegasbynonce",
+		Usage: "EnableFreeGasByNonce enable free gas",
+		Value: false,
+	}
+	TxPoolFreeGasExAddrs = cli.StringFlag{
+		Name:  "txpool.freegasexaddress",
+		Usage: "FreeGasExAddress is the ex address which can be free gas for the transfer receiver",
+	}
+	TxPoolFreeGasCountPerAddr = cli.Uint64Flag{
+		Name:  "txpool.freegascountperaddr",
+		Usage: "FreeGasCountPerAddr is the count limit of free gas tx per address",
+	}
+	TxPoolFreeGasLimit = cli.Uint64Flag{
+		Name:  "txpool.freegaslimit",
+		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
+	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
@@ -274,9 +291,31 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolGasPriceMultiple.Name) {
 		cfg.GasPriceMultiple = ctx.Uint64(TxPoolGasPriceMultiple.Name)
 	}
+	if ctx.IsSet(TxPoolEnableFreeGasByNonce.Name) {
+		cfg.EnableFreeGasByNonce = ctx.Bool(TxPoolEnableFreeGasByNonce.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasExAddrs.Name) {
+		addrHexes := SplitAndTrim(ctx.String(TxPoolFreeGasExAddrs.Name))
+		cfg.FreeGasExAddrs = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.FreeGasExAddrs[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolFreeGasCountPerAddr.Name) {
+		cfg.FreeGasCountPerAddr = ctx.Uint64(TxPoolFreeGasCountPerAddr.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
+		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
+	}
 }
 
 // SetApolloGPOXLayer is a public wrapper function to internally call setGPO
 func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 	setGPO(ctx, cfg)
+}
+
+// SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
+func SetApolloPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
+	setTxPool(ctx, cfg)
 }

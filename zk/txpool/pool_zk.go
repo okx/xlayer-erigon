@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"math/big"
 	"strings"
 
@@ -18,7 +19,6 @@ import (
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
-	"github.com/ledgerwatch/log/v3"
 )
 
 /*
@@ -45,6 +45,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 	minFeeCap := uint256.NewInt(0).SetAllOne()
 	minTip := uint64(math.MaxUint64)
 	var toDel []*metaTx // can't delete items while iterate them
+	// For X Layer
 	isfreeGasAddr, claim := p.checkFreeGasAddrXLayer(senderID)
 	byNonce.ascend(senderID, func(mt *metaTx) bool {
 		if mt.Tx.Traced {
@@ -68,6 +69,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 			toDel = append(toDel, mt)
 			return true
 		}
+		// For X Layer
 		// parse claim tx or dex tx, and add the withdraw addr into free gas cache
 		if p.xlayerCfg.EnableFreeGasByNonce {
 			if p.checkFreeGasExAddrXLayer(senderID) {
@@ -322,7 +324,6 @@ func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx
 		if err := p.fromDB(ctx, txPoolDbTx, coreTx); err != nil {
 			return fmt.Errorf("loading txs from DB: %w", err)
 		}
-
 		if p.started.CompareAndSwap(false, true) {
 			log.Info("[txpool] Start if not started")
 		}

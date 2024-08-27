@@ -6,6 +6,7 @@ Outputs = ["stderr"]
 [SequenceSender]
 WaitPeriodSendSequence = "15s"
 LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
+L1BlockTimestampMargin = "5s"
 MaxBatchesForL1 = 100
 L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 SenderAddress = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
@@ -19,8 +20,8 @@ MaxPendingTx = 1
 	[SequenceSender.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
 		WaitTxToBeMined = "1m"
-		ConsolidationL1ConfirmationBlocks = 2
-		FinalizationL1ConfirmationBlocks = 4
+		SafeStatusL1NumberOfBlocks = 1
+		FinalizedStatusL1NumberOfBlocks = 2
 		WaitReceiptToBeGenerated = "8s"
 		PrivateKeys = [
 #			{Path = "/pk/sequencer.keystore", Password = "testonly"},

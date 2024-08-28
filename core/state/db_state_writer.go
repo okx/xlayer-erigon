@@ -20,7 +20,6 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/trie"
 )
 
-
 // This type is now used in GenerateChain to generate blockchains for the tests (core/chain_makers.go)
 // Main mode of operation uses PlainDbStateWriter
 

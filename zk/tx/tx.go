@@ -167,7 +167,7 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 		var rlpFields [][]byte
 		err = rlp.DecodeBytes(txInfo, &rlpFields)
 		if err != nil {
-			log.Debug("error decoding tx Bytes: ", err, ". fullDataTx: ", hex.EncodeToString(fullDataTx), "\n tx: ", hex.EncodeToString(txInfo), "\n Transactions received: ", hex.EncodeToString(txsData))
+			log.Error("error decoding tx Bytes: ", err, ". fullDataTx: ", hex.EncodeToString(fullDataTx), "\n tx: ", hex.EncodeToString(txInfo), "\n Transactions received: ", hex.EncodeToString(txsData))
 			return result, ErrInvalidData
 		}
 

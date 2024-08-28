@@ -1,11 +1,11 @@
 package txpool
 
 import (
-	"github.com/gateway-fm/cdk-erigon-lib/types"
 	"math/big"
 	"strings"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/types"
 	ecommon "github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zkevm/hex"

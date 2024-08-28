@@ -139,6 +139,13 @@ Depending on the RPC provider you are using, you may wish to alter `zkevm.rpc-ra
 ***
 
 ## Running CDK-Erigon
+``` shell
+# build poseidon goldilocks lib
+curl https://sh.rustup.rs -sSf | sh -s -- -y
+rustup install nightly
+cd smt/pkg/hash/poseidon_goldilocks;
+cargo +nightly build --release && cp ./target/release/libposeidon_goldilocks.* . && cargo clean
+```
 - Build using  `make cdk-erigon`
 - Set up your config file (copy one of the examples found in the repository root directory, and edit as required)
 - run `./build/bin/cdk-erigon --config="./hermezconfig-{network}.yaml"` (complete the name of your config file as required)

@@ -97,7 +97,6 @@ Loop:
 						return err
 					}
 				case contracts.AddNewRollupTypeTopic:
-					log.Info(fmt.Sprintf("Received AddNewRollupTypeTopic"))
 					rollupType := l.Topics[1].Big().Uint64()
 					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
 					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
@@ -105,7 +104,6 @@ Loop:
 						return err
 					}
 				case contracts.CreateNewRollupTopic:
-					log.Info(fmt.Sprintf("Received CreateNewRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
 						continue
@@ -123,7 +121,6 @@ Loop:
 						return err
 					}
 				case contracts.UpdateRollupTopic:
-					log.Info(fmt.Sprintf("Received UpdateRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
 						continue
@@ -150,7 +147,6 @@ Loop:
 					}
 				case contracts.AddExistingRollupTopic:
 					// For X Layer testnet
-					log.Info(fmt.Sprintf("Received AddExistingRollupTopic"))
 					rollupId := l.Topics[1].Big().Uint64()
 					if rollupId != cfg.zkCfg.L1RollupId {
 						log.Error(fmt.Sprintf("Received AddExistingRollupTopic for rollupId %v, not the one we are interested in", rollupId))
@@ -166,8 +162,6 @@ Loop:
 					}
 				case contracts.UpdateEtrogSequenceTopic:
 					// For X Layer testnet
-					all := hex.EncodeToString(l.Data)
-					log.Info(fmt.Sprintf("Received UpdateEtrogSequenceTopic:%v", all))
 					numBatch := new(big.Int).SetBytes(l.Data[0:32]).Uint64()
 					lastGlobalExitRoot := l.Data[64:96]
 					sequencer := l.Data[96:128]

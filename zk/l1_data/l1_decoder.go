@@ -16,7 +16,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/da"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
-	"github.com/ledgerwatch/log/v3"
 )
 
 type RollupBaseEtrogBatchData struct {
@@ -52,7 +51,6 @@ func BuildSequencesForValidium(data []byte, daUrl string) ([]RollupBaseEtrogBatc
 		hash := common.BytesToHash(validiumSequence.TransactionsHash[:])
 		data, err := da.GetOffChainData(context.Background(), daUrl, hash)
 		if err != nil {
-			log.Error(fmt.Sprintf("GetOffChainData, hash:%v", hash.String()))
 			return nil, err
 		}
 
@@ -152,7 +150,6 @@ func DecodeL1BatchData(txData []byte, daUrl string) ([][]byte, common.Address, u
 	}
 
 	if err != nil {
-		log.Info(fmt.Sprintf("DecodeL1BatchData error:%v", err))
 		return nil, coinbase, 0, err
 	}
 
@@ -182,7 +179,6 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 	}
 
 	if len(batchData) == 0 {
-		log.Error(fmt.Sprintf("BreakDownL1DataByBatch is 0, form GetL1BatchData:%v", batchNo))
 		// end of the line for batch recovery so return empty
 		return decoded, nil
 	}
@@ -200,7 +196,6 @@ func BreakDownL1DataByBatch(batchNo uint64, forkId uint64, reader *hermez_db.Her
 
 	// no data means no more work to do - end of the line
 	if len(decoded.DecodedData) == 0 {
-		log.Info("No data in batch", "batch", batchNo)
 		return decoded, nil
 	}
 

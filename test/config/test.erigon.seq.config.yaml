@@ -8,6 +8,7 @@ zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
 zkevm.l1-highest-block-type: latest
+zkevm.l1-cache-enabled: false
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 zkevm.address-zkevm: "0xeb173087729c88a47568AF87b17C653039377BA6"

@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"time"
 
 	"github.com/RoaringBitmap/roaring/roaring64"
+	"github.com/holiman/uint256"
 	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/bitmapdb"
 	"github.com/gateway-fm/cdk-erigon-lib/kv/temporal/historyv2"
-	"github.com/holiman/uint256"
 
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/dbutils"
@@ -19,8 +18,8 @@ import (
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/ethdb"
 	"github.com/ledgerwatch/erigon/turbo/trie"
-	"github.com/ledgerwatch/log/v3"
 )
+
 
 // This type is now used in GenerateChain to generate blockchains for the tests (core/chain_makers.go)
 // Main mode of operation uses PlainDbStateWriter
@@ -182,7 +181,6 @@ func (dsw *DbStateWriter) WriteHistory() error {
 
 func writeIndex(blocknum uint64, changes *historyv2.ChangeSet, bucket string, changeDb kv.RwTx) error {
 	buf := bytes.NewBuffer(nil)
-	start := time.Now()
 	for _, change := range changes.Changes {
 		k := dbutils.CompositeKeyWithoutIncarnation(change.Key)
 
@@ -201,7 +199,6 @@ func writeIndex(blocknum uint64, changes *historyv2.ChangeSet, bucket string, ch
 			return err
 		}
 	}
-	log.Info(fmt.Sprintf("xlayer, writeIndex, change set:%v, all past %v ms", len(changes.Changes), time.Since(start).Milliseconds()))
 
 	return nil
 }

@@ -196,7 +196,7 @@ func finaliseBlock(
 
 	finalHeader := finalBlock.HeaderNoCopy()
 	finalHeader.Root = newRoot
-	finalHeader.Coinbase = batchState.getCoinbase(batchContext.cfg)
+	finalHeader.Coinbase = batchState.getCoinbase(batchContext.cfg) // For X Layer testnet
 	finalHeader.GasLimit = utils.GetBlockGasLimitForFork(batchState.forkId)
 	finalHeader.ReceiptHash = types.DeriveSha(builtBlockElements.receipts)
 	finalHeader.Bloom = types.CreateBloom(builtBlockElements.receipts)

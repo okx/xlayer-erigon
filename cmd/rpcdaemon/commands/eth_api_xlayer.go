@@ -7,6 +7,7 @@ import (
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/ledgerwatch/erigon/common/math"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 )
 
 func (apii *APIImpl) GetGPCache() *GasPriceCache {
@@ -91,6 +92,26 @@ func (c *RawGPCache) GetMinGPMoreRecent() (*big.Int, error) {
 	}
 
 	return new(big.Int).Set(minRGP), nil
+}
+
+func (c *GasPriceCache) GetLatestRawGP() *big.Int {
+	rgp, err := c.rawGPCache.GetMin()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
+	return rgp
+}
+
+func (c *GasPriceCache) GetMinRawGPMoreRecent() *big.Int {
+	rgp, err := c.rawGPCache.GetMinGPMoreRecent()
+	if err != nil {
+		return gaspricecfg.DefaultXLayerPrice
+	}
+	return rgp
+}
+
+func (c *GasPriceCache) SetLatestRawGP(rgp *big.Int) {
+	c.rawGPCache.Add(rgp)
 }
 
 var GasPricerOnce sync.Once

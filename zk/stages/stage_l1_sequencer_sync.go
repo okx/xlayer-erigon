@@ -137,7 +137,7 @@ Loop:
 					latestVerifiedBytes := l.Data[32:64]
 					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
 
-					// For X Layer testnet fork 9, we need to set the latestVerified to the upgrade batch
+					// For X Layer testnet, we need to set the latestVerified to the upgrade batch
 					if fork == uint64(constants.ForkID9Elderberry2) && cfg.zkCfg.XLayer.L2Fork9UpgradeBatch != 0 {
 						latestVerified = cfg.zkCfg.XLayer.L2Fork9UpgradeBatch
 						log.Warn(fmt.Sprintf("Received UpdateRollupTopic for fork 9, setting latestVerified to %v", latestVerified))

@@ -3,7 +3,6 @@ package da
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -15,14 +14,10 @@ import (
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 )
 
-const maxAttempts = 60
 const retryDelay = 1000 * time.Millisecond
 
 func GetOffChainData(ctx context.Context, url string, hash common.Hash) ([]byte, error) {
-	attemp := 0
-
-	for attemp < maxAttempts {
-		// X Layer for timeout
+	for {
 		http.DefaultClient.Timeout = 30 * time.Second
 		transport := &http.Transport{
 			DisableKeepAlives: false,
@@ -31,29 +26,23 @@ func GetOffChainData(ctx context.Context, url string, hash common.Hash) ([]byte,
 		response, err := client.JSONRPCCall(url, "sync_getOffChainData", hash)
 
 		if httpErr, ok := err.(*client.HTTPError); ok && httpErr.StatusCode == http.StatusTooManyRequests {
-			log.Error(fmt.Sprintf("GetOffChainData StatusTooManyRequests， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
+			log.Error(fmt.Sprintf("GetOffChainData StatusTooManyRequests， hash:%v, error:%v", hash.String(), err))
 			time.Sleep(retryDelay)
-			attemp += 1
-			continue
-		}
-
-		if err == io.EOF {
-			log.Error(fmt.Sprintf("GetOffChainData io.EOF， hash:%v, attemp:%v, error:%v", hash.String(), attemp, err))
-			time.Sleep(retryDelay)
-			attemp += 1
 			continue
 		}
 
 		if err != nil {
-			return nil, err
+			log.Error(fmt.Sprintf("GetOffChainData hash:%v, error:%v", hash.String(), err))
+			time.Sleep(retryDelay)
+			continue
 		}
 
 		if response.Error != nil {
-			return nil, fmt.Errorf("%v %v", response.Error.Code, response.Error.Message)
+			log.Error(fmt.Sprintf("GetOffChainData hash:%v, error:%v", hash.String(), response.Error))
+			time.Sleep(retryDelay)
+			continue
 		}
 
 		return hexutil.Decode(strings.Trim(string(response.Result), "\""))
 	}
-
-	return nil, fmt.Errorf("max attempts of data fetching reached, attempts: %v, DA url: %s", maxAttempts, url)
 }

@@ -18,6 +18,8 @@ import (
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
+var globalRecoverCompleted bool
+
 func SpawnSequencingStage(
 	s *stagedsync.StageState,
 	u stagedsync.Unwinder,
@@ -35,7 +37,9 @@ func SpawnSequencingStage(
 		return err
 	}
 	defer sdb.tx.Rollback()
-
+	loopCount := 0
+RECOVER_BATCH_LOOP:
+	loopCount++
 	executionAt, err := s.ExecutionAt(sdb.tx)
 	if err != nil {
 		return err
@@ -108,6 +112,7 @@ func SpawnSequencingStage(
 		if cfg.zk.L1SyncStopBatch > 0 && batchState.batchNumber > cfg.zk.L1SyncStopBatch {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", batchState.batchNumber)
 			time.Sleep(1 * time.Second)
+			globalRecoverCompleted = true
 			return nil
 		}
 
@@ -121,6 +126,7 @@ func SpawnSequencingStage(
 		if !batchState.batchL1RecoveryData.hasAnyDecodedBlocks() {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", batchState.batchNumber)
 			time.Sleep(1 * time.Second)
+			globalRecoverCompleted = true
 			return nil
 		}
 
@@ -363,14 +369,6 @@ func SpawnSequencingStage(
 		}
 	}
 
-	if batchState.isL1Recovery() {
-		// lets commit everything after updateStreamAndCheckRollback no matter of its result
-		if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
-			return errCommitAndStart
-		}
-		defer sdb.tx.Rollback()
-	}
-
 	cfg.legacyVerifier.Wait()
 	needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u)
 	if err != nil || needsUnwind {
@@ -383,6 +381,19 @@ func SpawnSequencingStage(
 
 	// For X Layer
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
+
+	if batchState.isL1Recovery() && loopCount%1000 != 0 && !globalRecoverCompleted {
+		goto RECOVER_BATCH_LOOP
+	}
+
+	log.Info(fmt.Sprintf("[%s] Finished batch %d", logPrefix, batchState.batchNumber))
+	if batchState.isL1Recovery() {
+		// lets commit everything after updateStreamAndCheckRollback no matter of its result
+		if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
+			return errCommitAndStart
+		}
+		defer sdb.tx.Rollback()
+	}
 
 	return sdb.tx.Commit()
 }

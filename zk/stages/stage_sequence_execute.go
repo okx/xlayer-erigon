@@ -35,6 +35,7 @@ func SpawnSequencingStage(
 		return err
 	}
 	defer sdb.tx.Rollback()
+	
 	executionAt, err := s.ExecutionAt(sdb.tx)
 	if err != nil {
 		return err

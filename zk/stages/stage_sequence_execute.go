@@ -380,7 +380,7 @@ RECOVER_BATCH_LOOP:
 	// For X Layer
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
-	if batchState.isL1Recovery() && batchState.batchNumber%100 != 0 && !globalRecoverCompleted {
+	if batchState.isL1Recovery() && batchState.batchNumber%10 != 0 && !globalRecoverCompleted {
 		goto RECOVER_BATCH_LOOP
 	}
 

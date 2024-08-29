@@ -18,8 +18,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/utils"
 )
 
-var globalRecoverCompleted bool
-
 func SpawnSequencingStage(
 	s *stagedsync.StageState,
 	u stagedsync.Unwinder,
@@ -32,12 +30,11 @@ func SpawnSequencingStage(
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
 
-	sdb, err := newStageDb(ctx, cfg.db, true)
+	sdb, err := newStageDb(ctx, cfg.db)
 	if err != nil {
 		return err
 	}
 	defer sdb.tx.Rollback()
-RECOVER_BATCH_LOOP:
 	executionAt, err := s.ExecutionAt(sdb.tx)
 	if err != nil {
 		return err
@@ -110,7 +107,6 @@ RECOVER_BATCH_LOOP:
 		if cfg.zk.L1SyncStopBatch > 0 && batchState.batchNumber > cfg.zk.L1SyncStopBatch {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", batchState.batchNumber)
 			time.Sleep(1 * time.Second)
-			globalRecoverCompleted = true
 			return nil
 		}
 
@@ -124,7 +120,6 @@ RECOVER_BATCH_LOOP:
 		if !batchState.batchL1RecoveryData.hasAnyDecodedBlocks() {
 			log.Info(fmt.Sprintf("[%s] L1 recovery has completed!", logPrefix), "batch", batchState.batchNumber)
 			time.Sleep(1 * time.Second)
-			globalRecoverCompleted = true
 			return nil
 		}
 
@@ -342,7 +337,7 @@ RECOVER_BATCH_LOOP:
 
 		if !batchState.isL1Recovery() {
 			// commit block data here so it is accessible in other threads
-			if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
+			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
@@ -355,7 +350,7 @@ RECOVER_BATCH_LOOP:
 
 		if !batchState.isL1Recovery() {
 			// lets commit everything after updateStreamAndCheckRollback no matter of its result
-			if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
+			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
@@ -380,14 +375,10 @@ RECOVER_BATCH_LOOP:
 	// For X Layer
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
-	if batchState.isL1Recovery() && batchState.batchNumber%10 != 0 && !globalRecoverCompleted {
-		goto RECOVER_BATCH_LOOP
-	}
-
 	log.Info(fmt.Sprintf("[%s] Finished batch %d", logPrefix, batchState.batchNumber))
 	if batchState.isL1Recovery() {
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result
-		if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
+		if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 			return errCommitAndStart
 		}
 		defer sdb.tx.Rollback()

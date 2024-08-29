@@ -210,7 +210,7 @@ func doTxpool(ctx context.Context) error {
 	ethCfg.DeprecatedTxPool.FreeGasLimit = freeGasLimit
 	ethCfg.DeprecatedTxPool.EnableFreeGasList = enableFreeGasList
 	if len(freeGasList) > 0 {
-		if err := jsoniter.UnmarshalFromString(freeGasList, ethCfg.DeprecatedTxPool.FreeGasList); err != nil {
+		if err := jsoniter.UnmarshalFromString(freeGasList, &ethCfg.DeprecatedTxPool.FreeGasList); err != nil {
 			panic("unable to unmarshal freeGasList:" + err.Error())
 		}
 	}

@@ -323,7 +323,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	if ctx.IsSet(TxPoolFreeGasList.Name) {
 		freeGasListStr := ctx.String(TxPoolFreeGasList.Name)
 		if len(freeGasListStr) > 0 {
-			if err := jsoniter.UnmarshalFromString(freeGasListStr, cfg.FreeGasList); err != nil {
+			if err := jsoniter.UnmarshalFromString(freeGasListStr, &cfg.FreeGasList); err != nil {
 				panic("unable to unmarshal freeGasList:" + err.Error())
 			}
 		}

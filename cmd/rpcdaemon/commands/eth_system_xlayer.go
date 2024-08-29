@@ -164,7 +164,7 @@ func (api *APIImpl) updateDynamicGP(ctx context.Context) {
 	lasthash, _ := api.gasCache.GetLatest()
 	api.gasCache.SetLatest(lasthash, gasResult)
 
-	log.Info(fmt.Sprintf("Updated dynamic gas price: %s", gasResult.String()))
+	//log.Info(fmt.Sprintf("Updated dynamic gas price: %s", gasResult.String()))
 }
 
 func getAvgPrice(low *big.Int, high *big.Int) *big.Int {

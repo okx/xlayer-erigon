@@ -37,9 +37,7 @@ func SpawnSequencingStage(
 		return err
 	}
 	defer sdb.tx.Rollback()
-	loopCount := 0
 RECOVER_BATCH_LOOP:
-	loopCount++
 	executionAt, err := s.ExecutionAt(sdb.tx)
 	if err != nil {
 		return err
@@ -382,7 +380,7 @@ RECOVER_BATCH_LOOP:
 	// For X Layer
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
-	if batchState.isL1Recovery() && loopCount%1000 != 0 && !globalRecoverCompleted {
+	if batchState.isL1Recovery() && batchState.batchNumber%100 != 0 && !globalRecoverCompleted {
 		goto RECOVER_BATCH_LOOP
 	}
 

@@ -30,7 +30,7 @@ func SpawnSequencingStage(
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
 
-	sdb, err := newStageDb(ctx, cfg.db)
+	sdb, err := newStageDb(ctx, cfg.db, true)
 	if err != nil {
 		return err
 	}
@@ -338,7 +338,7 @@ func SpawnSequencingStage(
 
 		if !batchState.isL1Recovery() {
 			// commit block data here so it is accessible in other threads
-			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
+			if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
@@ -351,7 +351,7 @@ func SpawnSequencingStage(
 
 		if !batchState.isL1Recovery() {
 			// lets commit everything after updateStreamAndCheckRollback no matter of its result
-			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
+			if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
@@ -365,7 +365,7 @@ func SpawnSequencingStage(
 
 	if batchState.isL1Recovery() {
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result
-		if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
+		if errCommitAndStart := sdb.CommitAndStart(ctx); errCommitAndStart != nil {
 			return errCommitAndStart
 		}
 		defer sdb.tx.Rollback()

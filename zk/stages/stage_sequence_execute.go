@@ -560,7 +560,6 @@ func SpawnSequencingStage(
 		seqlog.GetBlockLogger().SetTxCount(BlockTxCount)
 		seqlog.GetBatchLogger().AccmuTxCount(BlockTxCount)
 
-		commit2DBStart := time.Now()
 		if !hasExecutorForThisBatch {
 			// save counters midbatch
 			// here they shouldn't add more to counters other than what they already have
@@ -582,10 +581,12 @@ func SpawnSequencingStage(
 				return err
 			}
 
+			commit2DBStart := time.Now()
 			log.Info(fmt.Sprintf("[%s] Commit Started", logPrefix))
 			if err = tx.Commit(); err != nil {
 				return err
 			}
+			seqlog.GetBlockLogger().AppendStepLog(seqlog.Save2DB, time.Since(commit2DBStart))
 			if tx, err = cfg.db.BeginRw(ctx); err != nil {
 				return err
 			}
@@ -595,7 +596,7 @@ func SpawnSequencingStage(
 
 			lastBatch = thisBatch
 		}
-		seqlog.GetBlockLogger().AppendStepLog(seqlog.Save2DB, time.Since(commit2DBStart))
+
 		blockTime := time.Since(blockStart)
 		seqlog.GetBlockLogger().SetTotalDuration(blockTime)
 		seqlog.GetBatchLogger().AppendBlockLog(blockNumber, blockTime)

@@ -18,9 +18,11 @@ type TransactionCounter struct {
 	smtLevels          int
 	forkId             uint16
 	l2DataCache        []byte
+
+	isOkPayTx bool // For X Layer
 }
 
-func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkId uint16, mcpReduction float64, shouldCountersBeUnlimited bool) *TransactionCounter {
+func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkId uint16, mcpReduction float64, shouldCountersBeUnlimited bool, isOkPayTx bool) *TransactionCounter {
 	totalLevel := calculateSmtLevels(smtMaxLevel, 32, mcpReduction)
 
 	var tc *TransactionCounter
@@ -33,6 +35,7 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkI
 			processingCounters: NewUnlimitedCounterCollector(),
 			smtLevels:          1, // max depth of the tree anyways
 			forkId:             forkId,
+			isOkPayTx:          isOkPayTx,
 		}
 	} else {
 		tc = &TransactionCounter{
@@ -42,6 +45,7 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkI
 			processingCounters: NewCounterCollector(totalLevel, forkId),
 			smtLevels:          totalLevel,
 			forkId:             forkId,
+			isOkPayTx:          isOkPayTx,
 		}
 	}
 	tc.executionCounters.SetTransaction(transaction)

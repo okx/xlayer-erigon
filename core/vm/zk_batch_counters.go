@@ -26,6 +26,11 @@ type BatchCounterCollector struct {
 	rlpCombinedCountersCache        Counters
 	executionCombinedCountersCache  Counters
 	processingCombinedCountersCache Counters
+
+	// For X Layer
+	okPayRlpCombinedCounters        Counters
+	okPayExecutionCombinedCounters  Counters
+	okPayProcessingCombinedCounters Counters
 }
 
 func NewBatchCounterCollector(smtMaxLevel int, forkId uint16, mcpReduction float64, unlimitedCounters bool, addonCounters *Counters) *BatchCounterCollector {
@@ -44,6 +49,10 @@ func NewBatchCounterCollector(smtMaxLevel int, forkId uint16, mcpReduction float
 	bcc.rlpCombinedCounters = bcc.NewCounters()
 	bcc.executionCombinedCounters = bcc.NewCounters()
 	bcc.processingCombinedCounters = bcc.NewCounters()
+
+	bcc.okPayRlpCombinedCounters = bcc.NewCounters()
+	bcc.okPayExecutionCombinedCounters = bcc.NewCounters()
+	bcc.okPayProcessingCombinedCounters = bcc.NewCounters()
 
 	return &bcc
 }
@@ -73,6 +82,10 @@ func (bcc *BatchCounterCollector) Clone() *BatchCounterCollector {
 		rlpCombinedCounters:        bcc.rlpCombinedCounters.Clone(),
 		executionCombinedCounters:  bcc.executionCombinedCounters.Clone(),
 		processingCombinedCounters: bcc.processingCombinedCounters.Clone(),
+
+		okPayRlpCombinedCounters:        bcc.okPayRlpCombinedCounters.Clone(),
+		okPayExecutionCombinedCounters:  bcc.okPayExecutionCombinedCounters.Clone(),
+		okPayProcessingCombinedCounters: bcc.okPayProcessingCombinedCounters.Clone(),
 	}
 }
 
@@ -148,6 +161,35 @@ func (bcc *BatchCounterCollector) CheckForOverflow(verifyMerkleProof bool) (bool
 	for _, v := range combined {
 		if v.remaining < 0 {
 			log.Info("[VCOUNTER] Counter overflow detected", "counter", v.name, "remaining", v.remaining, "used", v.used)
+			overflow = true
+		}
+	}
+
+	// if we have an overflow we want to log the counters for debugging purposes
+	if overflow {
+		logText := "[VCOUNTER] Counters stats"
+		for _, v := range combined {
+			logText += fmt.Sprintf(" %s: initial: %v used: %v (remaining: %v)", v.name, v.initialAmount, v.used, v.remaining)
+		}
+		log.Info(logText)
+	}
+
+	return overflow, nil
+}
+
+// CheckOkPayForOverflow returns true in the case that any counter has less than 0 remaining
+func (bcc *BatchCounterCollector) CheckOkPayForOverflow() (bool, error) {
+	combined := bcc.NewCounters()
+	for k, _ := range combined {
+		val := bcc.rlpCombinedCounters[k].used + bcc.executionCombinedCounters[k].used + bcc.processingCombinedCounters[k].used
+		combined[k].used += val
+		combined[k].remaining -= val
+	}
+
+	overflow := false
+	for _, v := range combined {
+		if v.initialAmount*30/100 < v.used {
+			log.Info("[VCOUNTER] OkPay Counter overflow detected", "counter", v.name, "remaining", v.remaining, "used", v.used)
 			overflow = true
 		}
 	}
@@ -274,15 +316,24 @@ func (bcc *BatchCounterCollector) CombineCollectorsNoChanges() Counters {
 func (bcc *BatchCounterCollector) UpdateRlpCountersCache(txCounters *TransactionCounter) {
 	for k, v := range txCounters.rlpCounters.counters {
 		bcc.rlpCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayRlpCombinedCounters[k].used += v.used
+		}
 	}
 }
 
 func (bcc *BatchCounterCollector) UpdateExecutionAndProcessingCountersCache(txCounters *TransactionCounter) {
 	for k, v := range txCounters.executionCounters.counters {
 		bcc.executionCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayExecutionCombinedCounters[k].used += v.used
+		}
 	}
 
 	for k, v := range txCounters.processingCounters.counters {
 		bcc.processingCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayProcessingCombinedCounters[k].used += v.used
+		}
 	}
 }

@@ -91,7 +91,7 @@ func (p *TxPool) isFreeGasXLayer(senderID uint64) bool {
 	return free
 }
 
-func (p *TxPool) isOkPayAddr(addr common.Address) bool {
+func (p *TxPool) IsOkPayAddr(addr common.Address) bool {
 	for _, e := range p.xlayerCfg.OkPayAccountList {
 		if common.HexToAddress(e) == addr {
 			return true
@@ -138,7 +138,7 @@ func (p *TxPool) bestOkPay(n uint16, txs *types.TxsRlp, tx kv.Tx, isLondon, isSh
 			continue
 		}
 
-		if !p.isOkPayAddr(sender) {
+		if !p.IsOkPayAddr(sender) {
 			continue
 		}
 

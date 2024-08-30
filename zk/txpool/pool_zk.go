@@ -201,7 +201,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 
 // zk: the implementation of best here is changed only to not take into account block gas limits as we don't care about
 // these in zk.  Instead we do a quick check on the transaction maximum gas in zk
-func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
+func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte], okPayPriority bool) (bool, int, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -225,15 +225,17 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 
 	p.pending.EnforceBestInvariants()
 
-	// X Layer
-	okPayTxAvailableGas := p.xlayerCfg.OkPayGasLimitPerBlock
-	okPayTxGasRemain, count, okPayTxRemove, err := p.bestOkPay(n, txs, tx, isLondon, isShanghai, okPayTxAvailableGas, toSkip)
-	if err != nil {
-		return false, count, err
-	}
-	availableGas = availableGas - okPayTxAvailableGas + okPayTxGasRemain
-	if len(okPayTxRemove) > 0 {
-		toRemove = append(toRemove, okPayTxRemove...)
+	// For X Layer
+	if okPayPriority {
+		okPayTxAvailableGas := p.xlayerCfg.OkPayGasLimitPerBlock
+		okPayTxGasRemain, count, okPayTxRemove, err := p.bestOkPay(n, txs, tx, isLondon, isShanghai, okPayTxAvailableGas, toSkip)
+		if err != nil {
+			return false, count, err
+		}
+		availableGas = availableGas - okPayTxAvailableGas + okPayTxGasRemain
+		if len(okPayTxRemove) > 0 {
+			toRemove = append(toRemove, okPayTxRemove...)
+		}
 	}
 
 	for i := 0; count < int(n) && i < len(best.ms); i++ {

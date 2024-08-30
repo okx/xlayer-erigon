@@ -194,6 +194,8 @@ func SpawnSequencingStage(
 			log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
 		}
 
+		okPayPriority := true // For X Layer
+
 	LOOP_TRANSACTIONS:
 		for {
 			select {
@@ -217,7 +219,7 @@ func SpawnSequencingStage(
 						return err
 					}
 				} else if !batchState.isL1Recovery() {
-					batchState.blockState.transactionsForInclusion, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
+					batchState.blockState.transactionsForInclusion, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions, okPayPriority)
 					if err != nil {
 						return err
 					}
@@ -235,7 +237,7 @@ func SpawnSequencingStage(
 
 					// The copying of this structure is intentional
 					backupDataSizeChecker := *blockDataSizeChecker
-					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1InfoIndex, &backupDataSizeChecker)
+					receipt, execResult, anyOverflow, okPayOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1InfoIndex, &backupDataSizeChecker, okPayPriority)
 					if err != nil {
 						if batchState.isLimboRecovery() {
 							panic("limbo transaction has already been executed once so they must not fail while re-executing")
@@ -282,6 +284,11 @@ func SpawnSequencingStage(
 							break LOOP_TRANSACTIONS
 						}
 
+					}
+
+					if okPayOverflow {
+						okPayPriority = false
+						continue
 					}
 
 					if err == nil {

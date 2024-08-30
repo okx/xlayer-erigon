@@ -699,13 +699,13 @@ func (p *TxPool) ResetYieldedStatus() {
 	}
 }
 
-func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
-	return p.best(n, txs, tx, onTopOf, availableGas, toSkip)
+func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte], okPayPriority bool) (bool, int, error) {
+	return p.best(n, txs, tx, onTopOf, availableGas, toSkip, okPayPriority)
 }
 
 func (p *TxPool) PeekBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64) (bool, error) {
 	set := mapset.NewThreadUnsafeSet[[32]byte]()
-	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, set)
+	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, set, false)
 	return onTime, err
 }
 

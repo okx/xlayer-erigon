@@ -362,7 +362,7 @@ var (
 	}
 	L2RpcLimitFlag = cli.Int64Flag{ // For X Layer
 		Name:  "zkevm.l2-sequencer-rpc-limit",
-		Usage: "Upstream L2 node RPC endpoint",
+		Usage: "The limit of call L2 seq RPC endpoint",
 		Value: 0,
 	}
 	L2DataStreamerUrlFlag = cli.StringFlag{

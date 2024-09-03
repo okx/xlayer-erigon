@@ -144,9 +144,23 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 		if shouldIncrementBecauseOfAFlag {
 			log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 		}
-		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-			return trie.EmptyRoot, err
+		// for XLayer
+		if cfg.zk.XLayer.DDSType == 1 {
+			// producer
+			if root, err = zkIncrementIntermediateHashesDDSProducer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+				return trie.EmptyRoot, err
+			}
+		} else if cfg.zk.XLayer.DDSType == 2 {
+			// consumer
+			if root, err = zkIncrementIntermediateHashesDDSConsumer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+				return trie.EmptyRoot, err
+			}
+		} else {
+			if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+				return trie.EmptyRoot, err
+			}
 		}
+
 	} else {
 		if root, err = regenerateIntermediateHashes(ctx, logPrefix, tx, eridb, smt, to); err != nil {
 			return trie.EmptyRoot, err
@@ -345,6 +359,7 @@ func regenerateIntermediateHashes(ctx context.Context, logPrefix string, db kv.R
 }
 
 func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *stagedsync.StageState, db kv.RwTx, eridb *db2.EriDb, dbSmt *smt.SMT, from, to uint64) (common.Hash, error) {
+
 	log.Info(fmt.Sprintf("[%s] Increment trie hashes started", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 	defer log.Info(fmt.Sprintf("[%s] Increment ended", logPrefix))
 

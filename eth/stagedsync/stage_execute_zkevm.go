@@ -461,8 +461,11 @@ func executeBlockZk(
 				panic(err)
 			} else {
 				dds = true
+				rdb.Set(context.Background(), "useDDS", true, 0)
 				core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)
 			}
+		} else {
+			rdb.Set(context.Background(), "useDDS", false, 0)
 		}
 	}
 	if !dds {

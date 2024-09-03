@@ -338,7 +338,7 @@ services:
   xlayer-signer:
     container_name: xlayer-signer
     restart: unless-stopped
-    image: giskook/xlayer-signer:0001
+    image: zjg555543/xlayer-signer:v0.4.1
     ports:
       - 7001:7001
     volumes:

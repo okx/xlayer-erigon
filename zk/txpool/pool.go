@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
 
@@ -327,9 +328,10 @@ type TxPool struct {
 	aclDB                   kv.RwDB
 
 	// For X Layer
-	xlayerCfg XLayerConfig
-	apolloCfg ApolloConfig
-	gpCache   GPCache // GPCache will only work in sequencer node, without rpc node
+	xlayerCfg    XLayerConfig
+	apolloCfg    ApolloConfig
+	gpCache      GPCache // GPCache will only work in sequencer node, without rpc node
+	freeGasAddrs map[string]bool
 
 	// we cannot be in a flushing state whilst getting transactions from the pool, so we have this mutex which is
 	// exposed publicly so anything wanting to get "best" transactions can ensure a flush isn't happening and
@@ -393,12 +395,17 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		limbo:                   newLimbo(),
 		// X Layer config
 		xlayerCfg: XLayerConfig{
-			EnableWhitelist:   ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:         ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:       ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddrs: ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
-			GasPriceMultiple:  ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			EnableWhitelist:      ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:            ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:          ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs:    ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:     ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
+			FreeGasExAddrs:       ethCfg.DeprecatedTxPool.FreeGasExAddrs,
+			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
+			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
 		},
+		freeGasAddrs: map[string]bool{},
 	}, nil
 }
 
@@ -734,8 +741,11 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 
 	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
 	// X Layer
-	rgp := p.gpCache.GetLatestRawGP()
-	if !p.isFreeGas(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
+	rgp := gaspricecfg.DefaultXLayerPrice
+	if p.gpCache != nil {
+		rgp = p.gpCache.GetLatestRawGP()
+	}
+	if !p.isFreeGasXLayer(txn.SenderID) && uint256.NewInt(rgp.Uint64()).Cmp(&txn.FeeCap) == 1 {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx underpriced idHash=%x local=%t, feeCap=%d, cfg.MinFeeCap=%d", txn.IDHash, isLocal, txn.FeeCap, p.cfg.MinFeeCap))
 		}

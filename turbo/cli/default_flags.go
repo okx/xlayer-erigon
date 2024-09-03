@@ -1,10 +1,9 @@
 package cli
 
 import (
-	"github.com/urfave/cli/v2"
-
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/turbo/logging"
+	"github.com/urfave/cli/v2"
 )
 
 // DefaultFlags contains all flags that are used and supported by Erigon binary.
@@ -175,6 +174,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.L1SyncStopBatch,
 	&utils.L1ChainIdFlag,
 	&utils.L1RpcUrlFlag,
+	&utils.L1CacheEnabledFlag,
+	&utils.L1CachePortFlag,
 	&utils.AddressSequencerFlag,
 	&utils.AddressAdminFlag,
 	&utils.AddressRollupFlag,
@@ -187,18 +188,20 @@ var DefaultFlags = []cli.Flag{
 	&utils.L1MaticContractAddressFlag,
 	&utils.L1FirstBlockFlag,
 	&utils.RpcRateLimitsFlag,
+	&utils.RpcGetBatchWitnessConcurrencyLimitFlag,
 	&utils.DatastreamVersionFlag,
 	&utils.RebuildTreeAfterFlag,
 	&utils.IncrementTreeAlways,
 	&utils.SmtRegenerateInMemory,
 	&utils.SequencerBlockSealTime,
 	&utils.SequencerBatchSealTime,
-	&utils.SequencerNonEmptyBatchSealTime,
+	&utils.SequencerBatchVerificationTimeout,
 	&utils.SequencerHaltOnBatchNumber,
 	&utils.ExecutorUrls,
 	&utils.ExecutorStrictMode,
 	&utils.ExecutorRequestTimeout,
 	&utils.DatastreamNewBlockTimeout,
+	&utils.WitnessMemdbSize,
 	&utils.ExecutorMaxConcurrentRequests,
 	&utils.Limbo,
 	&utils.AllowFreeTransactions,
@@ -213,6 +216,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.DataStreamHost,
 	&utils.DataStreamPort,
 	&utils.DataStreamWriteTimeout,
+	&utils.DataStreamInactivityTimeout,
+	&utils.DataStreamInactivityCheckInterval,
 	&utils.WitnessFullFlag,
 	&utils.SyncLimit,
 	&utils.SupportGasless,
@@ -225,6 +230,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.PoolManagerUrl,
 	&utils.DisableVirtualCounters,
 	&utils.DAUrl,
+	&utils.VirtualCountersSmtReduction,
 
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
@@ -261,4 +267,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.XLMetricsEnabledFlag,
 	&utils.XLMetricsHostFlag,
 	&utils.XLMetricsPortFlag,
+	&utils.TxPoolEnableFreeGasByNonce,
+	&utils.TxPoolFreeGasCountPerAddr,
+	&utils.TxPoolFreeGasExAddrs,
+	&utils.TxPoolFreeGasLimit,
 }

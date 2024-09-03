@@ -10,7 +10,7 @@ zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
 zkevm.address-zkevm: "0xeb173087729c88a47568AF87b17C653039377BA6"
-zkevm.address-admin: "0x28BB4e66addE1f042B77E04cf7D3784C1dcDBbA3"
+zkevm.address-admin: "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 zkevm.address-rollup: "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
@@ -18,6 +18,7 @@ zkevm.l1-rollup-id: 1
 zkevm.l1-first-block: 368
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
+zkevm.l1-highest-block-type: latest
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
@@ -30,7 +31,6 @@ zkevm.witness-full: true
 
 zkevm.sequencer-block-seal-time: "6s"
 zkevm.sequencer-batch-seal-time: "12s"
-zkevm.sequencer-non-empty-batch-seal-time: "3s"
 zkevm.sequencer-batch-sleep-duration: "0s"
 
 zkevm.data-stream-host: "localhost"
@@ -74,3 +74,8 @@ zkevm.pool-manager-url: http://erigon-pool-manager:8545
 http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
 #http.apikeys: |
 #  {"project":"project1","key":"944cd2a6939eb23053289d9b91d6c498","timeout":"2033-12-12","methods":["eth_syncing"],"count":5,"bucket":1}
+
+pprof: true
+pprof.port: 6060
+pprof.addr: 127.0.0.1
+

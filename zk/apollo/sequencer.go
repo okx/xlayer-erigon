@@ -66,9 +66,6 @@ func loadEthSequencerConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	if ctx.IsSet(utils.SequencerBatchSealTime.Name) {
 		ethCfg.Zk.SequencerBatchSealTime = ctx.Duration(utils.SequencerBatchSealTime.Name)
 	}
-	if ctx.IsSet(utils.SequencerNonEmptyBatchSealTime.Name) {
-		ethCfg.Zk.SequencerNonEmptyBatchSealTime = ctx.Duration(utils.SequencerNonEmptyBatchSealTime.Name)
-	}
 	if ctx.IsSet(utils.SequencerBatchSleepDuration.Name) {
 		ethCfg.Zk.XLayer.SequencerBatchSleepDuration = ctx.Duration(utils.SequencerBatchSleepDuration.Name)
 	}

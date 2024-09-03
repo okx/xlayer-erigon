@@ -116,3 +116,13 @@ func (cfg *ApolloConfig) CheckFreeClaimAddr(localFreeClaimGasAddrs []string, add
 	}
 	return containsAddress(localFreeClaimGasAddrs, addr)
 }
+
+func (cfg *ApolloConfig) CheckFreeGasExAddr(localFreeGasExAddrs []string, addr libcommon.Address) bool {
+	cfg.RLock()
+	defer cfg.RUnlock()
+
+	if cfg.isPoolEnabled() {
+		return containsAddress(cfg.EthCfg.DeprecatedTxPool.FreeGasExAddrs, addr)
+	}
+	return containsAddress(localFreeGasExAddrs, addr)
+}

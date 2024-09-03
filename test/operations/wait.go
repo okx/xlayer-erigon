@@ -29,7 +29,7 @@ import (
 
 const (
 	// DefaultInterval is a time interval
-	DefaultInterval = 2 * time.Millisecond
+	DefaultInterval = 1 * time.Second
 	// DefaultDeadline is a time interval
 	DefaultDeadline = 2 * time.Minute
 	// DefaultTxMinedDeadline is a time interval
@@ -59,6 +59,7 @@ func Poll(interval, deadline time.Duration, condition ConditionFunc) error {
 	for {
 		select {
 		case <-timeout:
+			log.Infof("timeout reached after %v", deadline)
 			return ErrTimeoutReached
 		case <-tick.C:
 			ok, err := condition()
@@ -86,7 +87,7 @@ func WaitTxToBeMined(parentCtx context.Context, client ethClienter, tx types.Tra
 	if errors.Is(err, context.DeadlineExceeded) {
 		return err
 	} else if err != nil {
-		log.Errorf("error waiting tx %s to be mined: %w", tx.Hash(), err)
+		log.Errorf("error waiting tx %s to be mined: %v", tx.Hash(), err)
 		return err
 	}
 	if receipt.Status == types.ReceiptStatusFailed {
@@ -97,7 +98,7 @@ func WaitTxToBeMined(parentCtx context.Context, client ethClienter, tx types.Tra
 		}
 		return fmt.Errorf("transaction has failed, reason: %s, receipt: %+v. tx: %+v, gas: %v", reason, receipt, tx, tx.GetGas())
 	}
-	log.Debug("Transaction successfully mined: ", tx.Hash())
+	log.Debugf("Transaction successfully mined: %v", tx.Hash())
 	return nil
 }
 
@@ -271,6 +272,7 @@ func l2BlockConsolidationCondition(l2Block *big.Int) (bool, error) {
 	}
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
+	log.Infof("Block %v is consolidated: %v", l2Block.String(), result)
 	if err != nil {
 		return false, err
 	}
@@ -286,8 +288,10 @@ func l2BlockVirtualizationCondition(l2Block *big.Int, l2NetworkURL string) (bool
 	if response.Error != nil {
 		return false, fmt.Errorf("%d - %s", response.Error.Code, response.Error.Message)
 	}
+
 	var result bool
 	err = json.Unmarshal(response.Result, &result)
+	log.Infof("Block %v is virtualized: %v", l2Block.String(), result)
 	if err != nil {
 		return false, err
 	}
@@ -303,7 +307,7 @@ func WaitSignal(cleanupFuncs ...func()) {
 	for sig := range signals {
 		switch sig {
 		case os.Interrupt, os.Kill:
-			log.Info("terminating application gracefully...")
+			log.Infof("terminating application gracefully...")
 			for _, cleanup := range cleanupFuncs {
 				cleanup()
 			}

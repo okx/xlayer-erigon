@@ -25,6 +25,11 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		EnableInnerTx:               ctx.Bool(utils.AllowInternalTransactions.Name),
 		SequencerBatchSleepDuration: ctx.Duration(utils.SequencerBatchSleepDuration.Name),
 		DDSType:                     ctx.Int(utils.DDSType.Name),
+		DDSRedis: ethconfig.RedisConfig{
+			Url:      ctx.String(utils.DDSRedisUrlFlag.Name),
+			Password: ctx.String(utils.DDSRedisPasswordFlag.Name),
+			DB:       ctx.Int(utils.DDSRedisDBFlag.Name),
+		},
 	}
 
 	if ctx.IsSet(utils.ApolloNamespaceName.Name) {

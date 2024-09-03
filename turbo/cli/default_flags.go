@@ -263,4 +263,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolFreeGasExAddrs,
 	&utils.TxPoolFreeGasLimit,
 	&utils.DDSType,
+	&utils.DDSRedisUrlFlag,
+	&utils.DDSRedisPasswordFlag,
+	&utils.DDSRedisDBFlag,
 }

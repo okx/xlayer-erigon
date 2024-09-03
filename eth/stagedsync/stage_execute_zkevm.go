@@ -112,6 +112,11 @@ func SpawnExecuteBlocksStageZk(s *StageState, u Unwinder, tx kv.RwTx, toBlock ui
 
 	stageProgress := s.BlockNumber
 	var stoppedErr error
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.zk.XLayer.DDSRedis.Url,
+		Password: cfg.zk.XLayer.DDSRedis.Password,
+		DB:       cfg.zk.XLayer.DDSRedis.DB,
+	})
 Loop:
 	for blockNum := s.BlockNumber + 1; blockNum <= to; blockNum++ {
 		if cfg.zk.SyncLimit > 0 && blockNum > cfg.zk.SyncLimit {
@@ -137,7 +142,7 @@ Loop:
 		// For X Layer
 		writeInnerTxs := cfg.zk.XLayer.EnableInnerTx && (nextStagesExpectData || blockNum > cfg.prune.InnerTxs.PruneTo(to))
 
-		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb)
+		execRs, err := executeBlockZk(block, &prevBlockRoot, tx, batch, cfg, *cfg.vmConfig, writeChangeSets, writeReceipts, writeCallTraces, writeInnerTxs, initialCycle, stateStream, hermezDb, rdb)
 		if err != nil {
 			if !errors.Is(err, context.Canceled) {
 				log.Warn(fmt.Sprintf("[%s] Execution failed", s.LogPrefix()), "block", blockNum, "hash", datastreamBlockHash.Hex(), "err", err)
@@ -412,6 +417,7 @@ func executeBlockZk(
 	initialCycle bool,
 	stateStream bool,
 	hermezDb *hermez_db.HermezDb,
+	rdb *redis.Client,
 ) (*core.EphemeralExecResultZk, error) {
 	blockNum := block.NumberU64()
 
@@ -438,11 +444,6 @@ func executeBlockZk(
 	getHashFn := core.GetHashFn(block.Header(), getHeader)
 
 	// for XLayer
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "192.168.1.19:6379", // Redis 服务器地址
-		Password: "",                  // Redis 密码（如果没有密码，可以省略或留空）
-		DB:       0,                   // Redis 数据库编号，默认是 0
-	})
 	execRs := &core.EphemeralExecResultZk{}
 	dds := false
 	//ddsType := apollo.GetDDSType(cfg.zk.XLayer.DDSType)

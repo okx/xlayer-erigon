@@ -470,7 +470,7 @@ func FinalizeBlockExecution(
 	//if err != nil {
 	//	return nil, nil, nil, err
 	//}
-	
+
 	if err := ibs.CommitBlock(cc.Rules(header.Number.Uint64(), header.Time), stateWriter); err != nil {
 		return nil, nil, nil, fmt.Errorf("committing block %d failed: %w", header.Number.Uint64(), err)
 	}

@@ -461,11 +461,11 @@ func executeBlockZk(
 				panic(err)
 			} else {
 				dds = true
-				rdb.Set(context.Background(), "useDDS", true, 0)
+				rdb.Set(context.Background(), fmt.Sprintf("useDDS_%d", blockNum), true, 0)
 				core.ExecuteBlockEphemerallyZkDDSConsumer(rdb, cfg.chainConfig, block, stateReader, stateWriter)
 			}
 		} else {
-			rdb.Set(context.Background(), "useDDS", false, 0)
+			rdb.Set(context.Background(), fmt.Sprintf("useDDS_%d", blockNum), false, 0)
 		}
 	}
 	if !dds {

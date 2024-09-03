@@ -140,25 +140,32 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 		log.Info(fmt.Sprintf("[%s] SMT not using mapmutation", logPrefix))
 	}
 
+	// for XLayer
+	if cfg.zk.XLayer.DDSType != 0 {
+		shouldIncrement = false
+	}
 	if shouldIncrement {
 		if shouldIncrementBecauseOfAFlag {
 			log.Debug(fmt.Sprintf("[%s] IncrementTreeAlways true - incrementing tree", logPrefix), "previousRootHeight", s.BlockNumber, "calculatingRootHeight", to)
 		}
-		// for XLayer
-		if cfg.zk.XLayer.DDSType == 1 {
-			// producer
-			if root, err = zkIncrementIntermediateHashesDDSProducer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-				return trie.EmptyRoot, err
-			}
-		} else if cfg.zk.XLayer.DDSType == 2 {
-			// consumer
-			if root, err = zkIncrementIntermediateHashesDDSConsumer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-				return trie.EmptyRoot, err
-			}
-		} else {
-			if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
-				return trie.EmptyRoot, err
-			}
+		//// for XLayer
+		//if cfg.zk.XLayer.DDSType == 1 {
+		//	// producer
+		//	if root, err = zkIncrementIntermediateHashesDDSProducer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+		//		return trie.EmptyRoot, err
+		//	}
+		//} else if cfg.zk.XLayer.DDSType == 2 {
+		//	// consumer
+		//	if root, err = zkIncrementIntermediateHashesDDSConsumer(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+		//		return trie.EmptyRoot, err
+		//	}
+		//} else {
+		//	if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+		//		return trie.EmptyRoot, err
+		//	}
+		//}
+		if root, err = zkIncrementIntermediateHashes(ctx, logPrefix, s, tx, eridb, smt, s.BlockNumber, to); err != nil {
+			return trie.EmptyRoot, err
 		}
 
 	} else {

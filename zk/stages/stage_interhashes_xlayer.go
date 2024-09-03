@@ -65,7 +65,7 @@ func zkIncrementIntermediateHashesDDSConsumer(ctx context.Context, logPrefix str
 		dupSortKey := dbutils.EncodeBlockNumber(i)
 		psr.SetBlockNr(i + 1)
 
-		useDDS, err := rdb.Get(context.Background(), "useDDS").Bool()
+		useDDS, err := rdb.Get(context.Background(), fmt.Sprintf("useDDS_%d", i)).Bool()
 		if err != nil {
 			panic("get useDDS fail")
 		}
@@ -103,8 +103,14 @@ func zkIncrementIntermediateHashesDDSConsumer(ctx context.Context, logPrefix str
 				panic("unmarshal storageChanges err")
 			}
 			for k, v := range storageChangesI {
-				storageChanges[k] = v
+				for mk, mv := range v {
+					if storageChanges[k] == nil {
+						storageChanges[k] = make(map[string]string)
+					}
+					storageChanges[k][mk] = mv
+				}
 			}
+			//log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
 		} else {
 			// collect changes to accounts and code
 			for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
@@ -160,9 +166,13 @@ func zkIncrementIntermediateHashesDDSConsumer(ctx context.Context, logPrefix str
 			if err != nil {
 				return trie.EmptyRoot, err
 			}
+			//log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
+
 		}
+
 	}
 
+	log.Info(fmt.Sprintf("SetStorage!!!! %d", to))
 	if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {
 		return trie.EmptyRoot, err
 	}
@@ -303,6 +313,8 @@ func zkIncrementIntermediateHashesDDSProducer(ctx context.Context, logPrefix str
 		rdb.Set(context.Background(), fmt.Sprintf("acc_%d", i), accBytes, 0)
 		rdb.Set(context.Background(), fmt.Sprintf("code_%d", i), codeBytes, 0)
 		rdb.Set(context.Background(), fmt.Sprintf("storage_%d", i), storageBytes, 0)
+		log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
+
 	}
 
 	if _, _, err := dbSmt.SetStorage(ctx, logPrefix, accChanges, codeChanges, storageChanges); err != nil {

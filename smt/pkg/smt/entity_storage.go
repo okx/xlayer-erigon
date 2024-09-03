@@ -2,7 +2,9 @@ package smt
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/ledgerwatch/log/v3"
 	"math/big"
 	"strings"
 	"sync"
@@ -204,6 +206,9 @@ func (s *SMT) SetContractStorage(ethAddr string, storage map[string]string, prog
 }
 
 func (s *SMT) SetStorage(ctx context.Context, logPrefix string, accChanges map[libcommon.Address]*accounts.Account, codeChanges map[libcommon.Address]string, storageChanges map[libcommon.Address]map[string]string) ([]*utils.NodeKey, []*utils.NodeValue8, error) {
+	accjson, _ := json.Marshal(accChanges)
+	log.Info(fmt.Sprintf("=======================fsc:test  SetStorage.\nacc:%v\ncode:%v\nstorage:%v", string(accjson), codeChanges, storageChanges))
+
 	var isDelete bool
 
 	storageChangesInitialCapacity := 0

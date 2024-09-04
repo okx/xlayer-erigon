@@ -2,11 +2,12 @@ package stages
 
 import (
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
-
-	"math/big"
+	"github.com/ledgerwatch/secp256k1"
 
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -20,8 +21,6 @@ import (
 	"github.com/ledgerwatch/erigon/zk/seqlog"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/secp256k1"
-	"time"
 )
 
 func handleStateForNewBlockStarting(

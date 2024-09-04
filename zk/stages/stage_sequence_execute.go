@@ -40,7 +40,6 @@ func SpawnSequencingStage(
 	sdb, err := newStageDb(ctx, cfg.db)
 	if err != nil {
 		return err
-
 	}
 	defer sdb.tx.Rollback()
 

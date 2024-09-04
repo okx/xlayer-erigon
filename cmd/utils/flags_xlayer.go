@@ -179,17 +179,17 @@ var (
 	XLMetricsHostFlag = cli.StringFlag{
 		Name:  "zkevm.metrics-host",
 		Usage: "prometheus metrics host",
-		Value: "",
+		Value: "0.0.0.0",
 	}
-	XLMetricsPortFlag = cli.StringFlag{
+	XLMetricsPortFlag = cli.IntFlag{
 		Name:  "zkevm.metrics-port",
 		Usage: "prometheus metrics port",
-		Value: "",
+		Value: 9095,
 	}
-	XLMetricsEnabledFlag = cli.StringFlag{
+	XLMetricsEnabledFlag = cli.BoolFlag{
 		Name:  "zkevm.metrics-enabled",
 		Usage: "prometheus metrics enabled",
-		Value: "",
+		Value: true,
 	}
 	// Sequencer
 	AllowInternalTransactions = cli.BoolFlag{

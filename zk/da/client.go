@@ -20,7 +20,7 @@ func GetOffChainData(ctx context.Context, url string, hash common.Hash) ([]byte,
 		response, err := client.JSONRPCCall(url, "sync_getOffChainData", hash)
 
 		if err != nil || response.Error != nil {
-			log.Error(fmt.Sprintf("GetOffChainData hash:%v, error:%v", hash.String(), err))
+			log.Error(fmt.Sprintf("GetOffChainData hash:%v, error:%v, response err:%v", hash.String(), err, response.Error))
 			time.Sleep(retryDelay)
 			continue
 		}

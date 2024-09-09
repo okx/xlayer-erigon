@@ -110,6 +110,7 @@ func attemptAddTransaction(
 	forkId, l1InfoIndex uint64,
 	blockDataSizeChecker *BlockDataChecker,
 	okPayPriority bool,
+	okPayCounterLimitPercentage uint,
 ) (*types.Receipt, *core.ExecutionResult, bool, bool, error) {
 	var batchDataOverflow, overflow, okPayOverflow bool
 	var err error
@@ -196,7 +197,7 @@ func attemptAddTransaction(
 	// For X Layer: check ok pay tx counter overflow
 	if isOkPayTx && okPayPriority {
 		// now that we have executed we can check again for an overflow
-		if okPayOverflow, err = batchCounters.CheckOkPayForOverflow(); err != nil {
+		if okPayOverflow, err = batchCounters.CheckOkPayForOverflow(okPayCounterLimitPercentage); err != nil {
 			return nil, nil, false, false, err
 		}
 		if okPayOverflow {

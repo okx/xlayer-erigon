@@ -178,7 +178,7 @@ func (bcc *BatchCounterCollector) CheckForOverflow(verifyMerkleProof bool) (bool
 }
 
 // CheckOkPayForOverflow returns true in the case that any counter has less than 0 remaining
-func (bcc *BatchCounterCollector) CheckOkPayForOverflow() (bool, error) {
+func (bcc *BatchCounterCollector) CheckOkPayForOverflow(okPayCounterLimitPercentage uint) (bool, error) {
 	combined := bcc.NewCounters()
 	for k, _ := range combined {
 		val := bcc.rlpCombinedCounters[k].used + bcc.executionCombinedCounters[k].used + bcc.processingCombinedCounters[k].used
@@ -188,7 +188,7 @@ func (bcc *BatchCounterCollector) CheckOkPayForOverflow() (bool, error) {
 
 	overflow := false
 	for _, v := range combined {
-		if v.initialAmount*30/100 < v.used {
+		if v.initialAmount*int(okPayCounterLimitPercentage)/100 < v.used {
 			log.Info("[VCOUNTER] OkPay Counter overflow detected", "counter", v.name, "remaining", v.remaining, "used", v.used)
 			overflow = true
 		}

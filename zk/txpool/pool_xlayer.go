@@ -35,6 +35,8 @@ type XLayerConfig struct {
 	OkPayAccountList []string
 	// OkPayGasLimitPerBlock is the block max gas limit for ok pay tx
 	OkPayGasLimitPerBlock uint64
+	// OkPayCounterLimitPercentage is okpaytx's percentage of counter limit
+	OkPayCounterLimitPercentage uint
 }
 
 type GPCache interface {
@@ -163,4 +165,8 @@ func (p *TxPool) bestOkPay(n uint16, txs *types.TxsRlp, tx kv.Tx, isLondon, isSh
 	}
 
 	return availableGas, count, toRemove, nil
+}
+
+func (p *TxPool) OkPayCounterLimitPercentage() uint {
+	return p.xlayerCfg.OkPayCounterLimitPercentage
 }

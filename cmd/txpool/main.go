@@ -57,17 +57,18 @@ var (
 	commitEvery time.Duration
 
 	// For X Layer
-	enableWhiteList       bool
-	whiteList             []string
-	blockList             []string
-	freeClaimGasAddrs     []string
-	gasPriceMultiple      uint64
-	enableFreeGasByNonce  bool
-	freeGasExAddrs        []string
-	freeGasCountPerAddr   uint64
-	freeGasLimit          uint64
-	okPayAccountList      []string
-	okPayGasLimitPerBlock uint64
+	enableWhiteList             bool
+	whiteList                   []string
+	blockList                   []string
+	freeClaimGasAddrs           []string
+	gasPriceMultiple            uint64
+	enableFreeGasByNonce        bool
+	freeGasExAddrs              []string
+	freeGasCountPerAddr         uint64
+	freeGasLimit                uint64
+	okPayAccountList            []string
+	okPayGasLimitPerBlock       uint64
+	okPayCounterLimitPercentage uint
 )
 
 func init() {
@@ -103,6 +104,7 @@ func init() {
 	rootCmd.PersistentFlags().Uint64Var(&freeGasLimit, utils.TxPoolFreeGasLimit.Name, ethconfig.DeprecatedDefaultTxPoolConfig.FreeGasLimit, utils.TxPoolFreeGasLimit.Usage)
 	rootCmd.Flags().Uint64Var(&okPayGasLimitPerBlock, utils.TxPoolOkPayGasLimitPerBlock.Name, 0, utils.TxPoolOkPayGasLimitPerBlock.Usage)
 	rootCmd.Flags().StringSliceVar(&okPayAccountList, utils.TxPoolOkPayAccountList.Name, []string{}, utils.TxPoolOkPayAccountList.Usage)
+	rootCmd.Flags().UintVar(&okPayCounterLimitPercentage, utils.TxPoolOkPayCounterLimitPercentage.Name, 50, utils.TxPoolOkPayCounterLimitPercentage.Usage)
 }
 
 var rootCmd = &cobra.Command{
@@ -214,6 +216,7 @@ func doTxpool(ctx context.Context) error {
 		ethCfg.DeprecatedTxPool.OkPayAccountList[i] = addr.String()
 	}
 	ethCfg.DeprecatedTxPool.OkPayGasLimitPerBlock = okPayGasLimitPerBlock
+	ethCfg.DeprecatedTxPool.OkPayCounterLimitPercentage = okPayCounterLimitPercentage
 
 	newTxs := make(chan types.Announcements, 1024)
 	defer close(newTxs)

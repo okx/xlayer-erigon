@@ -99,10 +99,15 @@ var (
 		Usage: "Comma separated list of addresses, who send ok pay tx",
 		Value: "",
 	}
-	TxPoolOkPayGasLimitPerBlock = cli.StringFlag{
+	TxPoolOkPayGasLimitPerBlock = cli.Uint64Flag{
 		Name:  "txpool.okpay-gaslimit-per-block",
 		Usage: "the block max gas limit for ok pay tx",
-		Value: "",
+		Value: 0,
+	}
+	TxPoolOkPayCounterLimitPercentage = cli.UintFlag{
+		Name:  "txpool.okpay-counter-limit-percentage",
+		Usage: "okpaytx's percentage of counter limit",
+		Value: 50,
 	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
@@ -329,6 +334,9 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolOkPayGasLimitPerBlock.Name) {
 		cfg.OkPayGasLimitPerBlock = ctx.Uint64(TxPoolOkPayGasLimitPerBlock.Name)
+	}
+	if ctx.IsSet((TxPoolOkPayCounterLimitPercentage.Name)) {
+		cfg.OkPayCounterLimitPercentage = ctx.Uint(TxPoolOkPayCounterLimitPercentage.Name)
 	}
 }
 

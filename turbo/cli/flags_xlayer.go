@@ -24,6 +24,11 @@ func ApplyFlagsForEthXLayerConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		},
 		EnableInnerTx:               ctx.Bool(utils.AllowInternalTransactions.Name),
 		SequencerBatchSleepDuration: ctx.Duration(utils.SequencerBatchSleepDuration.Name),
+		Metrics: ethconfig.MetricsConfig{
+			Enabled: ctx.Bool(utils.MetricsEnabledFlag.Name),
+			Host:    ctx.String(utils.MetricsHTTPFlag.Name),
+			Port:    ctx.Int(utils.MetricsPortFlag.Name),
+		},
 	}
 
 	if ctx.IsSet(utils.ApolloNamespaceName.Name) {

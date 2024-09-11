@@ -94,10 +94,13 @@ func SpawnSequencingStage(
 	// we consider the data stream as verified by the executor so treat it as "safe" and unwind blocks beyond there
 	// if we identify any.  During normal operation this function will simply check and move on without performing
 	// any action.
-	if !batchState.isL1Recovery() {
-		isUnwinding, err := handleBatchEndChecks(batchContext, batchState, executionAt, u)
-		if err != nil || isUnwinding {
+	if !batchState.isAnyRecovery() {
+		isUnwinding, err := alignExecutionToDatastream(batchContext, batchState, executionAt, u)
+		if err != nil {
 			return err
+		}
+		if isUnwinding {
+			return sdb.tx.Commit()
 		}
 	}
 
@@ -155,15 +158,15 @@ func SpawnSequencingStage(
 		blockTicker.Reset(cfg.zk.SequencerBlockSealTime)
 
 		if batchState.isL1Recovery() {
-			didLoadedAnyDataForRecovery := batchState.loadBlockL1RecoveryData(blockNumber - (executionAt + 1))
+			blockNumbersInBatchSoFar, err := batchContext.sdb.hermezDb.GetL2BlockNosByBatch(batchState.batchNumber)
+			if err != nil {
+				return err
+			}
+
+			didLoadedAnyDataForRecovery := batchState.loadBlockL1RecoveryData(uint64(len(blockNumbersInBatchSoFar)))
 			if !didLoadedAnyDataForRecovery {
 				break
 			}
-		}
-
-		l1InfoIndex, err := sdb.hermezDb.GetBlockL1InfoTreeIndex(blockNumber - 1)
-		if err != nil {
-			return err
 		}
 
 		// For X Layer
@@ -184,7 +187,12 @@ func SpawnSequencingStage(
 		// timer: evm + smt
 		t := utils.StartTimer("stage_sequence_execute", "evm", "smt")
 
-		overflowOnNewBlock, err := batchCounters.StartNewBlock(l1InfoIndex != 0)
+		infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, err := prepareL1AndInfoTreeRelatedStuff(sdb, batchState, header.Time)
+		if err != nil {
+			return err
+		}
+
+		overflowOnNewBlock, err := batchCounters.StartNewBlock(l1TreeUpdateIndex != 0)
 		if err != nil {
 			return err
 		}
@@ -194,11 +202,6 @@ func SpawnSequencingStage(
 			batchCloseReason = metrics.CounterOverflow
 			seqlog.GetBatchLogger().SetClosingReason(metrics.CounterOverflow)
 			break
-		}
-
-		infoTreeIndexProgress, l1TreeUpdate, l1TreeUpdateIndex, l1BlockHash, ger, shouldWriteGerToContract, err := prepareL1AndInfoTreeRelatedStuff(sdb, batchState, header.Time)
-		if err != nil {
-			return err
 		}
 
 		ibs := state.New(sdb.stateReader)
@@ -248,12 +251,18 @@ func SpawnSequencingStage(
 						return err
 					}
 				} else if !batchState.isL1Recovery() {
-					batchState.blockState.transactionsForInclusion, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
+					var allConditionsOK bool
+					batchState.blockState.transactionsForInclusion, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
 					if err != nil {
 						return err
 					}
+
 					if len(batchState.blockState.transactionsForInclusion) == 0 {
-						time.Sleep(250 * time.Millisecond)
+						if allConditionsOK {
+							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
+						} else {
+							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
+						}
 					} else {
 						log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 					}
@@ -265,7 +274,7 @@ func SpawnSequencingStage(
 
 					// The copying of this structure is intentional
 					backupDataSizeChecker := *blockDataSizeChecker
-					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1InfoIndex, &backupDataSizeChecker)
+					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, &backupDataSizeChecker)
 					if err != nil {
 						if batchState.isLimboRecovery() {
 							panic("limbo transaction has already been executed once so they must not fail while re-executing")
@@ -323,7 +332,7 @@ func SpawnSequencingStage(
 				if batchState.isL1Recovery() {
 					// just go into the normal loop waiting for new transactions to signal that the recovery
 					// has finished as far as it can go
-					if batchState.isThereAnyTransactionsToRecover() {
+					if !batchState.isThereAnyTransactionsToRecover() {
 						log.Info(fmt.Sprintf("[%s] L1 recovery no more transactions to recover", logPrefix))
 					}
 
@@ -377,15 +386,22 @@ func SpawnSequencingStage(
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
-		// commit block data here so it is accessible in other threads
 		if !batchState.isL1Recovery() {
+			// commit block data here so it is accessible in other threads
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
 		}
 
-		cfg.legacyVerifier.StartAsyncVerification(batchState.forkId, batchState.batchNumber, block.Root(), batchCounters.CombineCollectorsNoChanges().UsedAsMap(), batchState.builtBlocks, batchState.hasExecutorForThisBatch, batchContext.cfg.zk.SequencerBatchVerificationTimeout)
+		// do not use remote executor in l1recovery mode
+		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
+		useExecutorForVerification := !batchState.isL1Recovery() && batchState.hasExecutorForThisBatch
+		counters, err := batchCounters.CombineCollectors(l1TreeUpdateIndex != 0)
+		if err != nil {
+			return err
+		}
+		cfg.legacyVerifier.StartAsyncVerification(batchState.forkId, batchState.batchNumber, block.Root(), counters.UsedAsMap(), batchState.builtBlocks, useExecutorForVerification, batchContext.cfg.zk.SequencerBatchVerificationTimeout)
 
 		// check for new responses from the verifier
 		needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u)
@@ -418,7 +434,15 @@ func SpawnSequencingStage(
 		return err
 	}
 
-	if err = runBatchLastSteps(batchContext, batchState.batchNumber, block.NumberU64(), batchCounters); err != nil {
+	/*
+		if adding something below that line we must ensure
+		- it is also handled property in processInjectedInitialBatch
+		- it is also handled property in alignExecutionToDatastream
+		- it is also handled property in doCheckForBadBatch
+		- it is unwound correctly
+	*/
+
+	if err := finalizeLastBatchInDatastream(batchContext, batchState.batchNumber, block.NumberU64()); err != nil {
 		return err
 	}
 
@@ -428,6 +452,14 @@ func SpawnSequencingStage(
 	metrics.BatchExecuteTime(batchCloseReason, batchTime)
 	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
+
+	// TODO: It is 99% sure that there is no need to write this in any of processInjectedInitialBatch, alignExecutionToDatastream, doCheckForBadBatch but it is worth double checknig
+	// the unwind of this value is handed by UnwindExecutionStageDbWrites
+	if _, err := rawdb.IncrementStateVersionByBlockNumberIfNeeded(batchContext.sdb.tx, block.NumberU64()); err != nil {
+		return fmt.Errorf("writing plain state version: %w", err)
+	}
+
+	log.Info(fmt.Sprintf("[%s] Finish batch %d...", batchContext.s.LogPrefix(), batchState.batchNumber))
 
 	return sdb.tx.Commit()
 }

@@ -82,6 +82,12 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		panic(fmt.Sprintf("could not parse sequencer batch seal time timeout value %s", sequencerBatchSealTimeVal))
 	}
 
+	sequencerTimeoutOnEmptyTxPoolVal := ctx.String(utils.SequencerTimeoutOnEmptyTxPool.Name)
+	sequencerTimeoutOnEmptyTxPool, err := time.ParseDuration(sequencerTimeoutOnEmptyTxPoolVal)
+	if err != nil {
+		panic(fmt.Sprintf("could not parse sequencer batch seal time timeout value %s", sequencerBatchSealTimeVal))
+	}
+
 	effectiveGasPriceForEthTransferVal := ctx.Float64(utils.EffectiveGasPriceForEthTransfer.Name)
 	effectiveGasPriceForErc20TransferVal := ctx.Float64(utils.EffectiveGasPriceForErc20Transfer.Name)
 	effectiveGasPriceForContractInvocationVal := ctx.Float64(utils.EffectiveGasPriceForContractInvocation.Name)
@@ -123,6 +129,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		L1HighestBlockType:                     ctx.String(utils.L1HighestBlockTypeFlag.Name),
 		L1MaticContractAddress:                 libcommon.HexToAddress(ctx.String(utils.L1MaticContractAddressFlag.Name)),
 		L1FirstBlock:                           ctx.Uint64(utils.L1FirstBlockFlag.Name),
+		L1ContractAddressCheck:                 ctx.Bool(utils.L1ContractAddressCheckFlag.Name),
 		RpcRateLimits:                          ctx.Int(utils.RpcRateLimitsFlag.Name),
 		RpcGetBatchWitnessConcurrencyLimit:     ctx.Int(utils.RpcGetBatchWitnessConcurrencyLimitFlag.Name),
 		DatastreamVersion:                      ctx.Int(utils.DatastreamVersionFlag.Name),
@@ -132,6 +139,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		SequencerBlockSealTime:                 sequencerBlockSealTime,
 		SequencerBatchSealTime:                 sequencerBatchSealTime,
 		SequencerBatchVerificationTimeout:      sequencerBatchVerificationTimeout,
+		SequencerTimeoutOnEmptyTxPool:          sequencerTimeoutOnEmptyTxPool,
 		SequencerHaltOnBatchNumber:             ctx.Uint64(utils.SequencerHaltOnBatchNumber.Name),
 		ExecutorUrls:                           strings.Split(strings.ReplaceAll(ctx.String(utils.ExecutorUrls.Name), " ", ""), ","),
 		ExecutorStrictMode:                     ctx.Bool(utils.ExecutorStrictMode.Name),
@@ -158,6 +166,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		DebugStep:                              ctx.Uint64(utils.DebugStep.Name),
 		DebugStepAfter:                         ctx.Uint64(utils.DebugStepAfter.Name),
 		PoolManagerUrl:                         ctx.String(utils.PoolManagerUrl.Name),
+		TxPoolRejectSmartContractDeployments:   ctx.Bool(utils.TxPoolRejectSmartContractDeployments.Name),
 		DisableVirtualCounters:                 ctx.Bool(utils.DisableVirtualCounters.Name),
 		ExecutorPayloadOutput:                  ctx.String(utils.ExecutorPayloadOutput.Name),
 		DAUrl:                                  ctx.String(utils.DAUrl.Name),
@@ -216,4 +225,6 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 	checkFlag(utils.RebuildTreeAfterFlag.Name, cfg.RebuildTreeAfter)
 	checkFlag(utils.L1BlockRangeFlag.Name, cfg.L1BlockRange)
 	checkFlag(utils.L1QueryDelayFlag.Name, cfg.L1QueryDelay)
+	checkFlag(utils.TxPoolRejectSmartContractDeployments.Name, cfg.TxPoolRejectSmartContractDeployments)
+	checkFlag(utils.L1ContractAddressCheckFlag.Name, cfg.L1ContractAddressCheck)
 }

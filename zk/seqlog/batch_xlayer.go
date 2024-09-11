@@ -27,8 +27,6 @@ func GetBatchLogger() *batchLogInstance {
 }
 
 func (b *batchLogInstance) init() {
-	//BlockNum > 0 means there is a wip log inside blockLogger
-	//BlockNum = 0 means the blockLogger is empty
 	b.BatchNum = 0
 	b.BlockCount = 0
 	b.TxCount = 0
@@ -41,11 +39,11 @@ func (b *batchLogInstance) SetBlockNum(batchNum uint64) {
 	b.BatchNum = batchNum
 }
 
-func (b *batchLogInstance) AccmuTxCount(txCount uint64) {
+func (b *batchLogInstance) AccumulateTxCount(txCount uint64) {
 	b.TxCount += txCount
 }
 
-func (b *batchLogInstance) AccmuBlockCount() {
+func (b *batchLogInstance) AccumulateBlockCount() {
 	b.BlockCount += 1
 }
 
@@ -71,7 +69,6 @@ func (b *batchLogInstance) PrintLogAndFlush() string {
 	totalFloatDuration := float64(b.TotalDuration.Microseconds()) / 1000.0
 	itemLog := fmt.Sprintf("[Batch Log] Batch<%d>,ClosingReason<%s>,Block<%d>,Tx<%d>,TotalDuration<%.2fms>", b.BatchNum, b.ClosingReason, b.BlockCount, b.TxCount, totalFloatDuration)
 	overallLog := itemLog + b.StepLog
-	//Flush blockLogger
 	b.init()
 	return overallLog
 }

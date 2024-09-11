@@ -160,10 +160,12 @@ func finaliseBlock(
 		})
 	}
 
+	// For X Layer
 	pbStateStart := time.Now()
 	if err := postBlockStateHandling(*batchContext.cfg, ibs, batchContext.sdb.hermezDb, newHeader, ger, l1BlockHash, parentBlock.Root(), txInfos); err != nil {
 		return nil, err
 	}
+	// For X Layer
 	seqlog.GetBlockLogger().AppendStepLog(seqlog.PbState, time.Since(pbStateStart))
 
 	if batchState.isL1Recovery() {
@@ -191,13 +193,15 @@ func finaliseBlock(
 		return nil, err
 	}
 
+	// For X Layer
 	zkIncStart := time.Now()
 	// this is actually the interhashes stage
 	newRoot, err := zkIncrementIntermediateHashes(batchContext.ctx, batchContext.s.LogPrefix(), batchContext.s, batchContext.sdb.tx, batchContext.sdb.eridb, batchContext.sdb.smt, newHeader.Number.Uint64()-1, newHeader.Number.Uint64())
-
 	if err != nil {
 		return nil, err
 	}
+
+	// For X Layer
 	seqlog.GetBlockLogger().AppendStepLog(seqlog.ZkInc, time.Since(zkIncStart))
 
 	doFinStart := time.Now()
@@ -247,6 +251,8 @@ func finaliseBlock(
 	if err := batchContext.sdb.hermezDb.WriteBlockBatch(newNum.Uint64(), batchState.batchNumber); err != nil {
 		return nil, fmt.Errorf("write block batch error: %v", err)
 	}
+
+	// For X Layer
 	seqlog.GetBlockLogger().AppendStepLog(seqlog.DoFin, time.Since(doFinStart))
 
 	// write batch counters

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 	"io"
 	"net/http"
+
+	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/types"
 )
 
 // Client defines typed wrappers for the zkEVM RPC API.
@@ -74,7 +75,6 @@ func JSONRPCCall(url, method string, parameters ...interface{}) (types.Response,
 	if err != nil {
 		return types.Response{}, err
 	}
-	//defer httpRes.Body.Close()
 
 	var res types.Response
 	err = json.Unmarshal(resBody, &res)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -26,17 +27,17 @@ func initRunForXLayer(ethCfg *ethconfig.Config) {
 
 	// Start Metrics Server
 	if ethCfg.Zk.XLayer.Metrics.Enabled {
-		metrics.XLayerMetricsInit()
 		go startMetricsHttpServer(ethCfg.Zk.XLayer.Metrics)
 	}
 }
 
 func startMetricsHttpServer(c ethconfig.MetricsConfig) {
+	metrics.XLayerMetricsInit()
 	mux := http.NewServeMux()
 	address := fmt.Sprintf("%s:%d", c.Host, c.Port)
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		log.Error("failed to create tcp listener for metrics", "err", err)
+		log.Error(fmt.Sprintf("failed to create %v for metrics, error:%v", address, err))
 		return
 	}
 	mux.Handle(MetricsEndpoint, promhttp.Handler())
@@ -48,11 +49,11 @@ func startMetricsHttpServer(c ethconfig.MetricsConfig) {
 	}
 	log.Info("metrics server listening on port", c.Port)
 	if err := metricsServer.Serve(lis); err != nil {
-		if err == http.ErrServerClosed {
+		if errors.Is(err, http.ErrServerClosed) {
 			log.Warn("http server for metrics stopped")
 			return
 		}
-		log.Error("closed http connection for metrics server", "err", err)
+		log.Error(fmt.Sprintf("closed http connection %v for metrics server, error:%v", address, err))
 		return
 	}
 }

@@ -175,7 +175,6 @@ var (
 		Usage: "Full batch sleep duration is the time the sequencer sleeps between each full batch iteration.",
 		Value: 0 * time.Second,
 	}
-	// X Layer Prometheus Metrics
 	XLMetricsHostFlag = cli.StringFlag{
 		Name:  "zkevm.metrics-host",
 		Usage: "prometheus metrics host",

@@ -25,8 +25,6 @@ func GetBlockLogger() *blockLogInstance {
 }
 
 func (b *blockLogInstance) init() {
-	//BlockNum > 0 means there is a wip log inside blockLogger
-	//BlockNum = 0 means the blockLogger is empty
 	b.BlockNum = 0
 	b.TxCount = 0
 	b.TotalDuration = 0
@@ -55,7 +53,6 @@ func (b *blockLogInstance) PrintLogAndFlush() string {
 	totalFloatDuration := float64(b.TotalDuration.Microseconds()) / 1000.0
 	itemLog := fmt.Sprintf("[Block Log] Block<%d>,Tx<%d>,TotalDuration<%.2fms>", b.BlockNum, b.TxCount, totalFloatDuration)
 	overallLog := itemLog + b.StepLog
-	//Flush blockLogger
 	b.init()
 	return overallLog
 }

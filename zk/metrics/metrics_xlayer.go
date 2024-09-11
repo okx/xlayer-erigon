@@ -2,18 +2,16 @@ package metrics
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/ledgerwatch/log/v3"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
 )
 
-// BatchFinalizeTypeLabel batch finalize type label
 type BatchFinalizeTypeLabel string
 
 const (
-	// BatchFinalizeTypeLabelDeadline batch finalize type deadline label
-	BatchFinalizeTypeLabelDeadline BatchFinalizeTypeLabel = "deadline"
-	// BatchFinalizeTypeLabelFullBatch batch finalize type full batch label
+	BatchFinalizeTypeLabelDeadline  BatchFinalizeTypeLabel = "deadline"
 	BatchFinalizeTypeLabelFullBatch BatchFinalizeTypeLabel = "full_batch"
 )
 
@@ -25,8 +23,7 @@ const (
 )
 
 var (
-	SeqPrefix = "sequencer_"
-	// BatchExecuteTimeName is the name of the metric that shows the batch execution time.
+	SeqPrefix            = "sequencer_"
 	BatchExecuteTimeName = SeqPrefix + "batch_execute_time"
 	PoolTxCountName      = SeqPrefix + "pool_tx_count"
 )
@@ -47,7 +44,7 @@ var BatchExecuteTimeGauge = prometheus.NewGaugeVec(
 var PoolTxCount = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: PoolTxCountName,
-		Help: "[SEQUENCER] txcount of each pool in txpool",
+		Help: "[SEQUENCER] tx count of each pool in tx pool",
 	},
 	[]string{"poolName"},
 )
@@ -58,9 +55,9 @@ func BatchExecuteTime(closingReason string, duration time.Duration) {
 	BatchExecuteTimeGauge.WithLabelValues(closingReason).Set(duration.Seconds())
 }
 
-func AddPoolTxCount(pending, basefee, queued int) {
-	log.Info(fmt.Sprintf("[PoolTxCount] pending: %d, basefee: %d, queued: %d", pending, basefee, queued))
+func AddPoolTxCount(pending, baseFee, queued int) {
+	log.Info(fmt.Sprintf("[PoolTxCount] pending: %d, basefee: %d, queued: %d", pending, baseFee, queued))
 	PoolTxCount.WithLabelValues("pending").Set(float64(pending))
-	PoolTxCount.WithLabelValues("basefee").Set(float64(basefee))
+	PoolTxCount.WithLabelValues("basefee").Set(float64(baseFee))
 	PoolTxCount.WithLabelValues("queued").Set(float64(queued))
 }

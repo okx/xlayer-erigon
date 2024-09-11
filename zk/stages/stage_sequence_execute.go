@@ -143,6 +143,8 @@ func SpawnSequencingStage(
 	defer blockTicker.Stop()
 
 	log.Info(fmt.Sprintf("[%s] Starting batch %d...", logPrefix, batchState.batchNumber))
+
+	// For X Layer
 	batchCloseReason := ""
 	batchStart := time.Now()
 	seqlog.GetBatchLogger().SetBlockNum(batchState.batchNumber)
@@ -164,11 +166,12 @@ func SpawnSequencingStage(
 			return err
 		}
 
+		// For X Layer
 		log.Info(fmt.Sprintf("[%s] Starting block %d (forkid %v)...", logPrefix, blockNumber, forkId))
 		seqlog.GetBlockLogger().SetBlockNum(blockNumber)
 		blockStart := time.Now()
-		header, parentBlock, err := prepareHeader(sdb.tx, blockNumber-1, batchState.blockState.getDeltaTimestamp(), batchState.getBlockHeaderForcedTimestamp(), batchState.forkId, batchState.getCoinbase(&cfg))
 
+		header, parentBlock, err := prepareHeader(sdb.tx, blockNumber-1, batchState.blockState.getDeltaTimestamp(), batchState.getBlockHeaderForcedTimestamp(), batchState.forkId, batchState.getCoinbase(&cfg))
 		if err != nil {
 			return err
 		}
@@ -187,6 +190,7 @@ func SpawnSequencingStage(
 		}
 
 		if !batchState.isAnyRecovery() && overflowOnNewBlock {
+			// For X Layer
 			batchCloseReason = metrics.CounterOverflow
 			seqlog.GetBatchLogger().SetClosingReason(metrics.CounterOverflow)
 			break
@@ -211,6 +215,8 @@ func SpawnSequencingStage(
 		if !batchState.isAnyRecovery() {
 			log.Info(fmt.Sprintf("[%s] Waiting for txs from the pool...", logPrefix))
 		}
+
+		// For X Layer
 		addTxsStart := time.Now()
 		blockCloseReason := ""
 
@@ -223,11 +229,13 @@ func SpawnSequencingStage(
 				}
 			case <-blockTicker.C:
 				if !batchState.isAnyRecovery() {
+					// For X Layer
 					blockCloseReason = metrics.BlockTickerTimeOut
 					break LOOP_TRANSACTIONS
 				}
 			case <-batchTicker.C:
 				if !batchState.isAnyRecovery() {
+					// For X Layer
 					batchCloseReason = metrics.EmptyTimeOut
 					seqlog.GetBatchLogger().SetClosingReason(metrics.EmptyTimeOut)
 					runLoopBlocks = false
@@ -328,6 +336,8 @@ func SpawnSequencingStage(
 				}
 			}
 		}
+
+		// For X Layer
 		if blockCloseReason == metrics.BlockTickerTimeOut {
 			seqlog.GetBlockLogger().AppendStepLog(seqlog.WaitBlockTimeOut, time.Since(addTxsStart))
 		} else if batchCloseReason == metrics.EmptyTimeOut {
@@ -345,6 +355,7 @@ func SpawnSequencingStage(
 			cfg.txPool.UpdateLimboRootByTxHash(batchState.limboRecoveryData.limboTxHash, &stateRoot)
 			return fmt.Errorf("[%s] %w: %s = %s", s.LogPrefix(), zk.ErrLimboState, batchState.limboRecoveryData.limboTxHash.Hex(), stateRoot.Hex())
 		}
+
 		t.LogTimer()
 		gasPerSecond := float64(0)
 		elapsedSeconds := t.Elapsed().Seconds()
@@ -358,9 +369,10 @@ func SpawnSequencingStage(
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions)))
 		}
 
+		// For X Layer
 		BlockTxCount := uint64(len(batchState.blockState.builtBlockElements.transactions))
 		seqlog.GetBlockLogger().SetTxCount(BlockTxCount)
-		seqlog.GetBatchLogger().AccmuTxCount(BlockTxCount)
+		seqlog.GetBatchLogger().AccumulateTxCount(BlockTxCount)
 
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
@@ -391,10 +403,12 @@ func SpawnSequencingStage(
 		if err != nil || needsUnwind {
 			return err
 		}
+
+		// For X Layer
 		blockTime := time.Since(blockStart)
 		seqlog.GetBlockLogger().SetTotalDuration(blockTime)
 		seqlog.GetBatchLogger().AppendBlockLog(blockNumber, blockTime)
-		seqlog.GetBatchLogger().AccmuBlockCount()
+		seqlog.GetBatchLogger().AccumulateBlockCount()
 		log.Info(seqlog.GetBlockLogger().PrintLogAndFlush())
 	}
 
@@ -407,15 +421,12 @@ func SpawnSequencingStage(
 	if err = runBatchLastSteps(batchContext, batchState.batchNumber, block.NumberU64(), batchCounters); err != nil {
 		return err
 	}
-	//commitStart := time.Now()
-	//seqlog.GetBatchLogger().AppendCommitLog(time.Since(commitStart))
-	batchTime := time.Since(batchStart)
-	seqlog.GetBatchLogger().SetTotalDuration(batchTime)
-	// For X Layer metrics
-	metrics.BatchExecuteTime(batchCloseReason, batchTime)
-	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 
 	// For X Layer
+	batchTime := time.Since(batchStart)
+	seqlog.GetBatchLogger().SetTotalDuration(batchTime)
+	metrics.BatchExecuteTime(batchCloseReason, batchTime)
+	log.Info(seqlog.GetBatchLogger().PrintLogAndFlush())
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
 	return sdb.tx.Commit()

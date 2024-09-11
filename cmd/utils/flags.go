@@ -456,6 +456,11 @@ var (
 		Usage: "First block to start syncing from on the L1",
 		Value: 0,
 	}
+	L1ContractAddressCheckFlag = cli.BoolFlag{
+		Name:  "zkevm.l1-contract-address-check",
+		Usage: "Check the contract address on the L1",
+		Value: true,
+	}
 	RebuildTreeAfterFlag = cli.Uint64Flag{
 		Name:  "zkevm.rebuild-tree-after",
 		Usage: "Rebuild the state tree after this many blocks behind",
@@ -485,6 +490,11 @@ var (
 		Name:  "zkevm.sequencer-batch-verification-timeout",
 		Usage: "This is a maximum time that a batch verification could take. Including retries. This could be interpreted as maximum that that the sequencer can run without executor. Setting it to 0s will mean infinite timeout. Defaults to 30min",
 		Value: "30m",
+	}
+	SequencerTimeoutOnEmptyTxPool = cli.StringFlag{
+		Name:  "zkevm.sequencer-timeout-on-empty-tx-pool",
+		Usage: "Timeout before requesting txs from the txpool if none were found before. Defaults to 250ms",
+		Value: "250ms",
 	}
 	SequencerHaltOnBatchNumber = cli.Uint64Flag{
 		Name:  "zkevm.sequencer-halt-on-batch-number",
@@ -626,6 +636,11 @@ var (
 		Name:  "zkevm.pool-manager-url",
 		Usage: "The URL of the pool manager. If set, eth_sendRawTransaction will be redirected there.",
 		Value: "",
+	}
+	TxPoolRejectSmartContractDeployments = cli.BoolFlag{
+		Name:  "zkevm.reject-smart-contract-deployments",
+		Usage: "Reject smart contract deployments",
+		Value: false,
 	}
 	DisableVirtualCounters = cli.BoolFlag{
 		Name:  "zkevm.disable-virtual-counters",

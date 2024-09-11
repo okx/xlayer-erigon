@@ -21,6 +21,7 @@ type Zk struct {
 	AddressRollup                          common.Address
 	AddressZkevm                           common.Address
 	AddressGerManager                      common.Address
+	L1ContractAddressCheck                 bool
 	L1RollupId                             uint64
 	L1BlockRange                           uint64
 	L1QueryDelay                           uint64
@@ -35,6 +36,7 @@ type Zk struct {
 	SequencerBlockSealTime                 time.Duration
 	SequencerBatchSealTime                 time.Duration
 	SequencerBatchVerificationTimeout      time.Duration
+	SequencerTimeoutOnEmptyTxPool          time.Duration
 	SequencerHaltOnBatchNumber             uint64
 	ExecutorUrls                           []string
 	ExecutorStrictMode                     bool
@@ -76,6 +78,7 @@ type Zk struct {
 	DisableVirtualCounters      bool
 	VirtualCountersSmtReduction float64
 	ExecutorPayloadOutput       string
+	TxPoolRejectSmartContractDeployments bool
 
 	// For X Layer
 	XLayer XLayerConfig

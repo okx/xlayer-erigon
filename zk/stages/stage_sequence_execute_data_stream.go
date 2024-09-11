@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	"github.com/ledgerwatch/erigon/core/rawdb"
+	"github.com/ledgerwatch/erigon/eth/stagedsync"
+	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	verifier "github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	"github.com/ledgerwatch/erigon/zk/utils"
@@ -62,6 +64,10 @@ func (sbc *SequencerBatchStreamWriter) writeBlockDetailsToDatastream(verifiedBun
 				return checkedVerifierBundles, err
 			}
 
+			if err = stages.SaveStageProgress(sbc.sdb.tx, stages.DataStream, block.NumberU64()); err != nil {
+				return checkedVerifierBundles, err
+			}
+
 			// once we have handled the very first block we can update the last batch to be the current batch safely so that
 			// we don't keep adding batch bookmarks in between blocks
 			sbc.lastBatch = request.BatchNumber
@@ -78,28 +84,62 @@ func (sbc *SequencerBatchStreamWriter) writeBlockDetailsToDatastream(verifiedBun
 	return checkedVerifierBundles, nil
 }
 
-func finalizeLastBatchInDatastreamIfNotFinalized(batchContext *BatchContext, batchState *BatchState, thisBlock uint64) error {
+func alignExecutionToDatastream(batchContext *BatchContext, batchState *BatchState, lastExecutedBlock uint64, u stagedsync.Unwinder) (bool, error) {
+	lastExecutedBatch := batchState.batchNumber - 1
+
+	lastDatastreamBatch, err := batchContext.cfg.datastreamServer.GetHighestClosedBatch()
+	if err != nil {
+		return false, err
+	}
+
+	lastDatastreamBlock, err := batchContext.cfg.datastreamServer.GetHighestBlockNumber()
+	if err != nil {
+		return false, err
+	}
+
+	if lastExecutedBatch != lastDatastreamBatch {
+		if err := finalizeLastBatchInDatastreamIfNotFinalized(batchContext, lastExecutedBatch, lastDatastreamBlock); err != nil {
+			return false, err
+		}
+	}
+
+	if lastExecutedBlock != lastDatastreamBlock {
+		block, err := rawdb.ReadBlockByNumber(batchContext.sdb.tx, lastDatastreamBlock)
+		if err != nil {
+			return false, err
+		}
+
+		log.Warn(fmt.Sprintf("[%s] Unwinding due to a datastream gap", batchContext.s.LogPrefix()), "streamHeight", lastDatastreamBlock, "sequencerHeight", lastExecutedBlock)
+		u.UnwindTo(lastDatastreamBlock, block.Hash())
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func finalizeLastBatchInDatastreamIfNotFinalized(batchContext *BatchContext, batchToClose, blockToCloseAt uint64) error {
 	isLastEntryBatchEnd, err := batchContext.cfg.datastreamServer.IsLastEntryBatchEnd()
 	if err != nil {
 		return err
 	}
-
 	if isLastEntryBatchEnd {
 		return nil
 	}
+	log.Warn(fmt.Sprintf("[%s] Last datastream's batch %d was not closed properly, closing it now...", batchContext.s.LogPrefix(), batchToClose))
+	return finalizeLastBatchInDatastream(batchContext, batchToClose, blockToCloseAt)
+}
 
-	log.Warn(fmt.Sprintf("[%s] Last batch %d was not closed properly, closing it now...", batchContext.s.LogPrefix(), batchState.batchNumber))
-	ler, err := utils.GetBatchLocalExitRootFromSCStorage(batchState.batchNumber, batchContext.sdb.hermezDb.HermezDbReader, batchContext.sdb.tx)
+func finalizeLastBatchInDatastream(batchContext *BatchContext, batchToClose, blockToCloseAt uint64) error {
+	ler, err := utils.GetBatchLocalExitRootFromSCStorageByBlock(blockToCloseAt, batchContext.sdb.hermezDb.HermezDbReader, batchContext.sdb.tx)
 	if err != nil {
 		return err
 	}
-
-	lastBlock, err := rawdb.ReadBlockByNumber(batchContext.sdb.tx, thisBlock)
+	lastBlock, err := rawdb.ReadBlockByNumber(batchContext.sdb.tx, blockToCloseAt)
 	if err != nil {
 		return err
 	}
 	root := lastBlock.Root()
-	if err = batchContext.cfg.datastreamServer.WriteBatchEnd(batchContext.sdb.hermezDb, batchState.batchNumber-1, &root, &ler); err != nil {
+	if err = batchContext.cfg.datastreamServer.WriteBatchEnd(batchContext.sdb.hermezDb, batchToClose, &root, &ler); err != nil {
 		return err
 	}
 	return nil

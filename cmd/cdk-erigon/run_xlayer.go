@@ -9,14 +9,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func initRunForXLayer(ctx *cli.Context, ethCfg *ethconfig.Config) {
+func initRunForXLayer(cliCtx *cli.Context, ethCfg *ethconfig.Config) {
 	apolloClient := apollo.NewClient(ethCfg)
 	if apolloClient.LoadConfig() {
 		log.Info("Apollo config loaded")
 	}
 
 	// Init metrics
-	if ctx.Bool(utils.MetricsEnabledFlag.Name) {
+	if cliCtx.Bool(utils.MetricsEnabledFlag.Name) {
 		metrics.Init()
 	}
 }

@@ -366,6 +366,12 @@ func TestMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, strings.Contains(result, "sequencer_batch_execute_time"), true)
 	require.Equal(t, strings.Contains(result, "sequencer_pool_tx_count"), true)
+
+	result, err = operations.GetMetrics()
+	require.NoError(t, err)
+	require.Equal(t, strings.Contains(result, "zkevm_getBatchWitness"), true)
+	require.Equal(t, strings.Contains(result, "eth_sendRawTransaction"), true)
+	require.Equal(t, strings.Contains(result, "eth_getTransactionCount"), true)
 }
 
 func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amount *uint256.Int, toAddress string) string {

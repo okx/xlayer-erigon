@@ -508,8 +508,7 @@ func TestOkPayTx(t *testing.T) {
 	transToken(t, ctx, client, uint256.NewInt(210000*encoding.Gwei), okPayAddr)
 
 	// build and send ok pay tx
-	okPayTx := buildAndSendTransTokenTx(t, ctx, client, okPayPriKey, operations.DefaultL2AdminAddress, uint256.NewInt(1))
-	fmt.Println(okPayTx.Hash().String())
+	okPayTx := buildAndSendTransTokenTx(t, ctx, client, okPayPriKey, operations.DefaultL2AdminAddress, uint256.NewInt(0))
 	err = operations.WaitTxToBeMined(ctx, client, okPayTx, operations.DefaultTimeoutTxToBeMined)
 	require.NoError(t, err)
 	//require.Error(t, err, "context deadline exceeded") // txpool.okpay-counter-limit-percentage=0

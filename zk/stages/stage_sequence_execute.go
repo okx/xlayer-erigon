@@ -262,6 +262,7 @@ func SpawnSequencingStage(
 					}
 				}
 
+				start := time.Now()
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
 					// For X Layer
 					metrics.GetLogStatistics().CumulativeCounting(metrics.TxCounter)
@@ -271,9 +272,8 @@ func SpawnSequencingStage(
 
 					// The copying of this structure is intentional
 					backupDataSizeChecker := *blockDataSizeChecker
-					start := time.Now()
+
 					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, &backupDataSizeChecker)
-					metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
 					if err != nil {
 						metrics.GetLogStatistics().CumulativeCounting(metrics.FailTxCounter)
 						if batchState.isLimboRecovery() {
@@ -325,7 +325,6 @@ func SpawnSequencingStage(
 						}
 
 					}
-
 					if err == nil {
 						// For X Layer
 						metrics.GetLogStatistics().CumulativeValue(metrics.BatchGas, int64(execResult.UsedGas))
@@ -333,7 +332,7 @@ func SpawnSequencingStage(
 						batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
 					}
 				}
-
+				metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
 				if batchState.isL1Recovery() {
 					// just go into the normal loop waiting for new transactions to signal that the recovery
 					// has finished as far as it can go
@@ -343,7 +342,6 @@ func SpawnSequencingStage(
 
 					break LOOP_TRANSACTIONS
 				}
-
 				if batchState.isLimboRecovery() {
 					batchCloseReason = metrics.BatchLimboRecovery
 					runLoopBlocks = false

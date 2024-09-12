@@ -16,7 +16,6 @@ const (
 	ReprocessingTxCounter         logTag = "ReProcessingTxCounter"
 	FailTxCounter                 logTag = "FailTxCounter"
 	FailTxResourceOverCounter     logTag = "FailTxResourceOverCounter"
-	NewRound                      logTag = "NewRound"
 	BatchGas                      logTag = "BatchGas"
 	ProcessingTxTiming            logTag = "ProcessingTxTiming"
 	ProcessingInvalidTxCounter    logTag = "ProcessingInvalidTxCounter"

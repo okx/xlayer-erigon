@@ -9,7 +9,6 @@ type XLayerConfig struct {
 	Apollo        ApolloClientConfig
 	Nacos         NacosConfig
 	EnableInnerTx bool
-	Metrics       MetricsConfig
 	// Sequencer
 	SequencerBatchSleepDuration time.Duration
 }
@@ -30,14 +29,4 @@ type ApolloClientConfig struct {
 	IP            string
 	AppID         string
 	NamespaceName string
-}
-
-// MetricsConfig is the config for prometheus metrics
-type MetricsConfig struct {
-	// Host is the address to bind the metrics server
-	Host string
-	// Port is the port to bind the metrics server
-	Port int
-	// Enabled is the flag to enable/disable the metrics server
-	Enabled bool
 }

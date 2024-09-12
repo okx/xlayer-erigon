@@ -43,14 +43,13 @@ var PoolTxCount = prometheus.NewGaugeVec(
 	[]string{"poolName"},
 )
 
-// BatchExecuteTime sets the gauge vector to the given batch type and time.
 func BatchExecuteTime(closingReason string, duration time.Duration) {
-	log.Info(fmt.Sprintf("[BatchExecuteTime] ClosingReason: %s, Duration: %.2fs", closingReason, duration.Seconds()))
+	log.Info(fmt.Sprintf("[BatchExecuteTime] ClosingReason: %v, Duration: %.2fs", closingReason, duration.Seconds()))
 	BatchExecuteTimeGauge.WithLabelValues(closingReason).Set(duration.Seconds())
 }
 
 func AddPoolTxCount(pending, baseFee, queued int) {
-	log.Info(fmt.Sprintf("[PoolTxCount] pending: %d, basefee: %d, queued: %d", pending, baseFee, queued))
+	log.Info(fmt.Sprintf("[PoolTxCount] pending: %v, basefee: %v, queued: %v", pending, baseFee, queued))
 	PoolTxCount.WithLabelValues("pending").Set(float64(pending))
 	PoolTxCount.WithLabelValues("basefee").Set(float64(baseFee))
 	PoolTxCount.WithLabelValues("queued").Set(float64(queued))

@@ -193,7 +193,6 @@ func SpawnSequencingStage(
 		if err != nil {
 			return err
 		}
-
 		if !batchState.isAnyRecovery() && overflowOnNewBlock {
 			// For X Layer
 			batchCloseReason = metrics.BatchCounterOverflow
@@ -241,6 +240,7 @@ func SpawnSequencingStage(
 					}
 				} else if !batchState.isL1Recovery() {
 					var allConditionsOK bool
+					// For X Layer
 					start := time.Now()
 					batchState.blockState.transactionsForInclusion, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
 					if err != nil {
@@ -258,7 +258,6 @@ func SpawnSequencingStage(
 					} else {
 						log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 					}
-
 				}
 
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
@@ -326,6 +325,7 @@ func SpawnSequencingStage(
 					}
 
 					if err == nil {
+						// For X Layer
 						metrics.GetLogStatistics().CumulativeValue(metrics.BatchGas, int64(execResult.UsedGas))
 						blockDataSizeChecker = &backupDataSizeChecker
 						batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
@@ -444,9 +444,10 @@ func SpawnSequencingStage(
 	}
 
 	log.Info(fmt.Sprintf("[%s] Finish batch %d...", batchContext.s.LogPrefix(), batchState.batchNumber))
+
+	// For X Layer
 	start := time.Now()
 	err = sdb.tx.Commit()
 	metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
-
 	return err
 }

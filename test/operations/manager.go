@@ -23,8 +23,9 @@ const (
 	DefaultL1AdminAddress           = "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
 	DefaultL1AdminPrivateKey        = "0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
 
-	DefaultL2NetworkURL        = "http://localhost:8124"
-	DefaultL2ChainID    uint64 = 195
+	DefaultL2NetworkURL                  = "http://localhost:8124"
+	DefaultL2MetricsPrometheusURL        = "http://127.0.0.1:9092/debug/metrics/prometheus"
+	DefaultL2ChainID              uint64 = 195
 
 	BridgeAddr = "0x1089Af36bD72553008FAd0A1240B4D5641208494"
 

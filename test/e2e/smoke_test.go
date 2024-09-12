@@ -361,6 +361,13 @@ func TestGasPrice(t *testing.T) {
 	require.Greater(t, gasPrice2, gasPrice1)
 }
 
+func TestMetrics(t *testing.T) {
+	result, err := operations.GetMetricsPrometheus()
+	require.NoError(t, err)
+	require.Equal(t, strings.Contains(result, "sequencer_batch_execute_time"), true)
+	require.Equal(t, strings.Contains(result, "sequencer_pool_tx_count"), true)
+}
+
 func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amount *uint256.Int, toAddress string) string {
 	auth, err := operations.GetAuth(operations.DefaultL2AdminPrivateKey, operations.DefaultL2ChainID)
 	nonce, err := client.PendingNonceAt(ctx, auth.From)

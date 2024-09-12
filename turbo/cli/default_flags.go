@@ -272,4 +272,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolFreeGasLimit,
 	&utils.HTTPApiKeysFlag,
 	&utils.MethodRateLimitFlag,
+	&utils.TxPoolOkPayAccountList,
+	&utils.TxPoolOkPayGasLimitPerBlock,
+	&utils.TxPoolOkPayCounterLimitPercentage,
 }

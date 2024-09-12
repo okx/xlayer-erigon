@@ -21,7 +21,7 @@ import (
 	"github.com/ledgerwatch/log/v3"
 )
 
-func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, bool, error) {
+func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte], okPayPriority bool) ([]types.Transaction, bool, error) {
 	cfg.txPool.LockFlusher()
 	defer cfg.txPool.UnlockFlusher()
 
@@ -33,7 +33,8 @@ func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executio
 
 	if err := cfg.txPoolDb.View(ctx, func(poolTx kv.Tx) error {
 		slots := types2.TxsRlp{}
-		if allConditionsOk, _, err = cfg.txPool.YieldBest(cfg.yieldSize, &slots, poolTx, executionAt, gasLimit, alreadyYielded); err != nil {
+
+		if allConditionsOk, _, err = cfg.txPool.YieldBest(cfg.yieldSize, &slots, poolTx, executionAt, gasLimit, alreadyYielded, okPayPriority); err != nil {
 			return err
 		}
 		yieldedTxs, err := extractTransactionsFromSlot(&slots)
@@ -110,18 +111,31 @@ func attemptAddTransaction(
 	l1Recovery bool,
 	forkId, l1InfoIndex uint64,
 	blockDataSizeChecker *BlockDataChecker,
-) (*types.Receipt, *core.ExecutionResult, bool, error) {
-	var batchDataOverflow, overflow bool
+	okPayPriority bool,
+	okPayCounterLimitPercentage uint,
+) (*types.Receipt, *core.ExecutionResult, bool, bool, error) {
+	var batchDataOverflow, overflow, okPayOverflow bool
 	var err error
 
-	txCounters := vm.NewTransactionCounter(transaction, sdb.smt.GetDepth(), uint16(forkId), cfg.zk.VirtualCountersSmtReduction, cfg.zk.ShouldCountersBeUnlimited(l1Recovery))
+	// For X Layer: check ok pay tx counter overflow
+	sender, ok := transaction.GetSender()
+	if !ok {
+		signer := types.MakeSigner(cfg.chainConfig, header.Number.Uint64())
+		sender, err = transaction.Sender(*signer)
+		if err != nil {
+			return nil, nil, false, false, err
+		}
+	}
+	isOkPayTx := cfg.txPool.IsOkPayAddr(sender)
+
+	txCounters := vm.NewTransactionCounter(transaction, sdb.smt.GetDepth(), uint16(forkId), cfg.zk.VirtualCountersSmtReduction, cfg.zk.ShouldCountersBeUnlimited(l1Recovery), isOkPayTx)
 	overflow, err = batchCounters.AddNewTransactionCounters(txCounters)
 
 	// run this only once the first time, do not add it on rerun
 	if blockDataSizeChecker != nil {
 		txL2Data, err := txCounters.GetL2DataCache()
 		if err != nil {
-			return nil, nil, false, err
+			return nil, nil, false, false, err
 		}
 		batchDataOverflow = blockDataSizeChecker.AddTransactionData(txL2Data)
 		if batchDataOverflow {
@@ -129,11 +143,11 @@ func attemptAddTransaction(
 		}
 	}
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 	anyOverflow := overflow || batchDataOverflow
 	if anyOverflow && !l1Recovery {
-		return nil, nil, true, nil
+		return nil, nil, true, false, nil
 	}
 
 	gasPool := new(core.GasPool).AddGas(transactionGasLimit)
@@ -164,22 +178,34 @@ func attemptAddTransaction(
 	)
 
 	if err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	if err = txCounters.ProcessTx(ibs, execResult.ReturnData); err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	batchCounters.UpdateExecutionAndProcessingCountersCache(txCounters)
 	// now that we have executed we can check again for an overflow
 	if overflow, err = batchCounters.CheckForOverflow(l1InfoIndex != 0); err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	if overflow {
 		ibs.RevertToSnapshot(snapshot)
-		return nil, nil, true, nil
+		return nil, nil, true, false, nil
+	}
+
+	// For X Layer: check ok pay tx counter overflow
+	if isOkPayTx && okPayPriority {
+		// now that we have executed we can check again for an overflow
+		if okPayOverflow, err = batchCounters.CheckOkPayForOverflow(okPayCounterLimitPercentage); err != nil {
+			return nil, nil, false, false, err
+		}
+		if okPayOverflow {
+			ibs.RevertToSnapshot(snapshot)
+			return nil, nil, false, true, nil
+		}
 	}
 
 	// add the gas only if not reverted. This should not be moved above the overflow check
@@ -188,10 +214,10 @@ func attemptAddTransaction(
 	// we need to keep hold of the effective percentage used
 	// todo [zkevm] for now we're hard coding to the max value but we need to calc this properly
 	if err = sdb.hermezDb.WriteEffectiveGasPricePercentage(transaction.Hash(), effectiveGasPrice); err != nil {
-		return nil, nil, false, err
+		return nil, nil, false, false, err
 	}
 
 	ibs.FinalizeTx(evm.ChainRules(), noop)
 
-	return receipt, execResult, false, nil
+	return receipt, execResult, false, false, nil
 }

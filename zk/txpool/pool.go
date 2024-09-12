@@ -398,15 +398,18 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 		limbo:                   newLimbo(),
 		// X Layer config
 		xlayerCfg: XLayerConfig{
-			EnableWhitelist:      ethCfg.DeprecatedTxPool.EnableWhitelist,
-			WhiteList:            ethCfg.DeprecatedTxPool.WhiteList,
-			BlockedList:          ethCfg.DeprecatedTxPool.BlockedList,
-			FreeClaimGasAddrs:    ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
-			GasPriceMultiple:     ethCfg.DeprecatedTxPool.GasPriceMultiple,
-			EnableFreeGasByNonce: ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
-			FreeGasExAddrs:       ethCfg.DeprecatedTxPool.FreeGasExAddrs,
-			FreeGasCountPerAddr:  ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
-			FreeGasLimit:         ethCfg.DeprecatedTxPool.FreeGasLimit,
+			EnableWhitelist:             ethCfg.DeprecatedTxPool.EnableWhitelist,
+			WhiteList:                   ethCfg.DeprecatedTxPool.WhiteList,
+			BlockedList:                 ethCfg.DeprecatedTxPool.BlockedList,
+			FreeClaimGasAddrs:           ethCfg.DeprecatedTxPool.FreeClaimGasAddrs,
+			GasPriceMultiple:            ethCfg.DeprecatedTxPool.GasPriceMultiple,
+			EnableFreeGasByNonce:        ethCfg.DeprecatedTxPool.EnableFreeGasByNonce,
+			FreeGasExAddrs:              ethCfg.DeprecatedTxPool.FreeGasExAddrs,
+			FreeGasCountPerAddr:         ethCfg.DeprecatedTxPool.FreeGasCountPerAddr,
+			FreeGasLimit:                ethCfg.DeprecatedTxPool.FreeGasLimit,
+			OkPayAccountList:            ethCfg.DeprecatedTxPool.OkPayAccountList,
+			OkPayGasLimitPerBlock:       ethCfg.DeprecatedTxPool.OkPayGasLimitPerBlock,
+			OkPayCounterLimitPercentage: ethCfg.DeprecatedTxPool.OkPayCounterLimitPercentage,
 		},
 		freeGasAddrs: map[string]bool{},
 	}, nil
@@ -700,13 +703,13 @@ func (p *TxPool) ResetYieldedStatus() {
 	}
 }
 
-func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
-	return p.best(n, txs, tx, onTopOf, availableGas, toSkip)
+func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte], okPayPriority bool) (bool, int, error) {
+	return p.best(n, txs, tx, onTopOf, availableGas, toSkip, okPayPriority)
 }
 
 func (p *TxPool) PeekBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64) (bool, error) {
 	set := mapset.NewThreadUnsafeSet[[32]byte]()
-	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, set)
+	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, set, false)
 	return onTime, err
 }
 

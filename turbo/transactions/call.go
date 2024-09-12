@@ -256,12 +256,12 @@ func NewReusableCaller(
 		msg.GasPrice(),
 		msg.Data(),
 	)
-
+	
 	var batchCounters *vm.BatchCounterCollector
 	var counterCollector *vm.CounterCollector
 	if useCounters {
 		batchCounters = vm.NewBatchCounterCollector(smtDepth, uint16(forkId), VirtualCountersSmtReduction, false, nil)
-		txCounters := vm.NewTransactionCounter(transaction, smtDepth, uint16(forkId), VirtualCountersSmtReduction, false)
+		txCounters := vm.NewTransactionCounter(transaction, smtDepth, uint16(forkId), VirtualCountersSmtReduction, false, false)
 
 		_, err = batchCounters.AddNewTransactionCounters(txCounters)
 		if err != nil {

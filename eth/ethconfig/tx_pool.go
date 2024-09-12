@@ -63,6 +63,12 @@ type DeprecatedTxPoolConfig struct {
 	FreeGasCountPerAddr uint64
 	// FreeGasLimit is the max gas allowed use to do a free gas tx
 	FreeGasLimit uint64
+	// okPayAccountList is the ok pay bundler accounts address
+	OkPayAccountList []string
+	// OkPayGasLimitPerBlock is the block max gas limit for ok pay tx
+	OkPayGasLimitPerBlock uint64
+	// OkPayCounterLimitPercentage is okpaytx's percentage of counter limit
+	OkPayCounterLimitPercentage uint
 }
 
 // DeprecatedDefaultTxPoolConfig contains the default configurations for the transaction

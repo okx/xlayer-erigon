@@ -94,6 +94,21 @@ var (
 		Name:  "txpool.freegaslimit",
 		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
 	}
+	TxPoolOkPayAccountList = cli.StringFlag{
+		Name:  "txpool.okpay-account-list",
+		Usage: "Comma separated list of addresses, who send ok pay tx",
+		Value: "",
+	}
+	TxPoolOkPayGasLimitPerBlock = cli.Uint64Flag{
+		Name:  "txpool.okpay-gaslimit-per-block",
+		Usage: "the block max gas limit for ok pay tx",
+		Value: 0,
+	}
+	TxPoolOkPayCounterLimitPercentage = cli.UintFlag{
+		Name:  "txpool.okpay-counter-limit-percentage",
+		Usage: "okpaytx's percentage of counter limit",
+		Value: 50,
+	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
 		Name:  "gpo.type",
@@ -307,6 +322,21 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
 		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
+	}
+	if ctx.IsSet(TxPoolOkPayAccountList.Name) {
+		// Parse the command separated flag
+		addrHexes := SplitAndTrim(ctx.String(TxPoolOkPayAccountList.Name))
+		cfg.OkPayAccountList = make([]string, len(addrHexes))
+		for i, senderHex := range addrHexes {
+			sender := libcommon.HexToAddress(senderHex)
+			cfg.OkPayAccountList[i] = sender.String()
+		}
+	}
+	if ctx.IsSet(TxPoolOkPayGasLimitPerBlock.Name) {
+		cfg.OkPayGasLimitPerBlock = ctx.Uint64(TxPoolOkPayGasLimitPerBlock.Name)
+	}
+	if ctx.IsSet((TxPoolOkPayCounterLimitPercentage.Name)) {
+		cfg.OkPayCounterLimitPercentage = ctx.Uint(TxPoolOkPayCounterLimitPercentage.Name)
 	}
 }
 

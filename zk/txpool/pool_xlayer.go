@@ -3,7 +3,12 @@ package txpool
 import (
 	"math/big"
 
+	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/gateway-fm/cdk-erigon-lib/common/fixedgas"
+	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // XLayerConfig contains the X Layer configs for the txpool
@@ -26,6 +31,12 @@ type XLayerConfig struct {
 	FreeGasCountPerAddr uint64
 	// FreeGasLimit is the max gas allowed use to do a free gas tx
 	FreeGasLimit uint64
+	// okPayAccountList is the ok pay bundler accounts address
+	OkPayAccountList []string
+	// OkPayGasLimitPerBlock is the block max gas limit for ok pay tx
+	OkPayGasLimitPerBlock uint64
+	// OkPayCounterLimitPercentage is okpaytx's percentage of counter limit
+	OkPayCounterLimitPercentage uint
 }
 
 type GPCache interface {
@@ -80,4 +91,82 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64) (bool, bool) {
 func (p *TxPool) isFreeGasXLayer(senderID uint64) bool {
 	free, _ := p.checkFreeGasAddrXLayer(senderID)
 	return free
+}
+
+func (p *TxPool) IsOkPayAddr(addr common.Address) bool {
+	for _, e := range p.xlayerCfg.OkPayAccountList {
+		if common.HexToAddress(e) == addr {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *TxPool) bestOkPay(n uint16, txs *types.TxsRlp, tx kv.Tx, isLondon, isShanghai bool, availableGas uint64, toSkip mapset.Set[[32]byte]) (uint64, int, []*metaTx, error) {
+	var toRemove []*metaTx
+	best := p.pending.best
+	count := 0
+
+	for i := 0; count < int(n) && i < len(best.ms); i++ {
+		// if we wouldn't have enough gas for a standard transaction then quit out early
+		if availableGas < fixedgas.TxGas {
+			break
+		}
+
+		mt := best.ms[i]
+
+		if toSkip.Contains(mt.Tx.IDHash) {
+			continue
+		}
+
+		if !isLondon && mt.Tx.Type == 0x2 {
+			// remove ldn txs when not in london
+			toRemove = append(toRemove, mt)
+			toSkip.Add(mt.Tx.IDHash)
+			continue
+		}
+
+		if mt.Tx.Gas >= transactionGasLimit {
+			// Skip transactions with very large gas limit, these shouldn't enter the pool at all
+			log.Debug("found a transaction in the pending pool with too high gas for tx - clear the tx pool")
+			continue
+		}
+		rlpTx, sender, isLocal, err := p.getRlpLocked(tx, mt.Tx.IDHash[:])
+		if err != nil {
+			return availableGas, count, toRemove, err
+		}
+		if len(rlpTx) == 0 {
+			toRemove = append(toRemove, mt)
+			continue
+		}
+
+		if !p.IsOkPayAddr(sender) {
+			continue
+		}
+
+		// make sure we have enough gas in the caller to add this transaction.
+		// not an exact science using intrinsic gas but as close as we could hope for at
+		// this stage
+		intrinsicGas, _ := CalcIntrinsicGas(uint64(mt.Tx.DataLen), uint64(mt.Tx.DataNonZeroLen), nil, mt.Tx.Creation, true, true, isShanghai)
+		if intrinsicGas > availableGas {
+			// we might find another TX with a low enough intrinsic gas to include so carry on
+			continue
+		}
+
+		if intrinsicGas <= availableGas { // check for potential underflow
+			availableGas -= intrinsicGas
+		}
+
+		txs.Txs[count] = rlpTx
+		copy(txs.Senders.At(count), sender.Bytes())
+		txs.IsLocal[count] = isLocal
+		toSkip.Add(mt.Tx.IDHash)
+		count++
+	}
+
+	return availableGas, count, toRemove, nil
+}
+
+func (p *TxPool) OkPayCounterLimitPercentage() uint {
+	return p.xlayerCfg.OkPayCounterLimitPercentage
 }

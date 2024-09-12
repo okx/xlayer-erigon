@@ -493,3 +493,61 @@ func sendBridgeAsset(
 	const txTimeout = 60 * time.Second
 	return operations.WaitTxToBeMined(ctx, c, tx, txTimeout)
 }
+
+var (
+	okPayAddr   = "0x36710Da8612C168702bf4F10f5ff089147a1Ba78"
+	okPayPriKey = "5f329974c35134e12a3b68c3ca1c3f52d96c70f11fae0b0074188067a8906064"
+)
+
+func TestOkPayTx(t *testing.T) {
+	ctx := context.Background()
+	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+
+	//prepare balance for okPayAddr
+	transToken(t, ctx, client, uint256.NewInt(21000000*encoding.Gwei), okPayAddr)
+
+	// build and send ok pay tx
+	okPayTx := buildAndSendTransTokenTx(t, ctx, client, okPayPriKey, operations.DefaultL2AdminAddress, uint256.NewInt(0))
+	err = operations.WaitTxToBeMined(ctx, client, okPayTx, operations.DefaultTimeoutTxToBeMined)
+	require.NoError(t, err)
+	//require.Error(t, err, "context deadline exceeded") // txpool.okpay-counter-limit-percentage=0
+}
+
+func buildAndSendTransTokenTx(t *testing.T, ctx context.Context, client *ethclient.Client, privateKeyStr string, toAddress string, amount *uint256.Int) types.Transaction {
+	auth, err := operations.GetAuth(privateKeyStr, operations.DefaultL2ChainID)
+	nonce, err := client.PendingNonceAt(ctx, auth.From)
+	//gasPrice, err := client.SuggestGasPrice(ctx)
+	gasPrice, err := operations.GetMinGasPrice()
+	require.NoError(t, err)
+
+	to := common.HexToAddress(toAddress)
+	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
+		From:  auth.From,
+		To:    &to,
+		Value: amount,
+	})
+	require.NoError(t, err)
+
+	var tx types.Transaction = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &to,
+			Gas:   gas,
+			Value: amount,
+		},
+		GasPrice: uint256.NewInt(gasPrice),
+	}
+
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(privateKeyStr, "0x"))
+	require.NoError(t, err)
+
+	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
+	signedTx, err := types.SignTx(tx, *signer, privateKey)
+	require.NoError(t, err)
+
+	err = client.SendTransaction(ctx, signedTx)
+	require.NoError(t, err)
+
+	return signedTx
+}

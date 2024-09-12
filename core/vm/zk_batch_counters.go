@@ -26,6 +26,11 @@ type BatchCounterCollector struct {
 	rlpCombinedCountersCache        Counters
 	executionCombinedCountersCache  Counters
 	processingCombinedCountersCache Counters
+
+	// For X Layer
+	okPayRlpCombinedCounters        Counters
+	okPayExecutionCombinedCounters  Counters
+	okPayProcessingCombinedCounters Counters
 }
 
 func NewBatchCounterCollector(smtMaxLevel int, forkId uint16, mcpReduction float64, unlimitedCounters bool, addonCounters *Counters) *BatchCounterCollector {
@@ -44,6 +49,10 @@ func NewBatchCounterCollector(smtMaxLevel int, forkId uint16, mcpReduction float
 	bcc.rlpCombinedCounters = bcc.NewCounters()
 	bcc.executionCombinedCounters = bcc.NewCounters()
 	bcc.processingCombinedCounters = bcc.NewCounters()
+
+	bcc.okPayRlpCombinedCounters = bcc.NewCounters()
+	bcc.okPayExecutionCombinedCounters = bcc.NewCounters()
+	bcc.okPayProcessingCombinedCounters = bcc.NewCounters()
 
 	return &bcc
 }
@@ -73,6 +82,10 @@ func (bcc *BatchCounterCollector) Clone() *BatchCounterCollector {
 		rlpCombinedCounters:        bcc.rlpCombinedCounters.Clone(),
 		executionCombinedCounters:  bcc.executionCombinedCounters.Clone(),
 		processingCombinedCounters: bcc.processingCombinedCounters.Clone(),
+
+		okPayRlpCombinedCounters:        bcc.okPayRlpCombinedCounters.Clone(),
+		okPayExecutionCombinedCounters:  bcc.okPayExecutionCombinedCounters.Clone(),
+		okPayProcessingCombinedCounters: bcc.okPayProcessingCombinedCounters.Clone(),
 	}
 }
 
@@ -274,15 +287,24 @@ func (bcc *BatchCounterCollector) CombineCollectorsNoChanges() Counters {
 func (bcc *BatchCounterCollector) UpdateRlpCountersCache(txCounters *TransactionCounter) {
 	for k, v := range txCounters.rlpCounters.counters {
 		bcc.rlpCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayRlpCombinedCounters[k].used += v.used
+		}
 	}
 }
 
 func (bcc *BatchCounterCollector) UpdateExecutionAndProcessingCountersCache(txCounters *TransactionCounter) {
 	for k, v := range txCounters.executionCounters.counters {
 		bcc.executionCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayExecutionCombinedCounters[k].used += v.used
+		}
 	}
 
 	for k, v := range txCounters.processingCounters.counters {
 		bcc.processingCombinedCounters[k].used += v.used
+		if txCounters.isOkPayTx {
+			bcc.okPayProcessingCombinedCounters[k].used += v.used
+		}
 	}
 }

@@ -34,5 +34,5 @@ L2 admin: 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534
 # Get metrics
 ```
 curl http://127.0.0.1:9092/debug/metrics/prometheus
-http://127.0.0.1:9092/debug/metrics
+curl http://127.0.0.1:9092/debug/metrics
 ```

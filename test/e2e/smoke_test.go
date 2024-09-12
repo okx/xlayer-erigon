@@ -505,7 +505,7 @@ func TestOkPayTx(t *testing.T) {
 	require.NoError(t, err)
 
 	//prepare balance for okPayAddr
-	transToken(t, ctx, client, uint256.NewInt(210000*encoding.Gwei), okPayAddr)
+	transToken(t, ctx, client, uint256.NewInt(21000000*encoding.Gwei), okPayAddr)
 
 	// build and send ok pay tx
 	okPayTx := buildAndSendTransTokenTx(t, ctx, client, okPayPriKey, operations.DefaultL2AdminAddress, uint256.NewInt(0))
@@ -517,7 +517,8 @@ func TestOkPayTx(t *testing.T) {
 func buildAndSendTransTokenTx(t *testing.T, ctx context.Context, client *ethclient.Client, privateKeyStr string, toAddress string, amount *uint256.Int) types.Transaction {
 	auth, err := operations.GetAuth(privateKeyStr, operations.DefaultL2ChainID)
 	nonce, err := client.PendingNonceAt(ctx, auth.From)
-	gasPrice, err := client.SuggestGasPrice(ctx)
+	//gasPrice, err := client.SuggestGasPrice(ctx)
+	gasPrice, err := operations.GetMinGasPrice()
 	require.NoError(t, err)
 
 	to := common.HexToAddress(toAddress)
@@ -535,7 +536,7 @@ func buildAndSendTransTokenTx(t *testing.T, ctx context.Context, client *ethclie
 			Gas:   gas,
 			Value: amount,
 		},
-		GasPrice: uint256.MustFromBig(gasPrice),
+		GasPrice: uint256.NewInt(gasPrice),
 	}
 
 	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(privateKeyStr, "0x"))

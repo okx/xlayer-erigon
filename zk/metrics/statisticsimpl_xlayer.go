@@ -55,6 +55,7 @@ func (l *statisticsInstance) Summary() string {
 	tx := "Tx<" + strconv.Itoa(int(l.statistics[TxCounter])) + ">, "
 	getTx := "GetTx<" + strconv.Itoa(int(l.statistics[GetTx])) + "ms>, "
 	getTxPause := "GetTxPause<" + strconv.Itoa(int(l.statistics[GetTxPauseCounter])) + ">, "
+	getTxPauseTiming := "GetTxPauseTiming<" + strconv.Itoa(int(l.statistics[GetTxPauseTiming])) + "ms>, "
 	reprocessTx := "ReprocessTx<" + strconv.Itoa(int(l.statistics[ReprocessingTxCounter])) + ">, "
 	resourceOverTx := "ResourceOverTx<" + strconv.Itoa(int(l.statistics[FailTxResourceOverCounter])) + ">, "
 	failTx := "FailTx<" + strconv.Itoa(int(l.statistics[FailTxCounter])) + ">, "
@@ -66,7 +67,7 @@ func (l *statisticsInstance) Summary() string {
 	finaliseBlockWriteTiming := "FinaliseBlockWriteTiming<" + strconv.Itoa(int(l.statistics[FinaliseBlockWriteTiming])) + "ms>, "
 	batchCloseReason := "BatchCloseReason<" + l.tags[BatchCloseReason] + ">"
 
-	result := batch + totalDuration + gasUsed + blockCount + tx + getTx + getTxPause +
+	result := batch + totalDuration + gasUsed + blockCount + tx + getTx + getTxPause + getTxPauseTiming +
 		reprocessTx + resourceOverTx + failTx + invalidTx + processTxTiming + pbStateTiming +
 		zkIncIntermediateHashesTiming + finaliseBlockWriteTiming + batchCommitDBTiming +
 		batchCloseReason

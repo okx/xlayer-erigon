@@ -250,8 +250,10 @@ func SpawnSequencingStage(
 
 					if len(batchState.blockState.transactionsForInclusion) == 0 {
 						if allConditionsOK {
+							metrics.GetLogStatistics().CumulativeTiming(metrics.GetTxPauseTiming, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 						} else {
+							metrics.GetLogStatistics().CumulativeTiming(metrics.GetTxPauseTiming, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool/5)
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
 						}
 						metrics.GetLogStatistics().CumulativeCounting(metrics.GetTxPauseCounter)

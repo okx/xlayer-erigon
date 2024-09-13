@@ -61,7 +61,7 @@ func SpawnSequencingStage(
 	var block *types.Block
 	runLoopBlocks := true
 	batchContext := newBatchContext(ctx, &cfg, &historyCfg, s, sdb)
-	batchState := newBatchState(forkId, lastBatch+1, cfg.zk.HasExecutors(), cfg.zk.L1SyncStartBlock > 0, cfg.txPool)
+	batchState := newBatchState(forkId, lastBatch+1, executionAt+1, cfg.zk.HasExecutors(), cfg.zk.L1SyncStartBlock > 0, cfg.txPool)
 	blockDataSizeChecker := newBlockDataChecker()
 	streamWriter := newSequencerBatchStreamWriter(batchContext, batchState, lastBatch) // using lastBatch (rather than batchState.batchNumber) is not mistake
 
@@ -103,7 +103,7 @@ func SpawnSequencingStage(
 		return err
 	}
 
-	batchCounters, err := prepareBatchCounters(batchContext, batchState, nil)
+	batchCounters, err := prepareBatchCounters(batchContext, batchState)
 	if err != nil {
 		return err
 	}

@@ -176,8 +176,13 @@ func NewLimboBlockDetails() *LimboBlockDetails {
 	}
 }
 
-func (_this *LimboBlockDetails) resizeTransactions(newSize int) {
-	for i := len(_this.Transactions); i < newSize; i++ {
+func (_this *LimboBlockDetails) resizeTransactions(txIndex int) {
+	if txIndex == -1 {
+		return
+	}
+
+	size := txIndex + 1
+	for i := len(_this.Transactions); i < size; i++ {
 		_this.Transactions = append(_this.Transactions, &LimboBlockTransactionDetails{})
 	}
 }

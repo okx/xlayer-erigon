@@ -2,11 +2,12 @@ package stages
 
 import (
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/gateway-fm/cdk-erigon-lib/kv"
-
-	"math/big"
+	"github.com/ledgerwatch/secp256k1"
 
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -17,9 +18,9 @@ import (
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zk/utils"
-	"github.com/ledgerwatch/secp256k1"
 )
 
 func handleStateForNewBlockStarting(
@@ -159,9 +160,13 @@ func finaliseBlock(
 		})
 	}
 
+	// For X Layer
+	pbStateStart := time.Now()
 	if err := postBlockStateHandling(*batchContext.cfg, ibs, batchContext.sdb.hermezDb, newHeader, ger, l1BlockHash, parentBlock.Root(), txInfos); err != nil {
 		return nil, err
 	}
+	// For X Layer
+	metrics.GetLogStatistics().CumulativeTiming(metrics.PbStateTiming, time.Since(pbStateStart))
 
 	if batchState.isL1Recovery() {
 		for i, receipt := range builtBlockElements.receipts {
@@ -188,12 +193,18 @@ func finaliseBlock(
 		return nil, err
 	}
 
+	// For X Layer
+	zkIncStart := time.Now()
 	// this is actually the interhashes stage
 	newRoot, err := zkIncrementIntermediateHashes(batchContext.ctx, batchContext.s.LogPrefix(), batchContext.s, batchContext.sdb.tx, batchContext.sdb.eridb, batchContext.sdb.smt, newHeader.Number.Uint64()-1, newHeader.Number.Uint64())
 	if err != nil {
 		return nil, err
 	}
 
+	// For X Layer
+	metrics.GetLogStatistics().CumulativeTiming(metrics.ZkIncIntermediateHashesTiming, time.Since(zkIncStart))
+
+	doFinStart := time.Now()
 	finalHeader := finalBlock.HeaderNoCopy()
 	finalHeader.Root = newRoot
 	finalHeader.Coinbase = batchContext.cfg.zk.AddressSequencer
@@ -240,6 +251,9 @@ func finaliseBlock(
 	if err := batchContext.sdb.hermezDb.WriteBlockBatch(newNum.Uint64(), batchState.batchNumber); err != nil {
 		return nil, fmt.Errorf("write block batch error: %v", err)
 	}
+
+	// For X Layer
+	metrics.GetLogStatistics().CumulativeTiming(metrics.FinaliseBlockWriteTiming, time.Since(doFinStart))
 
 	// write batch counters
 	err = batchContext.sdb.hermezDb.WriteBatchCounters(newNum.Uint64(), batchCounters.CombineCollectorsNoChanges().UsedAsMap())

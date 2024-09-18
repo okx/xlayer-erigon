@@ -22,7 +22,7 @@ zkevm.l1-highest-block-type: latest
 zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
-log.console.verbosity: 4
+log.console.verbosity: info
 
 #zkevm.executor-urls: erigon-stateless-executor:50071
 zkevm.executor-urls: ""
@@ -46,7 +46,25 @@ http.addr: 0.0.0.0
 http.port: 8545
 http.vhosts: any
 http.corsdomain: any
+http.timeouts.read: "10s"
+http.timeouts.write: "10s"
+http.timeouts.idle: "10s"
 ws: true
+
+zkevm.apollo-enabled: false
+zkevm.apollo-ip-addr: ""
+zkevm.apollo-app-id: ""
+zkevm.apollo-namespace-name: ""
+
+zkevm.nacos-urls: ""
+zkevm.nacos-namespace-id: ""
+zkevm.nacos-application-name: ""
+zkevm.nacos-external-listen-addr: ""
+
+metrics: true
+metrics.addr: "0.0.0.0"
+metrics.port: 9095
+
 db.read.concurrency: 20000
 txpool.globalslots: 100000
 networkid: 195
@@ -60,3 +78,4 @@ http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}
 pprof: true
 pprof.port: 6060
 pprof.addr: 127.0.0.1
+

@@ -26,6 +26,9 @@ const (
 	DefaultL2NetworkURL        = "http://localhost:8124"
 	DefaultL2ChainID    uint64 = 195
 
+	DefaultL2MetricsPrometheusURL = "http://127.0.0.1:9092/debug/metrics/prometheus"
+	DefaultL2MetricsURL           = "http://127.0.0.1:9092/debug/metrics"
+
 	BridgeAddr = "0x1089Af36bD72553008FAd0A1240B4D5641208494"
 
 	DefaultTimeoutTxToBeMined = 1 * time.Minute

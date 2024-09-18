@@ -3,8 +3,11 @@ package operations
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math/big"
+	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gateway-fm/cdk-erigon-lib/common"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
@@ -222,4 +225,38 @@ func GetMinGasPrice() (uint64, error) {
 	}
 
 	return transHexToUint64(response.Result)
+}
+
+func GetMetricsPrometheus() (string, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(DefaultL2MetricsPrometheusURL)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
+}
+
+func GetMetrics() (string, error) {
+	client := http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(DefaultL2MetricsURL)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(body), nil
 }

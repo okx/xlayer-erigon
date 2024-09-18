@@ -30,3 +30,9 @@ L2 WETH Token: 0x5d7AF92af4FF5a35323250D6ee174C23CCBe00EF
 L2 admin: 0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534
 
 ```
+
+# Get metrics
+```
+curl http://127.0.0.1:9092/debug/metrics/prometheus
+curl http://127.0.0.1:9092/debug/metrics
+```

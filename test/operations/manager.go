@@ -18,13 +18,16 @@ import (
 
 // Public shared
 const (
-	DefaultSequencerAddress           = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	DefaultSequencerPrivateKey        = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	DefaultL1NetworkURL               = "http://localhost:8545"
-	DefaultL1ChainID           uint64 = 1337
+	DefaultL1NetworkURL             = "http://localhost:8545"
+	DefaultL1ChainID         uint64 = 1337
+	DefaultL1AdminAddress           = "0x8f8E2d6cF621f30e9a11309D6A56A876281Fd534"
+	DefaultL1AdminPrivateKey        = "0x815405dddb0e2a99b12af775fd2929e526704e1d1aea6a0b4e74dc33e2f7fcd2"
 
 	DefaultL2NetworkURL        = "http://localhost:8124"
 	DefaultL2ChainID    uint64 = 195
+
+	DefaultL2MetricsPrometheusURL = "http://127.0.0.1:9092/debug/metrics/prometheus"
+	DefaultL2MetricsURL           = "http://127.0.0.1:9092/debug/metrics"
 
 	BridgeAddr = "0x1089Af36bD72553008FAd0A1240B4D5641208494"
 
@@ -74,7 +77,7 @@ const VerifiedConfirmationLevel ConfirmationLevel = 3
 func ApplyL2Txs(ctx context.Context, txs []*types.Transaction, auth *bind.TransactOpts, client *ethclient.Client, confirmationLevel ConfirmationLevel) ([]*big.Int, error) {
 	var err error
 	if auth == nil {
-		auth, err = GetAuth(DefaultSequencerPrivateKey, DefaultL2ChainID)
+		auth, err = GetAuth(DefaultL2AdminPrivateKey, DefaultL2ChainID)
 		if err != nil {
 			return nil, err
 		}

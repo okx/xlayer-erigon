@@ -41,7 +41,7 @@ type IL1Syncer interface {
 	Stop()
 }
 
-var ErrStateRootMismatch = fmt.Errorf("state root mismatch")
+var ErrStateRootMismatch = errors.New("state root mismatch")
 
 type L1SyncerCfg struct {
 	db     kv.RwDB
@@ -118,20 +118,18 @@ func SpawnStageL1Syncer(
 
 	newVerificationsCount := 0
 	newSequencesCount := 0
+	highestWrittenL1BlockNo := uint64(0)
 Loop:
 	for {
 		select {
 		case logs := <-logsChan:
-			logsForQueryBlocks := make([]ethTypes.Log, 0, len(logs))
 			infos := make([]*types.L1BatchInfo, 0, len(logs))
 			batchLogTypes := make([]BatchLogType, 0, len(logs))
 			for _, l := range logs {
+				l := l
 				info, batchLogType := parseLogType(cfg.zkCfg.L1RollupId, &l)
 				infos = append(infos, &info)
 				batchLogTypes = append(batchLogTypes, batchLogType)
-				if batchLogType == logL1InfoTreeUpdate {
-					logsForQueryBlocks = append(logsForQueryBlocks, l)
-				}
 			}
 
 			for i, l := range logs {
@@ -142,6 +140,9 @@ Loop:
 					if err := hermezDb.WriteSequence(info.L1BlockNo, info.BatchNo, info.L1TxHash, info.StateRoot); err != nil {
 						return fmt.Errorf("failed to write batch info, %w", err)
 					}
+					if info.L1BlockNo > highestWrittenL1BlockNo {
+						highestWrittenL1BlockNo = info.L1BlockNo
+					}
 					newSequencesCount++
 				case logVerify:
 					if info.BatchNo > highestVerification.BatchNo {
@@ -149,6 +150,9 @@ Loop:
 					}
 					if err := hermezDb.WriteVerification(info.L1BlockNo, info.BatchNo, info.L1TxHash, info.StateRoot); err != nil {
 						return fmt.Errorf("failed to write verification for block %d, %w", info.L1BlockNo, err)
+					}
+					if info.L1BlockNo > highestWrittenL1BlockNo {
+						highestWrittenL1BlockNo = info.L1BlockNo
 					}
 					newVerificationsCount++
 				case logIncompatible:
@@ -168,10 +172,10 @@ Loop:
 	}
 
 	latestCheckedBlock := cfg.syncer.GetLastCheckedL1Block()
-	if latestCheckedBlock > l1BlockProgress {
-		log.Info(fmt.Sprintf("[%s] Saving L1 syncer progress", logPrefix), "latestCheckedBlock", latestCheckedBlock, "newVerificationsCount", newVerificationsCount, "newSequencesCount", newSequencesCount)
+	if highestWrittenL1BlockNo > l1BlockProgress {
+		log.Info(fmt.Sprintf("[%s] Saving L1 syncer progress", logPrefix), "latestCheckedBlock", latestCheckedBlock, "newVerificationsCount", newVerificationsCount, "newSequencesCount", newSequencesCount, "highestWrittenL1BlockNo", highestWrittenL1BlockNo)
 
-		if err := stages.SaveStageProgress(tx, stages.L1Syncer, latestCheckedBlock); err != nil {
+		if err := stages.SaveStageProgress(tx, stages.L1Syncer, highestWrittenL1BlockNo); err != nil {
 			return fmt.Errorf("failed to save stage progress, %w", err)
 		}
 		if highestVerification.BatchNo > 0 {
@@ -218,8 +222,10 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 	bigRollupId := new(big.Int).SetUint64(l1RollupId)
 	isRollupIdMatching := log.Topics[1] == common.BigToHash(bigRollupId)
 
-	var batchNum uint64
-	var stateRoot, l1InfoRoot common.Hash
+	var (
+		batchNum              uint64
+		stateRoot, l1InfoRoot common.Hash
+	)
 
 	switch log.Topics[0] {
 	case contracts.SequencedBatchTopicPreEtrog:
@@ -266,83 +272,13 @@ func parseLogType(l1RollupId uint64, log *ethTypes.Log) (l1BatchInfo types.L1Bat
 }
 
 func UnwindL1SyncerStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg L1SyncerCfg, ctx context.Context) (err error) {
-	useExternalTx := tx != nil
-	if !useExternalTx {
-		tx, err = cfg.db.BeginRw(ctx)
-		if err != nil {
-			return err
-		}
-		defer tx.Rollback()
-	}
-	log.Debug("l1 sync: unwinding")
-
-	/*
-		1. unwind sequences table
-		2. unwind verifications table
-		3. update l1verifications batchno and l1syncer stage progress
-	*/
-
-	err = tx.ClearBucket(hermez_db.L1SEQUENCES)
-	if err != nil {
-		return err
-	}
-	err = tx.ClearBucket(hermez_db.L1VERIFICATIONS)
-	if err != nil {
-		return err
-	}
-
-	// the below are very inefficient due to key layout
-	//hermezDb := hermez_db.NewHermezDb(tx)
-	//err = hermezDb.TruncateSequences(u.UnwindPoint)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//err = hermezDb.TruncateVerifications(u.UnwindPoint)
-	//if err != nil {
-	//	return err
-	//}
-	// get the now latest l1 verification
-	//v, err := hermezDb.GetLatestVerification()
-	//if err != nil {
-	//	return err
-	//}
-
-	if err := stages.SaveStageProgress(tx, stages.L1VerificationsBatchNo, 0); err != nil {
-		return fmt.Errorf("failed to save stage progress, %w", err)
-	}
-	if err := stages.SaveStageProgress(tx, stages.L1Syncer, 0); err != nil {
-		return fmt.Errorf("failed to save stage progress, %w", err)
-	}
-
-	if err := u.Done(tx); err != nil {
-		return err
-	}
-	if !useExternalTx {
-		if err := tx.Commit(); err != nil {
-			return err
-		}
-	}
+	// we want to keep L1 data during an unwind, as we only sync finalised data there should be
+	// no need to unwind here
 	return nil
 }
 
 func PruneL1SyncerStage(s *stagedsync.PruneState, tx kv.RwTx, cfg L1SyncerCfg, ctx context.Context) (err error) {
-	useExternalTx := tx != nil
-	if !useExternalTx {
-		tx, err = cfg.db.BeginRw(ctx)
-		if err != nil {
-			return err
-		}
-		defer tx.Rollback()
-	}
-
-	// TODO: implement prune L1 Verifications stage! (if required)
-
-	if !useExternalTx {
-		if err := tx.Commit(); err != nil {
-			return err
-		}
-	}
+	// no need to prune this data
 	return nil
 }
 

@@ -249,7 +249,7 @@ func (api *APIImpl) EstimateGas(ctx context.Context, argsOrNil *ethapi2.CallArgs
 	}
 	header := block.HeaderNoCopy()
 
-	caller, err := transactions.NewReusableCaller(engine, stateReader, nil, header, args, api.GasCap, latestNumOrHash, dbtx, api._blockReader, chainConfig, api.evmCallTimeout, api.VirtualCountersSmtReduction)
+	caller, err := transactions.NewReusableCaller(engine, stateReader, nil, header, args, api.GasCap, latestNumOrHash, dbtx, api._blockReader, chainConfig, api.evmCallTimeout, api.VirtualCountersSmtReduction, false)
 	if err != nil {
 		return 0, err
 	}
@@ -363,7 +363,7 @@ func (api *APIImpl) GetProof(ctx context.Context, address libcommon.Address, sto
 		stageState := &stagedsync.StageState{BlockNumber: latestBlock}
 
 		hashStageCfg := stagedsync.StageHashStateCfg(nil, api.dirs, api.historyV3(batch), api._agg)
-		if err := stagedsync.UnwindHashStateStage(unwindState, stageState, batch, hashStageCfg, ctx); err != nil {
+		if err := stagedsync.UnwindHashStateStage(unwindState, stageState, batch, hashStageCfg, ctx, true); err != nil {
 			return nil, err
 		}
 

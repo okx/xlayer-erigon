@@ -26,7 +26,7 @@ const (
 	blockAddress    = "0xdD2FD4581271e230360230F9337D5c0430Bf44C0"
 	blockPrivateKey = "0xde9be858da4a475276426320d5e9262ecfc3ba460bfac56360bfa6c4c28b4ee0"
 
-	testVerified = false
+	testVerified = true
 )
 
 func TestGetBatchSealTime(t *testing.T) {
@@ -66,12 +66,12 @@ func TestBridgeTx(t *testing.T) {
 	require.NoError(t, err)
 	l2Client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
 	require.NoError(t, err)
-	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 
 	amount := new(big.Int).SetUint64(10)
 	var destNetwork uint32 = 1
-	destAddr := common.HexToAddress(operations.DefaultSequencerAddress)
-	auth, err := operations.GetAuth(operations.DefaultSequencerPrivateKey, operations.DefaultL1ChainID)
+	destAddr := common.HexToAddress(operations.DefaultL1AdminAddress)
+	auth, err := operations.GetAuth(operations.DefaultL1AdminPrivateKey, operations.DefaultL1ChainID)
 	require.NoError(t, err)
 	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
 	require.NoError(t, err)
@@ -80,9 +80,9 @@ func TestBridgeTx(t *testing.T) {
 func TestClaimTx(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
-	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 
-	from := common.HexToAddress(operations.DefaultSequencerAddress)
+	from := common.HexToAddress(operations.DefaultL2AdminAddress)
 	to := common.HexToAddress(operations.DefaultL2AdminAddress)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
@@ -101,7 +101,7 @@ func TestClaimTx(t *testing.T) {
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
 
-	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultSequencerPrivateKey, "0x"))
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL2AdminPrivateKey, "0x"))
 	require.NoError(t, err)
 
 	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1)
@@ -118,12 +118,12 @@ func TestClaimTx(t *testing.T) {
 func TestNewAccFreeGas(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
-	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 	var gas uint64 = 21000
 
 	// newAcc transfer failed
 	from := common.HexToAddress(operations.DefaultL2NewAcc1Address)
-	to := common.HexToAddress(operations.DefaultSequencerAddress)
+	to := common.HexToAddress(operations.DefaultL2AdminAddress)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
 	var tx types.Transaction = &types.LegacyTx{
@@ -146,7 +146,7 @@ func TestNewAccFreeGas(t *testing.T) {
 	require.Error(t, err)
 
 	// seq -> newAcc
-	from = common.HexToAddress(operations.DefaultSequencerAddress)
+	from = common.HexToAddress(operations.DefaultL2AdminAddress)
 	to = common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	nonce, err = client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestNewAccFreeGas(t *testing.T) {
 		},
 		GasPrice: uint256.MustFromBig(big.NewInt(0)),
 	}
-	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultSequencerPrivateKey, "0x"))
+	privateKey, err = crypto.HexToECDSA(strings.TrimPrefix(operations.DefaultL1AdminPrivateKey, "0x"))
 	require.NoError(t, err)
 	signedTx, err = types.SignTx(tx, *signer, privateKey)
 	require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestNewAccFreeGas(t *testing.T) {
 
 	// newAcc transfer success
 	from = common.HexToAddress(operations.DefaultL2NewAcc1Address)
-	to = common.HexToAddress(operations.DefaultSequencerAddress)
+	to = common.HexToAddress(operations.DefaultL2AdminAddress)
 	nonce, err = client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
 	tx = &types.LegacyTx{
@@ -263,7 +263,7 @@ func TestInnerTx(t *testing.T) {
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
 	require.NoError(t, err)
-	txHash := transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultSequencerAddress)
+	txHash := transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 	log.Infof("txHash: %s", txHash)
 
 	result, err := operations.GetInternalTransactions(common.HexToHash(txHash))
@@ -296,7 +296,7 @@ func TestEthTransfer(t *testing.T) {
 	require.NoError(t, err)
 
 	from := common.HexToAddress(operations.DefaultL2AdminAddress)
-	to := common.HexToAddress(operations.DefaultSequencerAddress)
+	to := common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	nonce, err := client.PendingNonceAt(ctx, from)
 	require.NoError(t, err)
 	var tx types.Transaction = &types.LegacyTx{
@@ -334,7 +334,7 @@ func TestGasPrice(t *testing.T) {
 		require.NoError(t, err)
 
 		from := common.HexToAddress(operations.DefaultL2AdminAddress)
-		to := common.HexToAddress(operations.DefaultSequencerAddress)
+		to := common.HexToAddress(operations.DefaultL2NewAcc1Address)
 		nonce, err := client.PendingNonceAt(ctx, from)
 		require.NoError(t, err)
 		var tx types.Transaction = &types.LegacyTx{
@@ -359,6 +359,19 @@ func TestGasPrice(t *testing.T) {
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)
 	require.Greater(t, gasPrice2, gasPrice1)
+}
+
+func TestMetrics(t *testing.T) {
+	result, err := operations.GetMetricsPrometheus()
+	require.NoError(t, err)
+	require.Equal(t, strings.Contains(result, "sequencer_batch_execute_time"), true)
+	require.Equal(t, strings.Contains(result, "sequencer_pool_tx_count"), true)
+
+	result, err = operations.GetMetrics()
+	require.NoError(t, err)
+	require.Equal(t, strings.Contains(result, "zkevm_getBatchWitness"), true)
+	require.Equal(t, strings.Contains(result, "eth_sendRawTransaction"), true)
+	require.Equal(t, strings.Contains(result, "eth_getTransactionCount"), true)
 }
 
 func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amount *uint256.Int, toAddress string) string {
@@ -415,7 +428,7 @@ func TestMinGasPrice(t *testing.T) {
 		require.NoError(t, err)
 
 		from := common.HexToAddress(operations.DefaultL2NewAcc2Address)
-		to := common.HexToAddress(operations.DefaultSequencerAddress)
+		to := common.HexToAddress(operations.DefaultL1AdminAddress)
 		nonce, err := client.PendingNonceAt(ctx, from)
 		require.NoError(t, err)
 		var tx types.Transaction = &types.LegacyTx{
@@ -442,7 +455,7 @@ func TestMinGasPrice(t *testing.T) {
 		require.NoError(t, err)
 
 		from := common.HexToAddress(operations.DefaultL2AdminAddress)
-		to := common.HexToAddress(operations.DefaultSequencerAddress)
+		to := common.HexToAddress(operations.DefaultL1AdminAddress)
 		nonce, err := client.PendingNonceAt(ctx, from)
 		require.NoError(t, err)
 		var tx types.Transaction = &types.LegacyTx{

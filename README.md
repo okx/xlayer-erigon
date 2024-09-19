@@ -64,6 +64,16 @@ In order to retrieve data from the L1, the L1 syncer must be configured to know 
 
 - `zkevm.l1-highest-block-type` which defaults to retrieving the 'finalized' block, however there are cases where you may wish to pass 'safe' or 'latest'.
 
+### L1 Cache
+The node can cache the L1 requests/responses to speed up the sync and enable quicker responses to RPC requests requiring for example OldAccInputHash from the L1. This is enabled by default,
+but can be controlled via the following flags:
+
+- `zkevm.l1-cache-enabled` - defaults to true, set to false to disable the cache
+- `zkevm.l1-cache-port` - the port the cache server will run on, defaults to 6969
+
+To transplant the cache between datadirs, the `l1cache` dir can be copied. To use an upstream cdk-erigon node's L1 cache, the zkevm.l1-cache-enabled can be set to false, and the node provided the endpoint of the cache,
+instead of a regular L1 URL. e.g. `zkevm.l1-rpc-url=http://myerigonnode:6969?endpoint=http%3A%2F%2Fsepolia-rpc.com&chainid=2440`. NB: this node must be syncing the same network for any benefit!
+
 ## Sequencer (WIP)
 
 Enable Sequencer: `CDK_ERIGON_SEQUENCER=1 ./build/bin/cdk-erigon <flags>`
@@ -96,9 +106,13 @@ In order to enable the zkevm_ namespace, please add 'zkevm' to the http.api flag
 - `zkevm_getFullBlockByNumber`
 - `zkevm_virtualCounters`
 - `zkevm_traceTransactionCounters`
+- `zkevm_getVersionHistory` - returns cdk-erigon versions and timestamps of their deployment (stored in datadir)
 
 ### Supported (remote)
 - `zkevm_getBatchByNumber`
+
+### Configurable
+- `zkevm_getBatchWitness` - concurrency can be limited with `zkevm.rpc-get-batch-witness-concurrency-limit` flag which defaults to 1. Use 0 for no limit.
 
 ### Not yet supported
 - `zkevm_getNativeBlockHashesInRange`
@@ -192,6 +206,7 @@ Sequencer specific config:
 - `zkevm.executor-urls`: A csv list of the executor URLs.  These will be used in a round robbin fashion by the sequencer
 - `zkevm.executor-strict`: Defaulted to true, but can be set to false when running the sequencer without verifications (use with extreme caution)
 - `zkevm.witness-full`: Defaulted to true.  Controls whether the full or partial witness is used with the executor.
+- `zkevm.reject-smart-contract-deployments`: Defaulted to false.  Controls whether smart contract deployments are rejected by the TxPool.
 
 Resource Utilisation config:
 - `zkevm.smt-regenerate-in-memory`: As documented above, allows SMT regeneration in memory if machine has enough RAM, for a speedup in initial sync.

@@ -376,6 +376,7 @@ func SpawnSequencingStage(
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
+		start := time.Now()
 		if !batchState.isL1Recovery() {
 			// commit block data here so it is accessible in other threads
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
@@ -383,6 +384,7 @@ func SpawnSequencingStage(
 			}
 			defer sdb.tx.Rollback()
 		}
+		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
@@ -398,12 +400,15 @@ func SpawnSequencingStage(
 
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
+
+		start = time.Now()
 		if !batchState.isL1Recovery() {
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
 		}
+		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
 		// check the return values of updateStreamAndCheckRollback
 		if err != nil || needsUnwind {

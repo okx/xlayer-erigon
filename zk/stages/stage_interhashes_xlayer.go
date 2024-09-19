@@ -110,7 +110,6 @@ func zkIncrementIntermediateHashesDDSConsumer(ctx context.Context, logPrefix str
 					storageChanges[k][mk] = mv
 				}
 			}
-			//log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
 		} else {
 			// collect changes to accounts and code
 			for _, v, err := ac.SeekExact(dupSortKey); err == nil && v != nil; _, v, err = ac.NextDup() {
@@ -166,8 +165,6 @@ func zkIncrementIntermediateHashesDDSConsumer(ctx context.Context, logPrefix str
 			if err != nil {
 				return trie.EmptyRoot, err
 			}
-			//log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
-
 		}
 
 	}
@@ -313,7 +310,6 @@ func zkIncrementIntermediateHashesDDSProducer(ctx context.Context, logPrefix str
 		rdb.Set(context.Background(), fmt.Sprintf("acc_%d", i), accBytes, 0)
 		rdb.Set(context.Background(), fmt.Sprintf("code_%d", i), codeBytes, 0)
 		rdb.Set(context.Background(), fmt.Sprintf("storage_%d", i), storageBytes, 0)
-		log.Info(fmt.Sprintf("=======================fsc:test. %d\nacc:%s\ncode:%s\nstorage:%s", i, string(accBytes), string(codeBytes), string(storageBytes)))
 
 	}
 

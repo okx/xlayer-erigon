@@ -436,10 +436,7 @@ func SpawnSequencingStage(
 
 	// For X Layer
 	metrics.GetLogStatistics().SetTag(metrics.BatchCloseReason, string(batchCloseReason))
-	batchTime := time.Since(batchStart)
-	metrics.BatchExecuteTime(string(batchCloseReason), batchTime)
 	metrics.GetLogStatistics().SetTag(metrics.FinalizeBatchNumber, strconv.Itoa(int(batchState.batchNumber)))
-	metrics.GetLogStatistics().Summary()
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
 	// TODO: It is 99% sure that there is no need to write this in any of processInjectedInitialBatch, alignExecutionToDatastream, doCheckForBadBatch but it is worth double checknig
@@ -454,5 +451,10 @@ func SpawnSequencingStage(
 	start := time.Now()
 	err = sdb.tx.Commit()
 	metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
+
+	batchTime := time.Since(batchStart)
+	metrics.BatchExecuteTime(string(batchCloseReason), batchTime)
+	metrics.GetLogStatistics().Summary()
+
 	return err
 }

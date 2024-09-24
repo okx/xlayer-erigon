@@ -376,6 +376,7 @@ func SpawnSequencingStage(
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
+		start := time.Now()
 		if !batchState.isL1Recovery() {
 			// commit block data here so it is accessible in other threads
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
@@ -383,6 +384,7 @@ func SpawnSequencingStage(
 			}
 			defer sdb.tx.Rollback()
 		}
+		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
 		// do not use remote executor in l1recovery mode
 		// if we need remote executor in l1 recovery then we must allow commit/start DB transactions
@@ -398,12 +400,15 @@ func SpawnSequencingStage(
 
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
+
+		start = time.Now()
 		if !batchState.isL1Recovery() {
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
 		}
+		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
 		// check the return values of updateStreamAndCheckRollback
 		if err != nil || needsUnwind {
@@ -431,10 +436,7 @@ func SpawnSequencingStage(
 
 	// For X Layer
 	metrics.GetLogStatistics().SetTag(metrics.BatchCloseReason, string(batchCloseReason))
-	batchTime := time.Since(batchStart)
-	metrics.BatchExecuteTime(string(batchCloseReason), batchTime)
 	metrics.GetLogStatistics().SetTag(metrics.FinalizeBatchNumber, strconv.Itoa(int(batchState.batchNumber)))
-	metrics.GetLogStatistics().Summary()
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
 
 	// TODO: It is 99% sure that there is no need to write this in any of processInjectedInitialBatch, alignExecutionToDatastream, doCheckForBadBatch but it is worth double checknig
@@ -449,5 +451,10 @@ func SpawnSequencingStage(
 	start := time.Now()
 	err = sdb.tx.Commit()
 	metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
+
+	batchTime := time.Since(batchStart)
+	metrics.BatchExecuteTime(string(batchCloseReason), batchTime)
+	metrics.GetLogStatistics().Summary()
+
 	return err
 }

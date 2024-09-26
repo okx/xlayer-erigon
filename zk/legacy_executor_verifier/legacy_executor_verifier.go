@@ -61,6 +61,10 @@ func (vr *VerifierRequest) IsOverdue() bool {
 	return time.Since(vr.creationTime) > vr.timeout
 }
 
+func (vr *VerifierRequest) GetFirstBlockNumber() uint64 {
+	return vr.BlockNumbers[0]
+}
+
 func (vr *VerifierRequest) GetLastBlockNumber() uint64 {
 	return vr.BlockNumbers[len(vr.BlockNumbers)-1]
 }
@@ -152,7 +156,7 @@ func (v *LegacyExecutorVerifier) appendPromise(promise *Promise[*VerifierBundle]
 	v.promises = append(v.promises, promise)
 }
 
-func (v *LegacyExecutorVerifier) VerifySync(tx kv.Tx, request *VerifierRequest, witness, streamBytes []byte, timestampLimit, firstBlockNumber uint64, l1InfoTreeMinTimestamps map[uint64]uint64) error {
+func (v *LegacyExecutorVerifier) VerifySync(tx kv.Tx, request *VerifierRequest, witness, streamBytes []byte, timestampLimit uint64, l1InfoTreeMinTimestamps map[uint64]uint64) error {
 	oldAccInputHash := common.HexToHash("0x0")
 	payload := &Payload{
 		Witness:                 witness,
@@ -177,7 +181,7 @@ func (v *LegacyExecutorVerifier) VerifySync(tx kv.Tx, request *VerifierRequest, 
 	e.AquireAccess()
 	defer e.ReleaseAccess()
 
-	previousBlock, err := rawdb.ReadBlockByNumber(tx, firstBlockNumber-1)
+	previousBlock, err := rawdb.ReadBlockByNumber(tx, request.GetFirstBlockNumber()-1)
 	if err != nil {
 		return err
 	}

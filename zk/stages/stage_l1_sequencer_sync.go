@@ -55,6 +55,19 @@ func SpawnL1SequencerSyncStage(
 		}
 		defer tx.Rollback()
 	}
+	hermezDb1 := hermez_db.NewHermezDb(tx)
+	latestBatchNum, _ := hermezDb1.GetLatestDownloadedBatchNo()
+	forkId, _, err := hermezDb1.GetLatestForkHistory()
+	if forkId == 9 {
+		log.Info(fmt.Sprintf("[%s] Update forkID13 finished, forkId: %v, latestBatchNum: %v", logPrefix, forkId, latestBatchNum))
+		if err := hermezDb1.WriteNewForkHistory(13, latestBatchNum+1); err != nil {
+			return err
+		}
+
+		defer func() {
+			err = tx.Commit()
+		}()
+	}
 
 	progress, err := stages.GetStageProgress(tx, stages.L1SequencerSync)
 	if err != nil {

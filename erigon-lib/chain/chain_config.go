@@ -641,6 +641,7 @@ func (c *Config) Rules(num uint64, time uint64) *Rules {
 	if chainID == nil {
 		chainID = new(big.Int)
 	}
+	fmt.Printf("-------fork8 %v, fork 10 %v, fork13 %v", c.IsForkID8Elderberry(num), c.IsForkID10(num), c.IsForkID13Durian(num))
 
 	return &Rules{
 		ChainID:              new(big.Int).Set(chainID),
@@ -668,6 +669,7 @@ func (c *Config) Rules(num uint64, time uint64) *Rules {
 		IsForkId10:           c.IsForkID10(num),
 		IsForkId11:           c.IsForkID11(num),
 		IsForkID12Banana:     c.IsForkID12Banana(num),
+		IsForkID13Durian:     c.IsForkID13Durian(num),
 	}
 }
 

@@ -240,7 +240,7 @@ func prepareForkId(lastBatch, executionAt uint64, hermezDb forkDb) (uint64, erro
 		}
 	}
 
-	return latest + 4, nil
+	return latest, nil
 }
 
 func prepareHeader(tx kv.RwTx, previousBlockNumber, deltaTimestamp, forcedTimestamp, forkId uint64, coinbase common.Address, chainConfig *chain.Config, miningConfig *params.MiningConfig) (*types.Header, *types.Block, error) {

@@ -2,6 +2,8 @@ package stages
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -9,10 +11,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	libstate "github.com/ledgerwatch/erigon-lib/state"
-
-	"math/big"
-
-	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
 	"github.com/ledgerwatch/erigon-lib/chain"
@@ -168,10 +166,10 @@ func (sCfg *SequenceBlockCfg) toErigonExecuteBlockCfg() stagedsync.ExecuteBlockC
 
 func validateIfDatastreamIsAheadOfExecution(
 	s *stagedsync.StageState,
-	// u stagedsync.Unwinder,
+// u stagedsync.Unwinder,
 	ctx context.Context,
 	cfg SequenceBlockCfg,
-	// historyCfg stagedsync.HistoryCfg,
+// historyCfg stagedsync.HistoryCfg,
 ) error {
 	roTx, err := cfg.db.BeginRo(ctx)
 	if err != nil {
@@ -242,7 +240,7 @@ func prepareForkId(lastBatch, executionAt uint64, hermezDb forkDb) (uint64, erro
 		}
 	}
 
-	return latest, nil
+	return latest + 4, nil
 }
 
 func prepareHeader(tx kv.RwTx, previousBlockNumber, deltaTimestamp, forcedTimestamp, forkId uint64, coinbase common.Address, chainConfig *chain.Config, miningConfig *params.MiningConfig) (*types.Header, *types.Block, error) {

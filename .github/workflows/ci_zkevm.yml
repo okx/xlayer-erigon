@@ -16,7 +16,7 @@ on:
       run_jobs:
         description: "check to run all jobs"
         required: true
-        default: "false" # default value for the input
+        default: "true" # Change to "false" to skip all jobs
 
 concurrency:
   group: ${{ github.ref }}

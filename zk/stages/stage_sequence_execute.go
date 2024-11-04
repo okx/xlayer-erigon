@@ -72,6 +72,11 @@ func sequencingBatchStep(
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
 
+	// For X Layer metrics
+	log.Info("[PoolTxCount] Starting Getting Pending Tx Count")
+	pending, basefee, queued := cfg.txPool.CountContent()
+	metrics.AddPoolTxCount(pending, basefee, queued)
+
 	// at this point of time the datastream could not be ahead of the executor
 	if err = validateIfDatastreamIsAheadOfExecution(s, ctx, cfg); err != nil {
 		return err

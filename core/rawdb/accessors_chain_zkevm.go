@@ -4,16 +4,15 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"math"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/dbg"
-	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcfg"
-	"github.com/ledgerwatch/erigon/common"
-	"github.com/ledgerwatch/erigon/common/dbutils"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/dbg"
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
+	"github.com/ledgerwatch/erigon-lib/kv/kvcfg"
 	"github.com/ledgerwatch/erigon/core/types"
-	ethTypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	"github.com/ledgerwatch/log/v3"
@@ -68,7 +67,7 @@ func DeleteBodyAndTransactions(tx kv.RwTx, blockNum uint64, blockHash libcommon.
 	}
 
 	// delete body for storage
-	deleteBody(tx, blockHash, blockNum)
+	DeleteBody(tx, blockHash, blockNum)
 
 	// delete transactions
 	if err := DeleteTransactions(tx, uint64(len(txs)), body.BaseTxId+1, nil); err != nil {
@@ -78,7 +77,7 @@ func DeleteBodyAndTransactions(tx kv.RwTx, blockNum uint64, blockHash libcommon.
 	return nil
 }
 
-func WriteBodyAndTransactions(db kv.RwTx, hash libcommon.Hash, number uint64, txs []ethTypes.Transaction, data *types.BodyForStorage) error {
+func WriteBodyAndTransactions(db kv.RwTx, hash libcommon.Hash, number uint64, txs []types.Transaction, data *types.BodyForStorage) error {
 	var err error
 	if err = WriteBodyForStorage(db, hash, number, data); err != nil {
 		return fmt.Errorf("failed to write body: %w", err)
@@ -111,11 +110,11 @@ func OverwriteTransactions(db kv.RwTx, txs []types.Transaction, baseTxId uint64,
 		// If next Append returns KeyExists error - it means you need to open transaction in App code before calling this func. Batch is also fine.
 		if blockHash != nil {
 			key := append(txIdKey, blockHash.Bytes()...)
-			if err := db.Put(kv.EthTxV3, key, common.CopyBytes(buf.Bytes())); err != nil {
+			if err := db.Put(kv.EthTxV3, key, libcommon.CopyBytes(buf.Bytes())); err != nil {
 				return err
 			}
 		} else {
-			if err := db.Put(kv.EthTx, txIdKey, common.CopyBytes(buf.Bytes())); err != nil {
+			if err := db.Put(kv.EthTx, txIdKey, libcommon.CopyBytes(buf.Bytes())); err != nil {
 				return err
 			}
 		}
@@ -223,7 +222,29 @@ func ReadReceipts_zkEvm(db kv.Tx, block *types.Block, senders []libcommon.Addres
 
 	//[hack] there was a cumulativeGasUsed bug priod to forkid8, so we need to check for it
 	hermezDb := hermez_db.NewHermezDbReader(db)
-	forkid8BlockNum, _, _ := hermezDb.GetForkIdBlock(8)
+	forkBlocks, err := hermezDb.GetAllForkBlocks()
+	if err != nil {
+		log.Error("Failed to get fork blocks", "err", err, "stack", dbg.Stack())
+		return nil
+	}
+
+	forkid8BlockNum := uint64(0)
+	highestForkId := uint64(0)
+	for forkId, forkBlock := range forkBlocks {
+		if forkId > highestForkId {
+			highestForkId = forkId
+		}
+		if forkId == 8 {
+			forkid8BlockNum = forkBlock
+			break
+		}
+	}
+
+	// if we don't have forkid8 and highest saved is lower, then we are lower than forkid
+	// otherwise we are higher than forkid8 but don't have it saved so it should be treated as if it was 0
+	if forkid8BlockNum == 0 && highestForkId < 8 {
+		forkid8BlockNum = math.MaxUint64
+	}
 
 	if err := receipts.DeriveFields_zkEvm(forkid8BlockNum, block.Hash(), block.NumberU64(), block.Transactions(), senders); err != nil {
 		log.Error("Failed to derive block receipts fields", "hash", block.Hash(), "number", block.NumberU64(), "err", err, "stack", dbg.Stack())

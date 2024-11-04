@@ -5,9 +5,9 @@ import (
 	"encoding/hex"
 	"sort"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
 	jsoniter "github.com/json-iterator/go"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/core/vm"
@@ -29,10 +29,11 @@ type JsonStreamLogger_ZkEvm struct {
 	locations common.Hashes // For sorting
 	storage   map[libcommon.Address]Storage
 	logs      []StructLog
-	env       vm.VMInterface
+	env       *vm.EVM
 
 	counterCollector *vm.CounterCollector
 	stateClosed      bool
+	memSize          int
 }
 
 // NewStructLogger returns a new logger
@@ -62,7 +63,7 @@ func (l *JsonStreamLogger_ZkEvm) CaptureTxEnd(restGas uint64) {
 }
 
 // CaptureStart implements the Tracer interface to initialize the tracing operation.
-func (l *JsonStreamLogger_ZkEvm) CaptureStart(env vm.VMInterface, from libcommon.Address, to libcommon.Address, precompile bool, create bool, input []byte, gas uint64, value *uint256.Int, code []byte) {
+func (l *JsonStreamLogger_ZkEvm) CaptureStart(env *vm.EVM, from libcommon.Address, to libcommon.Address, precompile bool, create bool, input []byte, gas uint64, value *uint256.Int, code []byte) {
 	l.env = env
 }
 
@@ -200,40 +201,28 @@ func (l *JsonStreamLogger_ZkEvm) writeStorage(contract *vm.Contract) {
 	}
 	l.stream.WriteObjectEnd()
 }
+
 func (l *JsonStreamLogger_ZkEvm) writeMemory(memory *vm.Memory) {
 	if !l.cfg.DisableMemory {
 		memData := memory.Data()
 
-		//[zkevm] don't print empty bytes in memory array after the last non-empty byte line
-		filteredByteLines := [][]byte{}
-		foundValueLine := false
-		for i := len(memData); i-32 >= 0; i -= 32 {
-			bytes := memData[i-32 : i]
-
-			isEmpty := true
-			if !foundValueLine {
-				for _, b := range bytes {
-					if b != 0 {
-						isEmpty = false
-						foundValueLine = true
-						break
-					}
-				}
-			}
-
-			if !isEmpty || foundValueLine {
-				filteredByteLines = append(filteredByteLines, bytes)
-			}
+		// on first occurance don't expand memory
+		// this is because in interpreter we expand the memory before we execute the opcode
+		// and the state for traced opcode should be before the execution of the opcode
+		if l.memSize < len(memData) {
+			size := len(memData)
+			memData = memData[:l.memSize]
+			l.memSize = size
 		}
 
 		l.stream.WriteMore()
 		l.stream.WriteObjectField("memory")
 		l.stream.WriteArrayStart()
-		for i := len(filteredByteLines) - 1; i >= 0; i-- {
-			if i != len(filteredByteLines)-1 {
+		for i := 0; i+32 <= len(memData); i += 32 {
+			if i != 0 { // add a comma for all but the first 32 bytes
 				l.stream.WriteMore()
 			}
-			l.stream.WriteString(string(l.hexEncodeBuf[0:hex.Encode(l.hexEncodeBuf[:], filteredByteLines[i])]))
+			l.stream.WriteString(string(l.hexEncodeBuf[0:hex.Encode(l.hexEncodeBuf[:], memData[i:i+32])]))
 		}
 
 		l.stream.WriteArrayEnd()
@@ -257,7 +246,7 @@ func (l *JsonStreamLogger_ZkEvm) writeStack(stack *stack.Stack) {
 			if i > 0 {
 				l.stream.WriteMore()
 			}
-			l.stream.WriteString(stackValue.String())
+			l.stream.WriteString(stackValue.Hex())
 		}
 		l.stream.WriteArrayEnd()
 	}

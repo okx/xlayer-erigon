@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/apolloconfig/agollo/v4/storage"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/node/nodecfg"
@@ -60,7 +60,7 @@ func loadEthPoolConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	loadZkConfig(ctx, ethCfg)
 
 	// Load deprecated pool config
-	utils.SetApolloPoolXLayer(ctx, &ethCfg.DeprecatedTxPool)
+	utils.SetApolloPoolXLayer(ctx, ethCfg)
 }
 
 func setPoolFlag() {

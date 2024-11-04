@@ -1,12 +1,13 @@
 package vm
 
 import (
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/hexutility"
-	"github.com/ledgerwatch/erigon/common/hexutil"
-	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"math/big"
 	"strconv"
+
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/hexutil"
+	"github.com/ledgerwatch/erigon-lib/common/hexutility"
+	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
 
 const (

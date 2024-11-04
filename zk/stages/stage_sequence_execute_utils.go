@@ -1,22 +1,24 @@
 package stages
 
 import (
+	"context"
 	"time"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/datadir"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	libstate "github.com/gateway-fm/cdk-erigon-lib/state"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/datadir"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	libstate "github.com/ledgerwatch/erigon-lib/state"
 
 	"math/big"
 
 	"fmt"
 
 	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
-	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
+	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -25,13 +27,13 @@ import (
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/ethdb/prune"
+	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/turbo/services"
 	"github.com/ledgerwatch/erigon/turbo/shards"
 	"github.com/ledgerwatch/erigon/turbo/stages/headerdownload"
 	"github.com/ledgerwatch/erigon/zk/datastream/server"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	verifier "github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
-	"github.com/ledgerwatch/erigon/zk/tx"
 	zktx "github.com/ledgerwatch/erigon/zk/tx"
 	"github.com/ledgerwatch/erigon/zk/txpool"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
@@ -71,10 +73,11 @@ type SequenceBlockCfg struct {
 	historyV3        bool
 	syncCfg          ethconfig.Sync
 	genesis          *types.Genesis
-	agg              *libstate.AggregatorV3
+	agg              *libstate.Aggregator
 	stream           *datastreamer.StreamServer
 	datastreamServer *server.DataStreamServer
 	zk               *ethconfig.Zk
+	miningConfig     *params.MiningConfig
 
 	txPool   *txpool.TxPool
 	txPoolDb kv.RwDB
@@ -100,9 +103,10 @@ func StageSequenceBlocksCfg(
 	blockReader services.FullBlockReader,
 	genesis *types.Genesis,
 	syncCfg ethconfig.Sync,
-	agg *libstate.AggregatorV3,
+	agg *libstate.Aggregator,
 	stream *datastreamer.StreamServer,
 	zk *ethconfig.Zk,
+	miningConfig *params.MiningConfig,
 
 	txPool *txpool.TxPool,
 	txPoolDb kv.RwDB,
@@ -130,6 +134,7 @@ func StageSequenceBlocksCfg(
 		stream:           stream,
 		datastreamServer: server.NewDataStreamServer(stream, chainConfig.ChainID.Uint64()),
 		zk:               zk,
+		miningConfig:     miningConfig,
 		txPool:           txPool,
 		txPoolDb:         txPoolDb,
 		legacyVerifier:   legacyVerifier,
@@ -152,12 +157,43 @@ func (sCfg *SequenceBlockCfg) toErigonExecuteBlockCfg() stagedsync.ExecuteBlockC
 		sCfg.historyV3,
 		sCfg.dirs,
 		sCfg.blockReader,
-		headerdownload.NewHeaderDownload(1, 1, sCfg.engine, sCfg.blockReader),
+		headerdownload.NewHeaderDownload(1, 1, sCfg.engine, sCfg.blockReader, nil),
 		sCfg.genesis,
 		sCfg.syncCfg,
 		sCfg.agg,
 		sCfg.zk,
+		nil,
 	)
+}
+
+func validateIfDatastreamIsAheadOfExecution(
+	s *stagedsync.StageState,
+	// u stagedsync.Unwinder,
+	ctx context.Context,
+	cfg SequenceBlockCfg,
+	// historyCfg stagedsync.HistoryCfg,
+) error {
+	roTx, err := cfg.db.BeginRo(ctx)
+	if err != nil {
+		return err
+	}
+	defer roTx.Rollback()
+
+	executionAt, err := s.ExecutionAt(roTx)
+	if err != nil {
+		return err
+	}
+
+	lastDatastreamBlock, err := cfg.datastreamServer.GetHighestBlockNumber()
+	if err != nil {
+		return err
+	}
+
+	if executionAt < lastDatastreamBlock {
+		panic(fmt.Errorf("[%s] Last block in the datastream (%d) is higher than last executed block (%d)", s.LogPrefix(), lastDatastreamBlock, executionAt))
+	}
+
+	return nil
 }
 
 type forkDb interface {
@@ -209,7 +245,7 @@ func prepareForkId(lastBatch, executionAt uint64, hermezDb forkDb) (uint64, erro
 	return latest, nil
 }
 
-func prepareHeader(tx kv.RwTx, previousBlockNumber, deltaTimestamp, forcedTimestamp, forkId uint64, coinbase common.Address) (*types.Header, *types.Block, error) {
+func prepareHeader(tx kv.RwTx, previousBlockNumber, deltaTimestamp, forcedTimestamp, forkId uint64, coinbase common.Address, chainConfig *chain.Config, miningConfig *params.MiningConfig) (*types.Header, *types.Block, error) {
 	parentBlock, err := rawdb.ReadBlockByNumber(tx, previousBlockNumber)
 	if err != nil {
 		return nil, nil, err
@@ -230,17 +266,23 @@ func prepareHeader(tx kv.RwTx, previousBlockNumber, deltaTimestamp, forcedTimest
 		}
 	}
 
-	return &types.Header{
-		ParentHash: parentBlock.Hash(),
-		Coinbase:   coinbase,
-		Difficulty: blockDifficulty,
-		Number:     new(big.Int).SetUint64(previousBlockNumber + 1),
-		GasLimit:   utils.GetBlockGasLimitForFork(forkId),
-		Time:       newBlockTimestamp,
-	}, parentBlock, nil
+	var targetGas uint64
+
+	if chainConfig.IsNormalcy(previousBlockNumber + 1) {
+		targetGas = miningConfig.GasLimit
+	}
+
+	header := core.MakeEmptyHeader(parentBlock.Header(), chainConfig, newBlockTimestamp, &targetGas)
+
+	if !chainConfig.IsNormalcy(previousBlockNumber + 1) {
+		header.GasLimit = utils.GetBlockGasLimitForFork(forkId)
+	}
+
+	header.Coinbase = coinbase
+	return header, parentBlock, nil
 }
 
-func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, batchState *BatchState, proposedTimestamp uint64) (
+func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, batchState *BatchState, proposedTimestamp uint64, reuseL1InfoIndex bool) (
 	infoTreeIndexProgress uint64,
 	l1TreeUpdate *zktypes.L1InfoTreeUpdate,
 	l1TreeUpdateIndex uint64,
@@ -258,8 +300,17 @@ func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, batchState *BatchState, prop
 		return
 	}
 
-	if batchState.isL1Recovery() {
-		l1TreeUpdateIndex = uint64(batchState.blockState.blockL1RecoveryData.L1InfoTreeIndex)
+	if batchState.isL1Recovery() || (batchState.isResequence() && reuseL1InfoIndex) {
+		if batchState.isL1Recovery() {
+			l1TreeUpdateIndex = uint64(batchState.blockState.blockL1RecoveryData.L1InfoTreeIndex)
+		} else {
+			// Resequence mode:
+			// If we are resequencing at the beginning (AtNewBlockBoundary->true) of a rolledback block, we need to reuse the l1TreeUpdateIndex from the block.
+			// If we are in the middle of a block (AtNewBlockBoundary -> false), it means the original block will be requenced into multiple blocks, so we will leave l1TreeUpdateIndex as 0 for the rest of blocks.
+			if batchState.resequenceBatchJob.AtNewBlockBoundary() {
+				l1TreeUpdateIndex = uint64(batchState.resequenceBatchJob.CurrentBlock().L1InfoTreeIndex)
+			}
+		}
 		if l1TreeUpdate, err = sdb.hermezDb.GetL1InfoTreeUpdate(l1TreeUpdateIndex); err != nil {
 			return
 		}
@@ -270,9 +321,10 @@ func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, batchState *BatchState, prop
 		if l1TreeUpdateIndex, l1TreeUpdate, err = calculateNextL1TreeUpdateToUse(infoTreeIndexProgress, sdb.hermezDb, proposedTimestamp); err != nil {
 			return
 		}
-		if l1TreeUpdateIndex > 0 {
-			infoTreeIndexProgress = l1TreeUpdateIndex
-		}
+	}
+
+	if l1TreeUpdateIndex > 0 {
+		infoTreeIndexProgress = l1TreeUpdateIndex
 	}
 
 	// we only want GER and l1 block hash for indexes above 0 - 0 is a special case
@@ -297,20 +349,64 @@ func prepareTickers(cfg *SequenceBlockCfg) (*time.Ticker, *time.Ticker, *time.Ti
 // 0 index first before we can use 1+
 func calculateNextL1TreeUpdateToUse(lastInfoIndex uint64, hermezDb *hermez_db.HermezDb, proposedTimestamp uint64) (uint64, *zktypes.L1InfoTreeUpdate, error) {
 	// always default to 0 and only update this if the next available index has reached finality
-	var nextL1Index uint64 = 0
+	var (
+		nextL1Index uint64 = 0
+		l1Info      *zktypes.L1InfoTreeUpdate
+		err         error
+	)
 
-	// check if the next index is there and if it has reached finality or not
-	l1Info, err := hermezDb.GetL1InfoTreeUpdate(lastInfoIndex + 1)
-	if err != nil {
-		return 0, nil, err
-	}
-
-	// ensure that we are above the min timestamp for this index to use it
-	if l1Info != nil && l1Info.Timestamp <= proposedTimestamp {
+	if lastInfoIndex == 0 {
+		// potentially at the start of the chain so get the latest info tree index in the DB and work
+		// backwards until we find a valid one to use
+		l1Info, err = getNetworkStartInfoTreeIndex(hermezDb, proposedTimestamp)
+		if err != nil || l1Info == nil {
+			return 0, nil, err
+		}
 		nextL1Index = l1Info.Index
+	} else {
+		// check if the next index is there and if it has reached finality or not
+		l1Info, err = hermezDb.GetL1InfoTreeUpdate(lastInfoIndex + 1)
+		if err != nil {
+			return 0, nil, err
+		}
+
+		// ensure that we are above the min timestamp for this index to use it
+		if l1Info != nil && l1Info.Timestamp <= proposedTimestamp {
+			nextL1Index = l1Info.Index
+		}
 	}
 
 	return nextL1Index, l1Info, nil
+}
+
+func getNetworkStartInfoTreeIndex(hermezDb *hermez_db.HermezDb, proposedTimestamp uint64) (*zktypes.L1InfoTreeUpdate, error) {
+	l1Info, found, err := hermezDb.GetLatestL1InfoTreeUpdate()
+	if err != nil || !found || l1Info == nil {
+		return nil, err
+	}
+
+	if l1Info.Timestamp > proposedTimestamp {
+		// not valid so move back one index - we need one less than or equal to the proposed timestamp
+		lastIndex := l1Info.Index
+		for lastIndex > 0 {
+			lastIndex = lastIndex - 1
+			l1Info, err = hermezDb.GetL1InfoTreeUpdate(lastIndex)
+			if err != nil {
+				return nil, err
+			}
+			if l1Info != nil && l1Info.Timestamp <= proposedTimestamp {
+				break
+			}
+		}
+	}
+
+	// final check that the l1Info is actually valid before returning, index 0 or 1 might be invalid for
+	// some strange reason so just use index 0 in this case - it is always safer to use a 0 index
+	if l1Info == nil || l1Info.Timestamp > proposedTimestamp {
+		return nil, nil
+	}
+
+	return l1Info, nil
 }
 
 func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, unwinding bool) error {
@@ -343,13 +439,38 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, unwi
 	return nil
 }
 
-func tryHaltSequencer(batchContext *BatchContext, thisBatch uint64) {
-	if batchContext.cfg.zk.SequencerHaltOnBatchNumber != 0 && batchContext.cfg.zk.SequencerHaltOnBatchNumber == thisBatch {
+func tryHaltSequencer(batchContext *BatchContext, batchState *BatchState, streamWriter *SequencerBatchStreamWriter, u stagedsync.Unwinder, latestBlock uint64) (bool, error) {
+	if batchContext.cfg.zk.SequencerHaltOnBatchNumber != 0 && batchContext.cfg.zk.SequencerHaltOnBatchNumber == batchState.batchNumber {
+		log.Info(fmt.Sprintf("[%s] Attempting to halt on batch %v, checking for pending verifications", batchContext.s.LogPrefix(), batchState.batchNumber))
+
+		// we first need to ensure there are no ongoing executor requests at this point before we halt as
+		// these blocks won't have been committed to the datastream
 		for {
-			log.Info(fmt.Sprintf("[%s] Halt sequencer on batch %d...", batchContext.s.LogPrefix(), thisBatch))
+			if pending, count := batchContext.cfg.legacyVerifier.HasPendingVerifications(); pending {
+				log.Info(fmt.Sprintf("[%s] Waiting for pending verifications to complete before halting sequencer...", batchContext.s.LogPrefix()), "count", count)
+				time.Sleep(2 * time.Second)
+				needsUnwind, err := updateStreamAndCheckRollback(batchContext, batchState, streamWriter, u)
+				if needsUnwind || err != nil {
+					return needsUnwind, err
+				}
+			} else {
+				log.Info(fmt.Sprintf("[%s] No pending verifications, halting sequencer...", batchContext.s.LogPrefix()))
+				break
+			}
+		}
+
+		// we need to ensure the batch is also sealed in the datastream at this point
+		if err := finalizeLastBatchInDatastreamIfNotFinalized(batchContext, batchState.batchNumber-1, latestBlock); err != nil {
+			return false, err
+		}
+
+		for {
+			log.Info(fmt.Sprintf("[%s] Halt sequencer on batch %d...", batchContext.s.LogPrefix(), batchState.batchNumber))
 			time.Sleep(5 * time.Second) //nolint:gomnd
 		}
 	}
+
+	return false, nil
 }
 
 type batchChecker interface {
@@ -413,9 +534,16 @@ type BlockDataChecker struct {
 	counter uint64 // counter amount of bytes
 }
 
-func newBlockDataChecker() *BlockDataChecker {
+func NewBlockDataChecker(unlimitedData bool) *BlockDataChecker {
+	var limit uint64
+	if unlimitedData {
+		limit = math.MaxUint64
+	} else {
+		limit = LIMIT_120_KB
+	}
+
 	return &BlockDataChecker{
-		limit:   LIMIT_120_KB,
+		limit:   limit,
 		counter: 0,
 	}
 }
@@ -423,7 +551,7 @@ func newBlockDataChecker() *BlockDataChecker {
 // adds bytes amounting to the block data and checks if the limit is reached
 // if the limit is reached, the data is not added, so this can be reused again for next check
 func (bdc *BlockDataChecker) AddBlockStartData() bool {
-	blockStartBytesAmount := tx.START_BLOCK_BATCH_L2_DATA_SIZE // tx.GenerateStartBlockBatchL2Data(deltaTimestamp, l1InfoTreeIndex) returns 65 long byte array
+	blockStartBytesAmount := zktx.START_BLOCK_BATCH_L2_DATA_SIZE // tx.GenerateStartBlockBatchL2Data(deltaTimestamp, l1InfoTreeIndex) returns 65 long byte array
 	// add in the changeL2Block transaction
 	if bdc.counter+blockStartBytesAmount > bdc.limit {
 		return true

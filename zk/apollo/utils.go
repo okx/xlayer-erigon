@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/urfave/cli/v2"
@@ -113,9 +113,6 @@ func loadZkConfig(ctx *cli.Context, ethCfg *ethconfig.Config) {
 	}
 	if ctx.IsSet(utils.SyncLimit.Name) {
 		ethCfg.Zk.SyncLimit = ctx.Uint64(utils.SyncLimit.Name)
-	}
-	if ctx.IsSet(utils.SupportGasless.Name) {
-		ethCfg.Zk.Gasless = ctx.Bool(utils.SupportGasless.Name)
 	}
 	if ctx.IsSet(utils.DebugNoSync.Name) {
 		ethCfg.Zk.DebugNoSync = ctx.Bool(utils.DebugNoSync.Name)

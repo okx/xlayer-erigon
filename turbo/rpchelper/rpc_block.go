@@ -3,8 +3,8 @@ package rpchelper
 import (
 	"fmt"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/kv"
 
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
@@ -17,7 +17,7 @@ var UnknownBlockError = &rpc.CustomError{
 	Message: "Unknown block",
 }
 
-func GetLatestBlockNumber(tx kv.Tx) (uint64, error) {
+func GetLatestFinishedBlockNumber(tx kv.Tx) (uint64, error) {
 	forkchoiceHeadHash := rawdb.ReadForkchoiceHead(tx)
 	if forkchoiceHeadHash != (libcommon.Hash{}) {
 		forkchoiceHeadNum := rawdb.ReadHeaderNumber(tx, forkchoiceHeadHash)
@@ -26,7 +26,7 @@ func GetLatestBlockNumber(tx kv.Tx) (uint64, error) {
 		}
 	}
 
-	blockNum, err := stages.GetStageProgress(tx, stages.Execution)
+	blockNum, err := stages.GetStageProgress(tx, stages.Finish)
 	if err != nil {
 		return 0, fmt.Errorf("getting latest block number: %w", err)
 	}
@@ -35,14 +35,6 @@ func GetLatestBlockNumber(tx kv.Tx) (uint64, error) {
 }
 
 func GetFinalizedBlockNumber(tx kv.Tx) (uint64, error) {
-	forkchoiceFinalizedHash := rawdb.ReadForkchoiceFinalized(tx)
-	if forkchoiceFinalizedHash != (libcommon.Hash{}) {
-		forkchoiceFinalizedNum := rawdb.ReadHeaderNumber(tx, forkchoiceFinalizedHash)
-		if forkchoiceFinalizedNum != nil {
-			return *forkchoiceFinalizedNum, nil
-		}
-	}
-
 	// get highest verified batch
 	highestVerifiedBatchNo, err := stages.GetStageProgress(tx, stages.L1VerificationsBatchNo)
 	if err != nil {
@@ -51,22 +43,22 @@ func GetFinalizedBlockNumber(tx kv.Tx) (uint64, error) {
 
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	// we've got the highest batch to execute to, now get it's highest block
-	highestVerifiedBlock, err := hermezDb.GetHighestBlockInBatch(highestVerifiedBatchNo)
+	highestVerifiedBlock, _, err := hermezDb.GetHighestBlockInBatch(highestVerifiedBatchNo)
 	if err != nil {
 		return 0, err
 	}
 
-	execBlockNum, err := stages.GetStageProgress(tx, stages.Execution)
+	finishedBlockNumber, err := stages.GetStageProgress(tx, stages.Finish)
 	if err != nil {
-		return 0, fmt.Errorf("getting latest block number: %w", err)
+		return 0, fmt.Errorf("getting latest finished block number: %w", err)
 	}
 
-	blockNum := highestVerifiedBlock
-	if execBlockNum < blockNum {
-		blockNum = execBlockNum
+	blockNumber := highestVerifiedBlock
+	if finishedBlockNumber < blockNumber {
+		blockNumber = finishedBlockNumber
 	}
 
-	return blockNum, nil
+	return blockNumber, nil
 }
 
 func GetSafeBlockNumber(tx kv.Tx) (uint64, error) {

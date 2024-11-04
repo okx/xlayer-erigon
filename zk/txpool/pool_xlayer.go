@@ -3,7 +3,7 @@ package txpool
 import (
 	"math/big"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common"
 )
 
 // XLayerConfig contains the X Layer configs for the txpool

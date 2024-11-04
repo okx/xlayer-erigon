@@ -19,9 +19,10 @@ package vm
 import (
 	"math/big"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 )
@@ -50,9 +51,9 @@ type VMInterface interface {
 	Config() Config
 	ChainConfig() *chain.Config
 	ChainRules() *chain.Rules
-	Context() evmtypes.BlockContext
+	//Context() evmtypes.BlockContext
 	IntraBlockState() evmtypes.IntraBlockState
-	TxContext() evmtypes.TxContext
+	//TxContext() evmtypes.TxContext
 	AddInnerTx(innerTx *zktypes.InnerTx)
 	GetInnerTxMeta() *InnerTxMeta
 }

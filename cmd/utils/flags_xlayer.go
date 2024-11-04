@@ -2,12 +2,11 @@ package utils
 
 import (
 	"fmt"
+	"github.com/urfave/cli/v2"
 	"math/big"
 	"time"
 
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/urfave/cli/v2"
-
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 )
@@ -263,7 +262,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolWhiteList.Name) {
 		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolWhiteList.Name))
+		addrHexes := libcommon.CliString2Array(ctx.String(TxPoolWhiteList.Name))
 		cfg.WhiteList = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)
@@ -272,7 +271,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolBlockedList.Name) {
 		// Parse the command separated flag
-		addrHexes := SplitAndTrim(ctx.String(TxPoolBlockedList.Name))
+		addrHexes := libcommon.CliString2Array(ctx.String(TxPoolBlockedList.Name))
 		cfg.BlockedList = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)
@@ -280,7 +279,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 		}
 	}
 	if ctx.IsSet(TxPoolPackBatchSpecialList.Name) {
-		addrHexes := SplitAndTrim(ctx.String(TxPoolPackBatchSpecialList.Name))
+		addrHexes := libcommon.CliString2Array(ctx.String(TxPoolPackBatchSpecialList.Name))
 
 		cfg.FreeClaimGasAddrs = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
@@ -295,7 +294,7 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 		cfg.EnableFreeGasByNonce = ctx.Bool(TxPoolEnableFreeGasByNonce.Name)
 	}
 	if ctx.IsSet(TxPoolFreeGasExAddrs.Name) {
-		addrHexes := SplitAndTrim(ctx.String(TxPoolFreeGasExAddrs.Name))
+		addrHexes := libcommon.CliString2Array(ctx.String(TxPoolFreeGasExAddrs.Name))
 		cfg.FreeGasExAddrs = make([]string, len(addrHexes))
 		for i, senderHex := range addrHexes {
 			sender := libcommon.HexToAddress(senderHex)
@@ -316,6 +315,6 @@ func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 }
 
 // SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
-func SetApolloPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
-	setTxPool(ctx, cfg)
+func SetApolloPoolXLayer(ctx *cli.Context, fullCfg *ethconfig.Config) {
+	setTxPool(ctx, fullCfg)
 }

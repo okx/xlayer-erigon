@@ -11,12 +11,13 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/length"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/length"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	eriCommon "github.com/ledgerwatch/erigon/common"
-	"github.com/ledgerwatch/erigon/common/dbutils"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
 	"github.com/ledgerwatch/erigon/ethdb"
 	"github.com/ledgerwatch/erigon/smt/pkg/utils"
@@ -543,7 +544,7 @@ func (tds *TrieDbState) GetAccount(addrHash common.Hash) (*accounts.Account, boo
 func (tds *TrieDbState) HashSave(data []byte) (common.Hash, error) {
 	cpy := make([]byte, len(data))
 	copy(cpy, data)
-	h, err := eriCommon.HashData(cpy)
+	h, err := libcommon.HashData(cpy)
 	if err != nil {
 		return common.Hash{}, err
 	} else {
@@ -912,36 +913,16 @@ func (tds *TrieDbState) ResolveSMTRetainList() (*trie.RetainList, error) {
 	for _, addrHash := range accountTouches {
 		addr := common.BytesToAddress(tds.preimageMap[addrHash]).String()
 
-		nonceKey, err := utils.KeyEthAddrNonce(addr)
-
-		if err != nil {
-			return nil, err
-		}
-
+		nonceKey := utils.KeyEthAddrNonce(addr)
 		keys = append(keys, nonceKey.GetPath())
 
-		balanceKey, err := utils.KeyEthAddrBalance(addr)
-
-		if err != nil {
-			return nil, err
-		}
-
+		balanceKey := utils.KeyEthAddrBalance(addr)
 		keys = append(keys, balanceKey.GetPath())
 
-		codeKey, err := utils.KeyContractCode(addr)
-
-		if err != nil {
-			return nil, err
-		}
-
+		codeKey := utils.KeyContractCode(addr)
 		keys = append(keys, codeKey.GetPath())
 
-		codeLengthKey, err := utils.KeyContractLength(addr)
-
-		if err != nil {
-			return nil, err
-		}
-
+		codeLengthKey := utils.KeyContractLength(addr)
 		keys = append(keys, codeLengthKey.GetPath())
 	}
 
@@ -949,11 +930,7 @@ func (tds *TrieDbState) ResolveSMTRetainList() (*trie.RetainList, error) {
 		a := utils.ConvertHexToBigInt(ethAddr)
 		addr := utils.ScalarToArrayBig(a)
 
-		storageKey, err := utils.KeyContractStorage(addr, key)
-
-		if err != nil {
-			return nil, err
-		}
+		storageKey := utils.KeyContractStorage(addr, key)
 
 		return storageKey.GetPath(), nil
 	}

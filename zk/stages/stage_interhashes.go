@@ -1,14 +1,14 @@
 package stages
 
 import (
-	"errors"
 	"fmt"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/length"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/state"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/length"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/state"
 	state2 "github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	db2 "github.com/ledgerwatch/erigon/smt/pkg/db"
@@ -27,8 +27,8 @@ import (
 
 	"math"
 
-	"github.com/gateway-fm/cdk-erigon-lib/kv/memdb"
-	"github.com/ledgerwatch/erigon/common/dbutils"
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
+	"github.com/ledgerwatch/erigon-lib/kv/membatchwithdb"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/systemcontracts"
 	"github.com/ledgerwatch/erigon/core/types/accounts"
@@ -52,7 +52,7 @@ type ZkInterHashesCfg struct {
 	hd                *headerdownload.HeaderDownload
 
 	historyV3 bool
-	agg       *state.AggregatorV3
+	agg       *state.Aggregator
 	zk        *ethconfig.Zk
 }
 
@@ -63,7 +63,7 @@ func StageZkInterHashesCfg(
 	blockReader services.FullBlockReader,
 	hd *headerdownload.HeaderDownload,
 	historyV3 bool,
-	agg *state.AggregatorV3,
+	agg *state.Aggregator,
 	zk *ethconfig.Zk,
 ) ZkInterHashesCfg {
 	return ZkInterHashesCfg{
@@ -81,7 +81,7 @@ func StageZkInterHashesCfg(
 	}
 }
 
-func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwinder, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context, quiet bool) (root common.Hash, err error) {
+func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwinder, tx kv.RwTx, cfg ZkInterHashesCfg, ctx context.Context) (root libcommon.Hash, err error) {
 	logPrefix := s.LogPrefix()
 
 	quit := ctx.Done()
@@ -122,7 +122,7 @@ func SpawnZkIntermediateHashesStage(s *stagedsync.StageState, u stagedsync.Unwin
 		return trie.EmptyRoot, nil
 	}
 
-	if !quiet && to > s.BlockNumber+16 {
+	if to > s.BlockNumber+16 {
 		log.Info(fmt.Sprintf("[%s] Generating intermediate hashes", logPrefix), "from", s.BlockNumber, "to", to)
 	}
 
@@ -405,9 +405,6 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 			if len(ach) > 0 {
 				hexcc := "0x" + ach
 				codeChanges[addr] = hexcc
-				if err != nil {
-					return trie.EmptyRoot, err
-				}
 			}
 		}
 
@@ -478,7 +475,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 	}
 
 	// only open the batch if tx is not already one
-	if _, ok := db.(*memdb.MemoryMutation); !ok {
+	if _, ok := db.(*membatchwithdb.MemoryMutation); !ok {
 		eridb.OpenBatch(quit)
 	}
 
@@ -525,7 +522,7 @@ func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.R
 	for i := from; i >= to+1; i-- {
 		select {
 		case <-ctx.Done():
-			return trie.EmptyRoot, errors.New(fmt.Sprintf("[%s] Context done", logPrefix))
+			return trie.EmptyRoot, fmt.Errorf("[%s] Context done", logPrefix)
 		default:
 		}
 
@@ -684,27 +681,15 @@ func processAccount(db smt.DB, a *accounts.Account, as map[string]string, inc ui
 }
 
 func insertContractBytecodeToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, bytecode string) ([]utils.NodeKey, error) {
-	keyContractCode, err := utils.KeyContractCode(ethAddr)
-	if err != nil {
-		return []utils.NodeKey{}, err
-	}
-
-	keyContractLength, err := utils.KeyContractLength(ethAddr)
-	if err != nil {
-		return []utils.NodeKey{}, err
-	}
-
-	hashedBytecode, err := utils.HashContractBytecode(bytecode)
-	if err != nil {
-		return []utils.NodeKey{}, err
-	}
+	keyContractCode := utils.KeyContractCode(ethAddr)
+	keyContractLength := utils.KeyContractLength(ethAddr)
+	bi := utils.HashContractBytecodeBigInt(bytecode)
 
 	parsedBytecode := strings.TrimPrefix(bytecode, "0x")
 	if len(parsedBytecode)%2 != 0 {
 		parsedBytecode = "0" + parsedBytecode
 	}
 
-	bi := utils.ConvertHexToBigInt(hashedBytecode)
 	bytecodeLength := len(parsedBytecode) / 2
 
 	x := utils.ScalarToArrayBig(bi)
@@ -746,10 +731,7 @@ func insertContractStorageToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, 
 			continue
 		}
 
-		keyStoragePosition, err := utils.KeyContractStorage(add, k)
-		if err != nil {
-			return []utils.NodeKey{}, err
-		}
+		keyStoragePosition := utils.KeyContractStorage(add, k)
 
 		base := 10
 		if strings.HasPrefix(v, "0x") {
@@ -779,14 +761,8 @@ func insertContractStorageToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, 
 }
 
 func insertAccountStateToKV(db smt.DB, keys []utils.NodeKey, ethAddr string, balance, nonce *big.Int) ([]utils.NodeKey, error) {
-	keyBalance, err := utils.KeyEthAddrBalance(ethAddr)
-	if err != nil {
-		return []utils.NodeKey{}, err
-	}
-	keyNonce, err := utils.KeyEthAddrNonce(ethAddr)
-	if err != nil {
-		return []utils.NodeKey{}, err
-	}
+	keyBalance := utils.KeyEthAddrBalance(ethAddr)
+	keyNonce := utils.KeyEthAddrNonce(ethAddr)
 
 	x := utils.ScalarToArrayBig(balance)
 	valueBalance, err := utils.NodeValue8FromBigIntArray(x)

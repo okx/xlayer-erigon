@@ -8,8 +8,38 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
+	"github.com/ledgerwatch/erigon/zk/l1_data"
+	verifier "github.com/ledgerwatch/erigon/zk/legacy_executor_verifier"
 	"github.com/ledgerwatch/log/v3"
 )
+
+func prepareBatchNumber(sdb *stageDb, forkId, lastBatch uint64, isL1Recovery bool) (uint64, error) {
+	if isL1Recovery {
+		recoveredBatchData, err := l1_data.BreakDownL1DataByBatch(lastBatch, forkId, sdb.hermezDb.HermezDbReader)
+		if err != nil {
+			return 0, err
+		}
+
+		blockNumbersInBatchSoFar, err := sdb.hermezDb.GetL2BlockNosByBatch(lastBatch)
+		if err != nil {
+			return 0, err
+		}
+
+		if len(blockNumbersInBatchSoFar) < len(recoveredBatchData.DecodedData) { // check if there are more blocks to process
+			isLastBatchBad, err := sdb.hermezDb.GetInvalidBatch(lastBatch)
+			if err != nil {
+				return 0, err
+			}
+
+			// if last batch is not bad then continue buildingin it, otherwise return lastBatch+1 (at the end of the function)
+			if !isLastBatchBad {
+				return lastBatch, nil
+			}
+		}
+	}
+
+	return lastBatch + 1, nil
+}
 
 func prepareBatchCounters(batchContext *BatchContext, batchState *BatchState) (*vm.BatchCounterCollector, error) {
 	return vm.NewBatchCounterCollector(batchContext.sdb.smt.GetDepth(), uint16(batchState.forkId), batchContext.cfg.zk.VirtualCountersSmtReduction, batchContext.cfg.zk.ShouldCountersBeUnlimited(batchState.isL1Recovery()), nil), nil
@@ -41,7 +71,7 @@ func doCheckForBadBatch(batchContext *BatchContext, batchState *BatchState, this
 	if err = batchContext.sdb.hermezDb.WriteInvalidBatch(batchState.batchNumber); err != nil {
 		return false, err
 	}
-	if err = batchContext.sdb.hermezDb.WriteBatchCounters(currentBlock.NumberU64(), map[string]int{}); err != nil {
+	if err = batchContext.sdb.hermezDb.WriteBatchCounters(currentBlock.NumberU64(), []int{}); err != nil {
 		return false, err
 	}
 	if err = stages.SaveStageProgress(batchContext.sdb.tx, stages.HighestSeenBatchNumber, batchState.batchNumber); err != nil {
@@ -62,7 +92,7 @@ func updateStreamAndCheckRollback(
 	streamWriter *SequencerBatchStreamWriter,
 	u stagedsync.Unwinder,
 ) (bool, error) {
-	checkedVerifierBundles, err := streamWriter.CommitNewUpdates()
+	checkedVerifierBundles, verifierBundleForUnwind, err := streamWriter.CommitNewUpdates()
 	if err != nil {
 		return false, err
 	}
@@ -93,21 +123,35 @@ func updateStreamAndCheckRollback(
 			return false, err
 		}
 
-		unwindTo := verifierBundle.Request.GetLastBlockNumber() - 1
+		err = markForUnwind(batchContext, streamWriter, u, verifierBundle)
+		return err == nil, err
+	}
 
-		// for unwind we supply the block number X-1 of the block we want to remove, but supply the hash of the block
-		// causing the unwind.
-		unwindHeader := rawdb.ReadHeaderByNumber(batchContext.sdb.tx, verifierBundle.Request.GetLastBlockNumber())
-		if unwindHeader == nil {
-			return false, fmt.Errorf("could not find header for block %d", verifierBundle.Request.GetLastBlockNumber())
-		}
-
-		log.Warn(fmt.Sprintf("[%s] Block is invalid - rolling back", batchContext.s.LogPrefix()), "badBlock", verifierBundle.Request.GetLastBlockNumber(), "unwindTo", unwindTo, "root", unwindHeader.Root)
-
-		u.UnwindTo(unwindTo, unwindHeader.Hash())
-		streamWriter.legacyVerifier.CancelAllRequests()
-		return true, nil
+	if verifierBundleForUnwind != nil {
+		err = markForUnwind(batchContext, streamWriter, u, verifierBundleForUnwind)
+		return err == nil, err
 	}
 
 	return false, nil
+}
+
+func markForUnwind(
+	batchContext *BatchContext,
+	streamWriter *SequencerBatchStreamWriter,
+	u stagedsync.Unwinder,
+	verifierBundle *verifier.VerifierBundle,
+) error {
+	unwindTo := verifierBundle.Request.GetLastBlockNumber() - 1
+
+	// for unwind we supply the block number X-1 of the block we want to remove, but supply the hash of the block
+	// causing the unwind.
+	unwindHeader := rawdb.ReadHeaderByNumber(batchContext.sdb.tx, verifierBundle.Request.GetLastBlockNumber())
+	if unwindHeader == nil {
+		return fmt.Errorf("could not find header for block %d", verifierBundle.Request.GetLastBlockNumber())
+	}
+
+	log.Warn(fmt.Sprintf("[%s] Block is invalid - rolling back", batchContext.s.LogPrefix()), "badBlock", verifierBundle.Request.GetLastBlockNumber(), "unwindTo", unwindTo, "root", unwindHeader.Root)
+
+	u.UnwindTo(unwindTo, stagedsync.BadBlock(unwindHeader.Hash(), fmt.Errorf("block %d is invalid", verifierBundle.Request.GetLastBlockNumber())))
+	return nil
 }

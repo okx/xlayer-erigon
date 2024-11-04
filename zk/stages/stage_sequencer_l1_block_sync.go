@@ -2,14 +2,13 @@ package stages
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
-	"errors"
-
 	"encoding/binary"
 
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
@@ -43,8 +42,8 @@ func SpawnSequencerL1BlockSyncStage(
 	ctx context.Context,
 	tx kv.RwTx,
 	cfg SequencerL1BlockSyncCfg,
-	quiet bool,
-) error {
+	logger log.Logger,
+) (funcErr error) {
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting L1 block sync stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished L1 block sync stage", logPrefix))
@@ -114,7 +113,14 @@ func SpawnSequencerL1BlockSyncStage(
 	}
 
 	if !cfg.syncer.IsSyncStarted() {
-		cfg.syncer.Run(l1BlockHeight)
+		cfg.syncer.RunQueryBlocks(l1BlockHeight)
+		defer func() {
+			if funcErr != nil {
+				cfg.syncer.StopQueryBlocks()
+				cfg.syncer.ConsumeQueryBlocks()
+				cfg.syncer.WaitQueryBlocksToFinish()
+			}
+		}()
 	}
 
 	logChan := cfg.syncer.GetLogsChan()
@@ -137,14 +143,14 @@ LOOP:
 				var transaction types.Transaction
 				attempts := 0
 				for {
-					transaction, _, err = cfg.syncer.GetTransaction(l.TxHash)
-					if err == nil {
+					transaction, _, funcErr = cfg.syncer.GetTransaction(l.TxHash)
+					if funcErr == nil {
 						break
 					} else {
 						log.Warn("Error getting transaction, attempting again", "hash", l.TxHash.String(), "err", err)
 						attempts++
 						if attempts > 50 {
-							return err
+							return funcErr
 						}
 						time.Sleep(500 * time.Millisecond)
 					}
@@ -156,12 +162,14 @@ LOOP:
 				l1InfoRoot := l.Data
 				if len(l1InfoRoot) != 32 {
 					log.Error(fmt.Sprintf("[%s] L1 info root is not 32 bytes", logPrefix), "tx-hash", l.TxHash.String())
-					return errors.New("l1 info root is not 32 bytes")
+					funcErr = errors.New("l1 info root is not 32 bytes")
+					return funcErr
 				}
 
 				batches, coinbase, limitTimestamp, err := l1_data.DecodeL1BatchData(transaction.GetData(), cfg.zkCfg.DAUrl)
 				if err != nil {
-					return err
+					funcErr = err
+					return funcErr
 				}
 
 				limitTimestampBytes := make([]byte, 8)
@@ -187,8 +195,8 @@ LOOP:
 					copy(data[52:], limitTimestampBytes)
 					copy(data[60:], batch)
 
-					if err := hermezDb.WriteL1BatchData(b, data); err != nil {
-						return err
+					if funcErr = hermezDb.WriteL1BatchData(b, data); funcErr != nil {
+						return funcErr
 					}
 
 					// check if we need to stop here based on config
@@ -217,14 +225,14 @@ LOOP:
 	lastCheckedBlock := cfg.syncer.GetLastCheckedL1Block()
 	if lastCheckedBlock > l1BlockHeight {
 		log.Info(fmt.Sprintf("[%s] Saving L1 block sync progress", logPrefix), "lastChecked", lastCheckedBlock)
-		if err := stages.SaveStageProgress(tx, stages.L1BlockSync, lastCheckedBlock); err != nil {
-			return err
+		if funcErr = stages.SaveStageProgress(tx, stages.L1BlockSync, lastCheckedBlock); funcErr != nil {
+			return funcErr
 		}
 	}
 
 	if freshTx {
-		if err := tx.Commit(); err != nil {
-			return err
+		if funcErr = tx.Commit(); funcErr != nil {
+			return funcErr
 		}
 	}
 
@@ -260,6 +268,6 @@ func UnwindSequencerL1BlockSyncStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg 
 	return nil
 }
 
-func PruneSequencerL1BlockSyncStage(s *stagedsync.PruneState, tx kv.RwTx, cfg SequencerL1BlockSyncCfg, ctx context.Context) error {
+func PruneSequencerL1BlockSyncStage(s *stagedsync.PruneState, tx kv.RwTx, cfg SequencerL1BlockSyncCfg, ctx context.Context, logger log.Logger) error {
 	return nil
 }

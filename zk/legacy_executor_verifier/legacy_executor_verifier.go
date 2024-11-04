@@ -2,6 +2,7 @@ package legacy_executor_verifier
 
 import (
 	"context"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,12 +10,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/0xPolygonHermez/zkevm-data-streamer/datastreamer"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
@@ -35,13 +35,14 @@ type VerifierRequest struct {
 	Counters     map[string]int
 	creationTime time.Time
 	timeout      time.Duration
+	retries      int
 }
 
 func NewVerifierRequest(forkId, batchNumber uint64, blockNumbers []uint64, stateRoot common.Hash, counters map[string]int) *VerifierRequest {
-	return NewVerifierRequestWithTimeout(forkId, batchNumber, blockNumbers, stateRoot, counters, 0)
+	return NewVerifierRequestWithLimits(forkId, batchNumber, blockNumbers, stateRoot, counters, 0, -1)
 }
 
-func NewVerifierRequestWithTimeout(forkId, batchNumber uint64, blockNumbers []uint64, stateRoot common.Hash, counters map[string]int, timeout time.Duration) *VerifierRequest {
+func NewVerifierRequestWithLimits(forkId, batchNumber uint64, blockNumbers []uint64, stateRoot common.Hash, counters map[string]int, timeout time.Duration, retries int) *VerifierRequest {
 	return &VerifierRequest{
 		BatchNumber:  batchNumber,
 		BlockNumbers: blockNumbers,
@@ -50,6 +51,7 @@ func NewVerifierRequestWithTimeout(forkId, batchNumber uint64, blockNumbers []ui
 		Counters:     counters,
 		creationTime: time.Now(),
 		timeout:      timeout,
+		retries:      retries,
 	}
 }
 
@@ -59,6 +61,17 @@ func (vr *VerifierRequest) IsOverdue() bool {
 	}
 
 	return time.Since(vr.creationTime) > vr.timeout
+}
+
+func (vr *VerifierRequest) IncrementAndValidateRetries() bool {
+	if vr.retries == -1 {
+		return true
+	}
+
+	if vr.retries > 0 {
+		vr.retries--
+	}
+	return vr.retries > 0
 }
 
 func (vr *VerifierRequest) GetFirstBlockNumber() uint64 {
@@ -78,15 +91,25 @@ type VerifierResponse struct {
 }
 
 type VerifierBundle struct {
-	Request  *VerifierRequest
-	Response *VerifierResponse
+	Request                *VerifierRequest
+	Response               *VerifierResponse
+	readyForSendingRequest bool
 }
 
-func NewVerifierBundle(request *VerifierRequest, response *VerifierResponse) *VerifierBundle {
+func NewVerifierBundle(request *VerifierRequest, response *VerifierResponse, readyForSendingRequest bool) *VerifierBundle {
 	return &VerifierBundle{
-		Request:  request,
-		Response: response,
+		Request:                request,
+		Response:               response,
+		readyForSendingRequest: readyForSendingRequest,
 	}
+}
+
+func (vb *VerifierBundle) markAsreadyForSendingRequest() {
+	vb.readyForSendingRequest = true
+}
+
+func (vb *VerifierBundle) isInternalError() bool {
+	return !vb.readyForSendingRequest
 }
 
 type WitnessGenerator interface {
@@ -130,6 +153,7 @@ func NewLegacyExecutorVerifier(
 }
 
 func (v *LegacyExecutorVerifier) StartAsyncVerification(
+	logPrefix string,
 	forkId uint64,
 	batchNumber uint64,
 	stateRoot common.Hash,
@@ -137,23 +161,26 @@ func (v *LegacyExecutorVerifier) StartAsyncVerification(
 	blockNumbers []uint64,
 	useRemoteExecutor bool,
 	requestTimeout time.Duration,
+	retries int,
 ) {
 	var promise *Promise[*VerifierBundle]
 
-	request := NewVerifierRequestWithTimeout(forkId, batchNumber, blockNumbers, stateRoot, counters, requestTimeout)
+	request := NewVerifierRequestWithLimits(forkId, batchNumber, blockNumbers, stateRoot, counters, requestTimeout, retries)
 	if useRemoteExecutor {
-		promise = v.VerifyAsync(request, blockNumbers)
+		promise = v.VerifyAsync(request)
 	} else {
-		promise = v.VerifyWithoutExecutor(request, blockNumbers)
+		promise = v.VerifyWithoutExecutor(request)
 	}
 
-	v.appendPromise(promise)
+	size := v.appendPromise(promise)
+	log.Info(fmt.Sprintf("[%s] Starting verification request", logPrefix), "batch-number", batchNumber, "blocks-range", fmt.Sprintf("[%d;%d]", request.GetFirstBlockNumber(), request.GetLastBlockNumber()), "pending-requests", size)
 }
 
-func (v *LegacyExecutorVerifier) appendPromise(promise *Promise[*VerifierBundle]) {
+func (v *LegacyExecutorVerifier) appendPromise(promise *Promise[*VerifierBundle]) int {
 	v.mtxPromises.Lock()
 	defer v.mtxPromises.Unlock()
 	v.promises = append(v.promises, promise)
+	return len(v.promises)
 }
 
 func (v *LegacyExecutorVerifier) VerifySync(tx kv.Tx, request *VerifierRequest, witness, streamBytes []byte, timestampLimit uint64, l1InfoTreeMinTimestamps map[uint64]uint64) error {
@@ -193,25 +220,12 @@ func (v *LegacyExecutorVerifier) VerifySync(tx kv.Tx, request *VerifierRequest, 
 	return executorErr
 }
 
-func (v *LegacyExecutorVerifier) VerifyAsync(request *VerifierRequest, blockNumbers []uint64) *Promise[*VerifierBundle] {
+func (v *LegacyExecutorVerifier) VerifyAsync(request *VerifierRequest) *Promise[*VerifierBundle] {
 	// eager promise will do the work as soon as called in a goroutine, then we can retrieve the result later
 	// ProcessResultsSequentiallyUnsafe relies on the fact that this function returns ALWAYS non-verifierBundle and error. The only exception is the case when verifications has been canceled. Only then the verifierBundle can be nil
 	return NewPromise[*VerifierBundle](func() (*VerifierBundle, error) {
-		verifierBundle := NewVerifierBundle(request, nil)
-
-		e := v.GetNextOnlineAvailableExecutor()
-		if e == nil {
-			return verifierBundle, ErrNoExecutorAvailable
-		}
-
-		t := utils.StartTimer("legacy-executor-verifier", "verify-async")
-		defer t.LogTimer()
-
-		e.AquireAccess()
-		defer e.ReleaseAccess()
-		if v.cancelAllVerifications.Load() {
-			return nil, ErrPromiseCancelled
-		}
+		verifierBundle := NewVerifierBundle(request, nil, false)
+		blockNumbers := verifierBundle.Request.BlockNumbers
 
 		var err error
 		ctx := context.Background()
@@ -270,6 +284,22 @@ func (v *LegacyExecutorVerifier) VerifyAsync(request *VerifierRequest, blockNumb
 			return verifierBundle, err
 		}
 
+		verifierBundle.markAsreadyForSendingRequest()
+
+		e := v.GetNextOnlineAvailableExecutor()
+		if e == nil {
+			return verifierBundle, ErrNoExecutorAvailable
+		}
+
+		t := utils.StartTimer("legacy-executor-verifier", "verify-async")
+		defer t.LogTimer()
+
+		e.AquireAccess()
+		defer e.ReleaseAccess()
+		if v.cancelAllVerifications.Load() {
+			return nil, ErrPromiseCancelled
+		}
+
 		ok, executorResponse, executorErr, generalErr := e.Verify(payload, request, previousBlock.Root())
 		if generalErr != nil {
 			return verifierBundle, generalErr
@@ -295,29 +325,35 @@ func (v *LegacyExecutorVerifier) VerifyAsync(request *VerifierRequest, blockNumb
 	})
 }
 
-func (v *LegacyExecutorVerifier) VerifyWithoutExecutor(request *VerifierRequest, blockNumbers []uint64) *Promise[*VerifierBundle] {
+func (v *LegacyExecutorVerifier) VerifyWithoutExecutor(request *VerifierRequest) *Promise[*VerifierBundle] {
 	promise := NewPromise[*VerifierBundle](func() (*VerifierBundle, error) {
 		response := &VerifierResponse{
-			// BatchNumber:      request.BatchNumber,
-			// BlockNumber:      request.BlockNumber,
 			Valid:            true,
 			OriginalCounters: request.Counters,
 			Witness:          nil,
 			ExecutorResponse: nil,
 			Error:            nil,
 		}
-		return NewVerifierBundle(request, response), nil
+		return NewVerifierBundle(request, response, true), nil
 	})
 	promise.Wait()
 
 	return promise
 }
 
-func (v *LegacyExecutorVerifier) ProcessResultsSequentially() ([]*VerifierBundle, error) {
+func (v *LegacyExecutorVerifier) HasPendingVerifications() (bool, int) {
+	v.mtxPromises.Lock()
+	defer v.mtxPromises.Unlock()
+
+	return len(v.promises) > 0, len(v.promises)
+}
+
+func (v *LegacyExecutorVerifier) ProcessResultsSequentially(logPrefix string) ([]*VerifierBundle, *VerifierBundle) {
 	v.mtxPromises.Lock()
 	defer v.mtxPromises.Unlock()
 
 	var verifierResponse []*VerifierBundle
+	var verifierBundleForUnwind *VerifierBundle
 
 	// not a stop signal, so we can start to process our promises now
 	for idx, promise := range v.promises {
@@ -337,25 +373,34 @@ func (v *LegacyExecutorVerifier) ProcessResultsSequentially() ([]*VerifierBundle
 
 			log.Error("error on our end while preparing the verification request, re-queueing the task", "err", err)
 
-			if verifierBundle.Request.IsOverdue() {
-				// signal an error, the caller can check on this and stop the process if needs be
-				return nil, fmt.Errorf("error: batch %d couldn't be processed in 30 minutes", verifierBundle.Request.BatchNumber)
+			if verifierBundle.isInternalError() {
+				canRetry := verifierBundle.Request.IncrementAndValidateRetries()
+				if !canRetry {
+					verifierBundleForUnwind = verifierBundle
+					break
+				}
+			} else {
+				if verifierBundle.Request.IsOverdue() {
+					verifierBundleForUnwind = verifierBundle
+					break
+				}
 			}
 
 			// re-queue the task - it should be safe to replace the index of the slice here as we only add to it
 			v.promises[idx] = promise.CloneAndRerun()
 
-			// break now as we know we can't proceed here until this promise is attempted again
+			// we have a problamtic bundle so we cannot processed next, because it should break the sequentiality
 			break
 		}
 
+		log.Info(fmt.Sprintf("[%s] Finished verification request", logPrefix), "batch-number", verifierBundle.Request.BatchNumber, "blocks-range", fmt.Sprintf("[%d;%d]", verifierBundle.Request.GetFirstBlockNumber(), verifierBundle.Request.GetLastBlockNumber()), "is-valid", verifierBundle.Response.Valid, "pending-requests", len(v.promises)-1-idx)
 		verifierResponse = append(verifierResponse, verifierBundle)
 	}
 
 	// remove processed promises from the list
 	v.promises = v.promises[len(verifierResponse):]
 
-	return verifierResponse, nil
+	return verifierResponse, verifierBundleForUnwind
 }
 
 func (v *LegacyExecutorVerifier) Wait() {
@@ -426,6 +471,7 @@ func (v *LegacyExecutorVerifier) GetWholeBatchStreamBytes(
 
 	for idx, blockNumber := range blockNumbers {
 		block, err := rawdb.ReadBlockByNumber(tx, blockNumber)
+
 		if err != nil {
 			return nil, err
 		}
@@ -440,7 +486,7 @@ func (v *LegacyExecutorVerifier) GetWholeBatchStreamBytes(
 		txsPerBlock[blockNumber] = filteredTransactions
 	}
 
-	entries, err := server.BuildWholeBatchStreamEntriesProto(tx, hermezDb, v.streamServer.GetChainId(), batchNumber, previousBatch, blocks, txsPerBlock, l1InfoTreeMinTimestamps)
+	entries, err := server.BuildWholeBatchStreamEntriesProto(tx, hermezDb, v.streamServer.GetChainId(), previousBatch, batchNumber, blocks, txsPerBlock, l1InfoTreeMinTimestamps)
 	if err != nil {
 		return nil, err
 	}

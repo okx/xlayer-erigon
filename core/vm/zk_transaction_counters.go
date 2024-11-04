@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"math"
 
-	"github.com/ledgerwatch/erigon/common/hexutil"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/zk/tx"
@@ -47,6 +48,18 @@ func NewTransactionCounter(transaction types.Transaction, smtMaxLevel int, forkI
 	tc.executionCounters.SetTransaction(transaction)
 
 	return tc
+}
+
+func (tc *TransactionCounter) CombineCounters() Counters {
+	combined := NewCounters()
+	for k := range tc.rlpCounters.counters {
+		val := tc.rlpCounters.counters[k].used + tc.executionCounters.counters[k].used + tc.processingCounters.counters[k].used
+		combined[k] = &Counter{
+			used: val,
+		}
+	}
+
+	return combined
 }
 
 func (tc *TransactionCounter) Clone() *TransactionCounter {
@@ -170,7 +183,11 @@ func (tc *TransactionCounter) ProcessTx(ibs *state.IntraBlockState, returnData [
 
 	cc := NewCounterCollector(tc.smtLevels, tc.forkId)
 	cc.Deduct(S, 300)
-	cc.Deduct(B, 11+7)
+	if tc.forkId >= uint16(chain.ForkId13Durian) {
+		cc.Deduct(B, 12+7)
+	} else {
+		cc.Deduct(B, 11+7)
+	}
 	cc.Deduct(P, 14*tc.smtLevels)
 	cc.Deduct(D, 5)
 	cc.Deduct(A, 2)

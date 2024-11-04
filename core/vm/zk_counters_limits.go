@@ -3,16 +3,16 @@ package vm
 import (
 	"math"
 
-	zk_consts "github.com/ledgerwatch/erigon/zk/constants"
+	zk_consts "github.com/ledgerwatch/erigon-lib/chain"
 )
 
 const stepDeduction = 200
 const baseSafetyPercentage float64 = 0.05
 
 var (
-	defaultTotalSteps  = 1 << 23
-	forkId10TotalSteps = 1 << 24
-	forkId11TotalSteps = 1 << 25
+	preForkId10TotalSteps = 1 << 23
+	forkId10TotalSteps    = 1 << 24
+	forkId11TotalSteps    = 1 << 25
 
 	unlimitedCounters = counterLimits{
 		totalSteps: math.MaxInt32,
@@ -36,48 +36,49 @@ type counterLimits struct {
 }
 
 func createCountrsByLimits(c counterLimits) *Counters {
-	return &Counters{
-		S: {
-			remaining:     c.totalSteps,
-			name:          "defaultTotalSteps",
-			initialAmount: c.totalSteps,
-		},
-		A: {
-			remaining:     c.arith,
-			name:          "arith",
-			initialAmount: c.arith,
-		},
-		B: {
-			remaining:     c.binary,
-			name:          "binary",
-			initialAmount: c.binary,
-		},
-		M: {
-			remaining:     c.memAlign,
-			name:          "memAlign",
-			initialAmount: c.memAlign,
-		},
-		K: {
-			remaining:     c.keccaks,
-			name:          "keccaks",
-			initialAmount: c.keccaks,
-		},
-		D: {
-			remaining:     c.padding,
-			name:          "padding",
-			initialAmount: c.padding,
-		},
-		P: {
-			remaining:     c.poseidon,
-			name:          "poseidon",
-			initialAmount: c.poseidon,
-		},
-		SHA: {
-			remaining:     c.sha256,
-			name:          "sha256",
-			initialAmount: c.sha256,
-		},
+	counters := NewCounters()
+
+	counters[S] = &Counter{
+		remaining:     c.totalSteps,
+		name:          "defaultTotalSteps",
+		initialAmount: c.totalSteps,
 	}
+	counters[A] = &Counter{
+		remaining:     c.arith,
+		name:          "arith",
+		initialAmount: c.arith,
+	}
+	counters[B] = &Counter{
+		remaining:     c.binary,
+		name:          "binary",
+		initialAmount: c.binary,
+	}
+	counters[M] = &Counter{
+		remaining:     c.memAlign,
+		name:          "memAlign",
+		initialAmount: c.memAlign,
+	}
+	counters[K] = &Counter{
+		remaining:     c.keccaks,
+		name:          "keccaks",
+		initialAmount: c.keccaks,
+	}
+	counters[D] = &Counter{
+		remaining:     c.padding,
+		name:          "padding",
+		initialAmount: c.padding,
+	}
+	counters[P] = &Counter{
+		remaining:     c.poseidon,
+		name:          "poseidon",
+		initialAmount: c.poseidon,
+	}
+	counters[SHA] = &Counter{
+		remaining:     c.sha256,
+		name:          "sha256",
+		initialAmount: c.sha256,
+	}
+	return &counters
 }
 
 // tp ne used on next forkid counters
@@ -101,13 +102,13 @@ func getCounterLimits(forkId uint16) *Counters {
 func getTotalSteps(forkId uint16) int {
 	var totalSteps int
 
-	switch forkId {
-	case uint16(zk_consts.ForkID10):
+	if forkId < uint16(zk_consts.ForkID10) {
+		return preForkId10TotalSteps
+	} else if forkId == uint16(zk_consts.ForkID10) {
 		totalSteps = forkId10TotalSteps
-	case uint16(zk_consts.ForkID11):
+	} else if forkId >= uint16(zk_consts.ForkID11) {
+		// Use the new total steps for ForkID11 and above, unless a new limit is added in the future
 		totalSteps = forkId11TotalSteps
-	default:
-		totalSteps = defaultTotalSteps
 	}
 
 	// we need to remove some steps as these will always be used during batch execution

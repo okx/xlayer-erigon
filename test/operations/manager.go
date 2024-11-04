@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	erigonchain "github.com/gateway-fm/cdk-erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon/accounts/abi/bind"
-	"github.com/ledgerwatch/erigon/chain"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/ethclient"
@@ -204,7 +203,7 @@ func GetClient(URL string) (*ethclient.Client, error) {
 func GetTestChainConfig(chainID uint64) *chain.Config {
 	return &chain.Config{
 		ChainID:               big.NewInt(int64(chainID)),
-		Consensus:             erigonchain.EtHashConsensus,
+		Consensus:             chain.EtHashConsensus,
 		HomesteadBlock:        big.NewInt(0),
 		TangerineWhistleBlock: big.NewInt(0),
 		SpuriousDragonBlock:   big.NewInt(0),
@@ -214,6 +213,6 @@ func GetTestChainConfig(chainID uint64) *chain.Config {
 		IstanbulBlock:         big.NewInt(0),
 		MuirGlacierBlock:      big.NewInt(0),
 		BerlinBlock:           big.NewInt(0),
-		Ethash:                new(erigonchain.EthashConfig),
+		Ethash:                new(chain.EthashConfig),
 	}
 }

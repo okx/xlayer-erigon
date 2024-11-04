@@ -34,31 +34,31 @@ import (
 
 	"github.com/VictoriaMetrics/metrics"
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
 	"github.com/go-stack/stack"
 	"github.com/google/btree"
 	"github.com/hashicorp/golang-lru/v2/simplelru"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/txpool/txpoolcfg"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
 	"github.com/status-im/keycard-go/hexutils"
 
-	"github.com/gateway-fm/cdk-erigon-lib/chain"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/assert"
-	"github.com/gateway-fm/cdk-erigon-lib/common/dbg"
-	"github.com/gateway-fm/cdk-erigon-lib/common/fixedgas"
-	emath "github.com/gateway-fm/cdk-erigon-lib/common/math"
-	"github.com/gateway-fm/cdk-erigon-lib/common/u256"
-	"github.com/gateway-fm/cdk-erigon-lib/gointerfaces"
-	"github.com/gateway-fm/cdk-erigon-lib/gointerfaces/grpcutil"
-	"github.com/gateway-fm/cdk-erigon-lib/gointerfaces/remote"
-	proto_txpool "github.com/gateway-fm/cdk-erigon-lib/gointerfaces/txpool"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
-	"github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/assert"
+	"github.com/ledgerwatch/erigon-lib/common/dbg"
+	"github.com/ledgerwatch/erigon-lib/common/fixedgas"
+	emath "github.com/ledgerwatch/erigon-lib/common/math"
+	"github.com/ledgerwatch/erigon-lib/common/u256"
+	"github.com/ledgerwatch/erigon-lib/gointerfaces"
+	"github.com/ledgerwatch/erigon-lib/gointerfaces/grpcutil"
+	"github.com/ledgerwatch/erigon-lib/gointerfaces/remote"
+	proto_txpool "github.com/ledgerwatch/erigon-lib/gointerfaces/txpool"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/kvcache"
+	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
+	"github.com/ledgerwatch/erigon-lib/types"
 )
 
 var (
@@ -147,10 +147,10 @@ const (
 	SenderDisallowedDeploy          DiscardReason = 26 // sender is not allowed to deploy contracts by ACL policy
 	DiscardByLimbo                  DiscardReason = 27
 	SmartContractDeploymentDisabled DiscardReason = 28 // to == null not allowed, config set to block smart contract deployment
-
 	// For X Layer
 	ReceiverDisallowedReceiveTx DiscardReason = 127 // receiver is not allowed to receive transactions
 	NoWhiteListedSender         DiscardReason = 128 // the transaction is sent by a non-whitelisted account
+	GasLimitTooHigh             DiscardReason = 29  // gas limit is too high
 )
 
 func (r DiscardReason) String() string {
@@ -217,6 +217,8 @@ func (r DiscardReason) String() string {
 		return "limbo error"
 	case SmartContractDeploymentDisabled:
 		return "smart contract deployment disabled"
+	case GasLimitTooHigh:
+		return fmt.Sprintf("gas limit too high. Max: %d", transactionGasLimit)
 	default:
 		panic(fmt.Sprintf("discard reason: %d", r))
 	}
@@ -372,6 +374,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 	for _, sender := range cfg.TracedSenders {
 		tracedSenders[common.BytesToAddress([]byte(sender))] = struct{}{}
 	}
+
 	return &TxPool{
 		lock:                    &sync.Mutex{},
 		byHash:                  map[string]*metaTx{},
@@ -700,13 +703,13 @@ func (p *TxPool) ResetYieldedStatus() {
 	}
 }
 
-func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
-	return p.best(n, txs, tx, onTopOf, availableGas, toSkip)
+func (p *TxPool) YieldBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
+	return p.best(n, txs, tx, onTopOf, availableGas, availableBlobGas, toSkip)
 }
 
-func (p *TxPool) PeekBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64) (bool, error) {
+func (p *TxPool) PeekBest(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64) (bool, error) {
 	set := mapset.NewThreadUnsafeSet[[32]byte]()
-	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, set)
+	onTime, _, err := p.best(n, txs, tx, onTopOf, availableGas, availableBlobGas, set)
 	return onTime, err
 }
 
@@ -748,7 +751,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		return UnsupportedTx
 	}
 
-	// Drop transactions under our raw gas price suggested by default\fixed\follower gp mode
+	// Drop non-local transactions under our own minimal accepted gas price or tip
 	// X Layer
 	rgp := gaspricecfg.DefaultXLayerPrice
 	if p.gpCache != nil {
@@ -776,6 +779,13 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 		}
 		return IntrinsicGas
 	}
+	if txn.Gas > transactionGasLimit {
+		if txn.Traced {
+			log.Info(fmt.Sprintf("TX TRACING: validateTx gas limit too high idHash=%x gas=%d, limit=%d", txn.IDHash, txn.Gas, transactionGasLimit))
+		}
+		return GasLimitTooHigh
+	}
+
 	if !isLocal && uint64(p.all.count(txn.SenderID)) > p.cfg.AccountSlots {
 		if txn.Traced {
 			log.Info(fmt.Sprintf("TX TRACING: validateTx marked as spamming idHash=%x slots=%d, limit=%d", txn.IDHash, p.all.count(txn.SenderID), p.cfg.AccountSlots))
@@ -825,7 +835,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	switch resolvePolicy(txn) {
 	case SendTx:
 		var allow bool
-		allow, err := p.checkPolicy(context.TODO(), from, SendTx)
+		allow, err := p.isActionAllowed(context.TODO(), from, SendTx)
 		if err != nil {
 			panic(err)
 		}
@@ -835,7 +845,7 @@ func (p *TxPool) validateTx(txn *types.TxSlot, isLocal bool, stateCache kvcache.
 	case Deploy:
 		var allow bool
 		// check that sender may deploy contracts
-		allow, err := p.checkPolicy(context.TODO(), from, Deploy)
+		allow, err := p.isActionAllowed(context.TODO(), from, Deploy)
 		if err != nil {
 			panic(err)
 		}
@@ -878,7 +888,7 @@ func (p *TxPool) isLondon() bool {
 		return true
 	}
 	lbsBig := big.NewInt(0).SetUint64(p.lastSeenBlock.Load())
-	if p.londonBlock.Cmp(lbsBig) <= 0 {
+	if p.londonBlock != nil && p.londonBlock.Cmp(lbsBig) <= 0 {
 		p.isPostLondon.Swap(true)
 		return true
 	}
@@ -1095,14 +1105,7 @@ func (p *TxPool) addTxs(blockNum uint64, cacheView kvcache.CacheView, senders *s
 		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
 	}
 
-	for _, mt := range p.overflowZkCounters {
-		pending.Remove(mt)
-		discard(mt, OverflowZkCounters)
-		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
-		// do not hold on to the discard reason for an OOC issue
-		p.discardReasonsLRU.Remove(string(mt.Tx.IDHash[:]))
-	}
-	p.overflowZkCounters = p.overflowZkCounters[:0]
+	p.discardOverflowZkCountersFromPending(pending, discard, sendersWithChangedState)
 
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
@@ -1192,14 +1195,7 @@ func (p *TxPool) addTxsOnNewBlock(
 		}
 	}
 
-	for _, mt := range p.overflowZkCounters {
-		pending.Remove(mt)
-		discard(mt, OverflowZkCounters)
-		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
-		// do not hold on to the discard reason for an OOC issue
-		p.discardReasonsLRU.Remove(string(mt.Tx.IDHash[:]))
-	}
-	p.overflowZkCounters = p.overflowZkCounters[:0]
+	p.discardOverflowZkCountersFromPending(pending, discard, sendersWithChangedState)
 
 	for senderID := range sendersWithChangedState {
 		nonce, balance, err := senders.info(cacheView, senderID)
@@ -1217,16 +1213,17 @@ func (p *TxPool) addTxsOnNewBlock(
 
 func (p *TxPool) setBaseFee(baseFee uint64, allowFreeTransactions bool) (uint64, bool) {
 	changed := false
+	changed = baseFee != p.pendingBaseFee.Load()
+	p.pendingBaseFee.Store(baseFee)
 	if allowFreeTransactions {
 		changed = uint64(0) != p.pendingBaseFee.Load()
 		p.pendingBaseFee.Store(0)
 		return 0, changed
 	}
 
-	if baseFee > 0 {
-		changed = baseFee != p.pendingBaseFee.Load()
-		p.pendingBaseFee.Store(baseFee)
-	}
+	changed = baseFee != p.pendingBaseFee.Load()
+	p.pendingBaseFee.Store(baseFee)
+
 	return p.pendingBaseFee.Load(), changed
 }
 
@@ -1728,7 +1725,7 @@ func (p *TxPool) fromDB(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
 		addr, txRlp := *(*[20]byte)(v[:20]), v[20:]
 		txn := &types.TxSlot{}
 
-		_, err = parseCtx.ParseTransaction(txRlp, 0, txn, nil, false /* hasEnvelope */, nil)
+		_, err = parseCtx.ParseTransaction(txRlp, 0, txn, nil, false /* hasEnvelope */, false, nil)
 		if err != nil {
 			err = fmt.Errorf("err: %w, rlp: %x", err, txRlp)
 			log.Warn("[txpool] fromDB: parseTransaction", "err", err)

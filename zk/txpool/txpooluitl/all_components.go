@@ -22,17 +22,17 @@ import (
 	"time"
 
 	"github.com/c2h5oh/datasize"
-	"github.com/gateway-fm/cdk-erigon-lib/txpool/txpoolcfg"
+	mdbx2 "github.com/erigontech/mdbx-go/mdbx"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/txpool/txpoolcfg"
 	"github.com/ledgerwatch/log/v3"
-	mdbx2 "github.com/torquem-ch/mdbx-go/mdbx"
 
-	"github.com/gateway-fm/cdk-erigon-lib/chain"
-	"github.com/gateway-fm/cdk-erigon-lib/direct"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/kvcache"
-	"github.com/gateway-fm/cdk-erigon-lib/kv/mdbx"
-	"github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/direct"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/kv/kvcache"
+	"github.com/ledgerwatch/erigon-lib/kv/mdbx"
+	"github.com/ledgerwatch/erigon-lib/types"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/zk/apollo"
 	"github.com/ledgerwatch/erigon/zk/txpool"
@@ -108,7 +108,7 @@ func AllComponents(ctx context.Context, cfg txpoolcfg.Config, ethCfg *ethconfig.
 		Flags(func(f uint) uint { return f ^ mdbx2.Durable | mdbx2.SafeNoSync }).
 		GrowthStep(16 * datasize.MB).
 		SyncPeriod(30 * time.Second).
-		Open()
+		Open(ctx)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
@@ -116,6 +116,16 @@ func AllComponents(ctx context.Context, cfg txpoolcfg.Config, ethCfg *ethconfig.
 	aclDB, err := txpool.OpenACLDB(ctx, cfg.DBDir)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
+	}
+
+	if ethCfg.Zk.ACLPrintHistory > 0 {
+		pts, _ := txpool.LastPolicyTransactions(context.Background(), aclDB, ethCfg.Zk.ACLPrintHistory)
+		if len(pts) == 0 {
+			log.Info("[ACL] No policy transactions found")
+		}
+		for i, pt := range pts {
+			log.Info("[ACL] Policy transaction - ", "index:", i, "pt:", pt.ToString())
+		}
 	}
 
 	chainConfig, _, err := SaveChainConfigIfNeed(ctx, chainDB, txPoolDB, true)

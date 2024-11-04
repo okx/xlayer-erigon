@@ -12,11 +12,6 @@ on:
       - synchronize
       - ready_for_review
   workflow_dispatch:
-    inputs:
-      run_jobs:
-        description: "check to run all jobs"
-        required: true
-        default: "true" # Change to "false" to skip all jobs
 
 concurrency:
   group: ${{ github.ref }}
@@ -69,7 +64,7 @@ jobs:
 #          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   kurtosis-cdk:
-    if: ${{ github.event.inputs.run_jobs == 'true' }}
+    if: true
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -188,7 +183,7 @@ jobs:
           path: ./kurtosis-cdk/ci_logs
 
   kurtosis-cdk-post-london:
-    if: ${{ github.event.inputs.run_jobs == 'true' }}
+    if: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout cdk-erigon

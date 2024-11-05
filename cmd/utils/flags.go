@@ -739,22 +739,22 @@ var (
 		Value: "",
 	}
   NacosUrls = cli.StringFlag {
-		Name:  "zkevm.nacos.urls",
+		Name:  "zkevm.nacos-urls",
 		Usage: "Nacos urls.",
 		Value: "",
   }
   NacosNamespaceId = cli.StringFlag {
-		Name:  "zkevm.nacos.namespace-id",
+		Name:  "zkevm.nacos-namespace-id",
 		Usage: "Nacos namespace ID.",
 		Value: "",
   }
   NacosAppName = cli.StringFlag {
-		Name:  "zkevm.nacos.application-name",
+		Name:  "zkevm.nacos-application-name",
 		Usage: "Nacos application name.",
 		Value: "",
   }
   NacosExtListenAddr = cli.StringFlag {
-		Name:  "zkevm.nacos.external-listen-addr",
+		Name:  "zkevm.nacos-external-listen-addr",
 		Usage: "Nacos external listen address.",
 		Value: "",
   }

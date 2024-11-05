@@ -76,19 +76,19 @@ func runErigon(cliCtx *cli.Context) error {
 	}
 
 	go func() {
-		externalListenAddr := cliCtx.String("zkevm.nacos.external-listen-addr")
+		externalListenAddr := cliCtx.String("zkevm.nacos-external-listen-addr")
 		if os.Getenv(nacosExternalListenAddr) != "" {
 			externalListenAddr = os.Getenv(nacosExternalListenAddr)
 		}
 
-		if len(cliCtx.String("zkevm.nacos.urls")) > 0 {
+		if len(cliCtx.String("zkevm.nacos-urls")) > 0 {
 			log.Info("Nacos client starting...")
 			// Give time for node to start.
 			time.Sleep(3 * time.Second)
 			nacos.StartNacosClient(
-				cliCtx.String("zkevm.nacos.urls"),
-				cliCtx.String("zkevm.nacos.namespace-id"),
-				cliCtx.String("zkevm.nacos.application-name"),
+				cliCtx.String("zkevm.nacos-urls"),
+				cliCtx.String("zkevm.nacos-namespace-id"),
+				cliCtx.String("zkevm.nacos-application-name"),
 				externalListenAddr,
 			)
 			log.Info("Nacos client started")

@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	nacosExternalListenAddr = "NACOS_EXTERNAL_LISTEN_ADDR"
+	pod_ip_env = "MY_POD_IP"
 )
 
 func main() {
@@ -77,14 +77,20 @@ func runErigon(cliCtx *cli.Context) error {
 
 	go func() {
 		externalListenAddr := cliCtx.String("zkevm.nacos-external-listen-addr")
-		if os.Getenv(nacosExternalListenAddr) != "" {
-			externalListenAddr = os.Getenv(nacosExternalListenAddr)
+
+		if len(externalListenAddr) == 0 {
+			// For for pod ip to be assigned before registering with Nacos.
+			// This allows pod ip env to be set before reading the env var.
+			// Only applies if `nacos-external-listen-addr` is not set.
+			time.Sleep(3 * time.Second)
+		}
+
+		if os.Getenv(pod_ip_env) != "" {
+			externalListenAddr = fmt.Sprintf("%s:7001", os.Getenv(pod_ip_env))
 		}
 
 		if len(cliCtx.String("zkevm.nacos-urls")) > 0 {
 			log.Info("Nacos client starting...")
-			// Give time for node to start.
-			time.Sleep(3 * time.Second)
 			nacos.StartNacosClient(
 				cliCtx.String("zkevm.nacos-urls"),
 				cliCtx.String("zkevm.nacos-namespace-id"),

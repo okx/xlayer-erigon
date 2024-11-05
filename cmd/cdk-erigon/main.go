@@ -83,7 +83,7 @@ func runErigon(cliCtx *cli.Context) error {
 
 		if len(cliCtx.String("zkevm.nacos.urls")) > 0 {
 			log.Info("Nacos client starting...")
-      // Give time for node to start.
+			// Give time for node to start.
 			time.Sleep(3 * time.Second)
 			nacos.StartNacosClient(
 				cliCtx.String("zkevm.nacos.urls"),

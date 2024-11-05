@@ -33,7 +33,7 @@ jobs:
         run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm cdk-erigon
 
       - name: Test
-        run: make test
+        run: make test-cdk-erigon
 
   kurtosis-cdk:
     if: false

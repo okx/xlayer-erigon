@@ -17,11 +17,12 @@
 package types
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
 	"github.com/holiman/uint256"
-	libcommon "github.com/gateway-fm/cdk-erigon-lib/common"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/common/u256"
 	"github.com/ledgerwatch/erigon/crypto"
@@ -105,11 +106,11 @@ func TestDeriveFields_zkEvm_preForkId8(t *testing.T) {
 	hash := libcommon.BytesToHash([]byte{0x03, 0x14})
 
 	clearComputedFieldsOnReceipts(t, receipts)
-	if err := receipts.DeriveFields_zkEvm(0, hash, number.Uint64(), txs, []libcommon.Address{libcommon.BytesToAddress([]byte{0x0}), libcommon.BytesToAddress([]byte{0x0}), libcommon.BytesToAddress([]byte{0x0})}); err != nil {
+	if err := receipts.DeriveFields_zkEvm(math.MaxUint64, hash, number.Uint64(), txs, []libcommon.Address{libcommon.BytesToAddress([]byte{0x0}), libcommon.BytesToAddress([]byte{0x0}), libcommon.BytesToAddress([]byte{0x0})}); err != nil {
 		t.Fatalf("DeriveFields_zkEvm(...) = %v, want <nil>", err)
 	}
 	// Iterate over all the computed fields and check that they're correct
-	signer := MakeSigner(params.TestChainConfig, number.Uint64())
+	signer := MakeSigner(params.TestChainConfig, number.Uint64(), 0)
 
 	logIndex := uint(0)
 	for i := range receipts {
@@ -245,7 +246,7 @@ func TestDeriveFields_zkEvmForkid8(t *testing.T) {
 		t.Fatalf("DeriveFields_zkEvm(...) = %v, want <nil>", err)
 	}
 	// Iterate over all the computed fields and check that they're correct
-	signer := MakeSigner(params.TestChainConfig, number.Uint64())
+	signer := MakeSigner(params.TestChainConfig, number.Uint64(), 0)
 
 	logIndex := uint(0)
 	for i := range receipts {

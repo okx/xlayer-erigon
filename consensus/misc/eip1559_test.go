@@ -20,8 +20,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/ledgerwatch/erigon/chain"
+	"github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/params"
@@ -37,14 +37,14 @@ func copyConfig(original *chain.Config) *chain.Config {
 func config() *chain.Config {
 	config := copyConfig(params.TestChainConfig)
 	config.LondonBlock = big.NewInt(5)
+	// setting the default expected fee for tests
+	config.ZkDefaultGasPrice = params.InitialBaseFee
 	return config
 }
 
 // TestBlockGasLimits tests the gasLimit checks for blocks both across
 // the EIP-1559 boundary and post-1559 blocks
 func TestBlockGasLimits(t *testing.T) {
-	initial := new(big.Int).SetUint64(params.InitialBaseFee)
-
 	for i, tc := range []struct {
 		pGasLimit uint64
 		pNum      int64
@@ -68,11 +68,19 @@ func TestBlockGasLimits(t *testing.T) {
 		{40000000, 5, 39960939, true},  // lower limit
 		{40000000, 5, 39960938, false}, // Lower limit -1
 	} {
+		pInitial := new(big.Int).SetUint64(params.InitialBaseFee)
+		if !config().IsLondon(uint64(tc.pNum)) {
+			pInitial.SetUint64(0)
+		}
 		parent := &types.Header{
 			GasUsed:  tc.pGasLimit / 2,
 			GasLimit: tc.pGasLimit,
-			BaseFee:  initial,
+			BaseFee:  pInitial,
 			Number:   big.NewInt(tc.pNum),
+		}
+		initial := new(big.Int).SetUint64(params.InitialBaseFee)
+		if !config().IsLondon(uint64(tc.pNum + 1)) {
+			initial.SetUint64(0)
 		}
 		header := &types.Header{
 			GasUsed:  tc.gasLimit / 2,
@@ -80,7 +88,7 @@ func TestBlockGasLimits(t *testing.T) {
 			BaseFee:  initial,
 			Number:   big.NewInt(tc.pNum + 1),
 		}
-		err := VerifyEip1559Header(config(), parent, header)
+		err := VerifyEip1559Header(config(), parent, header, false /*skipGasLimit*/)
 		if tc.ok && err != nil {
 			t.Errorf("test %d: Expected valid header: %s", i, err)
 		}

@@ -5,9 +5,9 @@ import (
 	"math"
 	"sync/atomic"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/types"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/types"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
@@ -68,7 +68,7 @@ type LimboBlockTransactionDetails struct {
 	Sender      common.Address
 }
 
-func newLimboBatchTransactionDetails(rlp, streamBytes []byte, hash common.Hash, sender common.Address) *LimboBlockTransactionDetails {
+func newLimboBlockTransactionDetails(rlp, streamBytes []byte, hash common.Hash, sender common.Address) *LimboBlockTransactionDetails {
 	return &LimboBlockTransactionDetails{
 		Rlp:         rlp,
 		StreamBytes: streamBytes,
@@ -137,7 +137,7 @@ func (_this *Limbo) getFirstTxWithoutRootByBlockNumber(blockNumber uint64) (*Lim
 					return nil, nil
 				}
 				if blockNumber > limboBlock.BlockNumber {
-					panic(fmt.Errorf("requested batch %d while the network is already on %d", limboBlock.BlockNumber, blockNumber))
+					panic(fmt.Errorf("requested block %d while the network is already on %d", limboBlock.BlockNumber, blockNumber))
 				}
 
 				return limboBlock, limboTx
@@ -180,15 +180,15 @@ func (_this *LimboBlockDetails) resizeTransactions(txIndex int) {
 	if txIndex == -1 {
 		return
 	}
-
 	size := txIndex + 1
+
 	for i := len(_this.Transactions); i < size; i++ {
 		_this.Transactions = append(_this.Transactions, &LimboBlockTransactionDetails{})
 	}
 }
 
 func (_this *LimboBlockDetails) AppendTransaction(rlp, streamBytes []byte, hash common.Hash, sender common.Address) uint32 {
-	_this.Transactions = append(_this.Transactions, newLimboBatchTransactionDetails(rlp, streamBytes, hash, sender))
+	_this.Transactions = append(_this.Transactions, newLimboBlockTransactionDetails(rlp, streamBytes, hash, sender))
 	return uint32(len(_this.Transactions))
 }
 
@@ -229,6 +229,7 @@ func (p *TxPool) GetLimboTxRplsByHash(tx kv.Tx, txHash *common.Hash) (*types.Txs
 	for i := uint32(0); i < txSize; i++ {
 		limboTx := limboBlock.Transactions[i]
 		txsRlps.Txs[i] = limboTx.Rlp
+		txsRlps.TxIds[i] = limboTx.Hash
 		copy(txsRlps.Senders.At(int(i)), limboTx.Sender[:])
 		txsRlps.IsLocal[i] = true // all limbo tx are considered local //TODO: explain better about local
 	}

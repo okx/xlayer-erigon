@@ -4,21 +4,21 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon/zkevm/log"
 	"math/big"
 	"strings"
 
 	mapset "github.com/deckarep/golang-set/v2"
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/common/cmp"
-	"github.com/gateway-fm/cdk-erigon-lib/common/fixedgas"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
-	"github.com/gateway-fm/cdk-erigon-lib/types"
-	types2 "github.com/gateway-fm/cdk-erigon-lib/types"
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common/cmp"
+	"github.com/ledgerwatch/erigon-lib/common/fixedgas"
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/types"
+	types2 "github.com/ledgerwatch/erigon-lib/types"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/erigon/zkevm/hex"
+	"github.com/ledgerwatch/log/v3"
 )
 
 /*
@@ -175,7 +175,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 
 		mt.subPool &^= NotTooMuchGas
 		// zk: here we don't care about block limits any more and care about only the transaction gas limit in ZK
-		if mt.Tx.Gas < transactionGasLimit {
+		if mt.Tx.Gas <= transactionGasLimit {
 			mt.subPool |= NotTooMuchGas
 		}
 
@@ -201,7 +201,7 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 
 // zk: the implementation of best here is changed only to not take into account block gas limits as we don't care about
 // these in zk.  Instead we do a quick check on the transaction maximum gas in zk
-func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
+func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableGas, availableBlobGas uint64, toSkip mapset.Set[[32]byte]) (bool, int, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -244,7 +244,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 			continue
 		}
 
-		if mt.Tx.Gas >= transactionGasLimit {
+		if mt.Tx.Gas > transactionGasLimit {
 			// Skip transactions with very large gas limit, these shouldn't enter the pool at all
 			log.Debug("found a transaction in the pending pool with too high gas for tx - clear the tx pool")
 			continue
@@ -257,6 +257,13 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 			toRemove = append(toRemove, mt)
 			continue
 		}
+
+		// Skip transactions that require more blob gas than is available
+		blobCount := uint64(len(mt.Tx.BlobHashes))
+		if blobCount*fixedgas.BlobGasPerBlob > availableBlobGas {
+			continue
+		}
+		availableBlobGas -= blobCount * fixedgas.BlobGasPerBlob
 
 		// make sure we have enough gas in the caller to add this transaction.
 		// not an exact science using intrinsic gas but as close as we could hope for at
@@ -272,6 +279,7 @@ func (p *TxPool) best(n uint16, txs *types.TxsRlp, tx kv.Tx, onTopOf, availableG
 		}
 
 		txs.Txs[count] = rlpTx
+		txs.TxIds[count] = mt.Tx.IDHash
 		copy(txs.Senders.At(count), sender.Bytes())
 		txs.IsLocal[count] = isLocal
 		toSkip.Add(mt.Tx.IDHash)
@@ -309,6 +317,22 @@ func (p *TxPool) MarkForDiscardFromPendingBest(txHash common.Hash) {
 			break
 		}
 	}
+}
+
+// discards the transactions that are in overflowZkCoutners from pending
+// executes the discard function on them
+// deletes the tx from the sendersWithChangedState map
+// deletes the discarded txs from the overflowZkCounters
+func (p *TxPool) discardOverflowZkCountersFromPending(pending *PendingPool, discard func(*metaTx, DiscardReason), sendersWithChangedState map[uint64]struct{}) {
+	for _, mt := range p.overflowZkCounters {
+		log.Info("[tx_pool] Removing TX from pending due to counter overflow", "tx", mt.Tx.IDHash)
+		pending.Remove(mt)
+		discard(mt, OverflowZkCounters)
+		sendersWithChangedState[mt.Tx.SenderID] = struct{}{}
+		// do not hold on to the discard reason for an OOC issue
+		p.discardReasonsLRU.Remove(string(mt.Tx.IDHash[:]))
+	}
+	p.overflowZkCounters = p.overflowZkCounters[:0]
 }
 
 func (p *TxPool) StartIfNotStarted(ctx context.Context, txPoolDb kv.RoDB, coreTx kv.Tx) error {

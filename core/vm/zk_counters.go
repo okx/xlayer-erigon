@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/holiman/uint256"
+	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 )
@@ -67,38 +68,53 @@ func (c *Counter) AsMap() map[string]int {
 	}
 }
 
-type Counters map[CounterKey]*Counter
+type Counters []*Counter
 
-func NewCountersFromUsedMap(used map[string]int) *Counters {
+func NewCounters() Counters {
+	array := make(Counters, CounterTypesCount)
+	return array
+}
+
+func NewCountersFromUsedArray(used []int) *Counters {
 	res := Counters{}
 	for k, v := range used {
-		res[CounterKey(k)] = &Counter{used: v}
+		res[k] = &Counter{used: v}
 	}
 	return &res
 }
 
 func (c Counters) UsedAsString() string {
-	res := fmt.Sprintf("[SHA: %v]", c[SHA].used)
-	res += fmt.Sprintf("[A: %v]", c[A].used)
-	res += fmt.Sprintf("[B: %v]", c[B].used)
-	res += fmt.Sprintf("[K: %v]", c[K].used)
-	res += fmt.Sprintf("[M: %v]", c[M].used)
-	res += fmt.Sprintf("[P: %v]", c[P].used)
-	res += fmt.Sprintf("[S: %v]", c[S].used)
-	res += fmt.Sprintf("[D: %v]", c[D].used)
+	res := fmt.Sprintf("[%s: %v]", CounterKeyNames[SHA], c[SHA].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[A], c[A].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[B], c[B].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[K], c[K].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[M], c[M].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[P], c[P].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[S], c[S].used)
+	res += fmt.Sprintf("[%s: %v]", CounterKeyNames[D], c[D].used)
 	return res
+}
+
+func (c Counters) UsedAsArray() []int {
+	array := make([]int, len(c))
+
+	for i, v := range c {
+		array[i] = v.used
+	}
+
+	return array
 }
 
 func (c Counters) UsedAsMap() map[string]int {
 	return map[string]int{
-		"SHA": c[SHA].used,
-		"A":   c[A].used,
-		"B":   c[B].used,
-		"K":   c[K].used,
-		"M":   c[M].used,
-		"P":   c[P].used,
-		"S":   c[S].used,
-		"D":   c[D].used,
+		string(CounterKeyNames[S]):   c[S].used,
+		string(CounterKeyNames[A]):   c[A].used,
+		string(CounterKeyNames[B]):   c[B].used,
+		string(CounterKeyNames[M]):   c[M].used,
+		string(CounterKeyNames[K]):   c[K].used,
+		string(CounterKeyNames[D]):   c[D].used,
+		string(CounterKeyNames[P]):   c[P].used,
+		string(CounterKeyNames[SHA]): c[SHA].used,
 	}
 }
 
@@ -144,17 +160,25 @@ func (cc Counters) Clone() Counters {
 	return clonedCounters
 }
 
-type CounterKey string
+type CounterKey int
+type CounterName string
+
+const (
+	S   CounterKey = 0
+	A   CounterKey = 1
+	B   CounterKey = 2
+	M   CounterKey = 3
+	K   CounterKey = 4
+	D   CounterKey = 5
+	P   CounterKey = 6
+	SHA CounterKey = 7
+
+	CounterTypesCount = 8
+)
 
 var (
-	S   CounterKey = "S"
-	A   CounterKey = "A"
-	B   CounterKey = "B"
-	M   CounterKey = "M"
-	K   CounterKey = "K"
-	D   CounterKey = "D"
-	P   CounterKey = "P"
-	SHA CounterKey = "SHA"
+	// important!!! must match the indexes of the keys
+	CounterKeyNames = []CounterName{"S", "A", "B", "M", "K", "D", "P", "SHA"}
 )
 
 type CounterCollector struct {
@@ -162,6 +186,7 @@ type CounterCollector struct {
 	smtLevels   int
 	isDeploy    bool
 	transaction types.Transaction
+	forkId      uint16
 }
 
 func (cc *CounterCollector) isOverflown() bool {
@@ -203,6 +228,7 @@ func NewCounterCollector(smtLevels int, forkId uint16) *CounterCollector {
 	return &CounterCollector{
 		counters:  *getCounterLimits(forkId),
 		smtLevels: smtLevels,
+		forkId:    forkId,
 	}
 }
 
@@ -579,12 +605,16 @@ func (cc *CounterCollector) finishBatchProcessing() {
 	cc.Deduct(S, 200)
 	cc.Deduct(K, 2)
 	cc.Deduct(P, cc.smtLevels)
-	cc.Deduct(B, 1)
+	cc.Deduct(B, 2)
 }
 
 func (cc *CounterCollector) isColdAddress() {
 	cc.Deduct(S, 100)
-	cc.Deduct(B, 2+1)
+	if cc.forkId >= uint16(chain.ForkId13Durian) {
+		cc.Deduct(B, 3+1)
+	} else {
+		cc.Deduct(B, 2+1)
+	}
 	cc.Deduct(P, 2*MCPL)
 }
 
@@ -709,6 +739,7 @@ func (cc *CounterCollector) setupNewBlockInfoTree() {
 
 func (cc *CounterCollector) verifyMerkleProof() {
 	cc.Deduct(S, 250)
+	cc.Deduct(B, 1)
 	cc.Deduct(K, 33)
 }
 
@@ -763,9 +794,9 @@ func (cc *CounterCollector) decodeChangeL2BlockTx() {
 }
 
 func (cc *CounterCollector) ecAdd() {
-	cc.Deduct(S, 323)
-	cc.Deduct(B, 33)
-	cc.Deduct(A, 40)
+	cc.Deduct(S, 800)
+	cc.Deduct(B, 50)
+	cc.Deduct(A, 50)
 }
 
 func (cc *CounterCollector) preECMul() {
@@ -778,9 +809,9 @@ func (cc *CounterCollector) preECMul() {
 }
 
 func (cc *CounterCollector) ecMul() {
-	cc.Deduct(S, 162890)
-	cc.Deduct(B, 16395)
-	cc.Deduct(A, 19161)
+	cc.Deduct(S, 175000)
+	cc.Deduct(B, 20000)
+	cc.Deduct(A, 20000)
 }
 
 func (cc *CounterCollector) preECPairing(inputsCount int) {
@@ -794,9 +825,9 @@ func (cc *CounterCollector) preECPairing(inputsCount int) {
 }
 
 func (cc *CounterCollector) ecPairing(inputsCount int) {
-	cc.Deduct(S, 16+inputsCount*184017+171253)
-	cc.Deduct(B, inputsCount*3986+650)
-	cc.Deduct(A, inputsCount*13694+15411)
+	cc.Deduct(S, 16+inputsCount*200000+175000)
+	cc.Deduct(B, inputsCount*4100+750)
+	cc.Deduct(A, inputsCount*15000+17500)
 }
 
 func (cc *CounterCollector) preModExp(callDataLength, returnDataLength, bLen, mLen, eLen int, base, exponent, modulus *big.Int) {
@@ -818,14 +849,26 @@ func (cc *CounterCollector) preModExp(callDataLength, returnDataLength, bLen, mL
 }
 
 func (cc *CounterCollector) modExp(bLen, mLen, eLen int, base, exponent, modulus *big.Int) {
-	steps, binary, arith := expectedModExpCounters(
-		int(math.Ceil(float64(bLen)/32)),
-		int(math.Ceil(float64(mLen)/32)),
-		int(math.Ceil(float64(eLen)/32)),
-		base,
-		exponent,
-		modulus,
-	)
+	var steps, binary, arith *big.Int
+	if cc.forkId >= uint16(chain.ForkId13Durian) {
+		steps, binary, arith = expectedModExpCounters(
+			int(math.Ceil(float64(bLen)/32)),
+			int(math.Ceil(float64(eLen)/32)),
+			int(math.Ceil(float64(mLen)/32)),
+			base,
+			exponent,
+			modulus,
+		)
+	} else {
+		steps, binary, arith = expectedModExpCounters(
+			int(math.Ceil(float64(bLen)/32)),
+			int(math.Ceil(float64(mLen)/32)),
+			int(math.Ceil(float64(eLen)/32)),
+			base,
+			exponent,
+			modulus,
+		)
+	}
 	cc.Deduct(S, int(steps.Int64()))
 	cc.Deduct(B, int(binary.Int64()))
 	cc.Deduct(A, int(arith.Int64()))
@@ -854,7 +897,7 @@ func (cc *CounterCollector) multiCall(call func(), times int) {
 func (cc *CounterCollector) preSha256(callDataLength int) {
 	cc.Deduct(S, 100)
 	cc.Deduct(B, 1)
-	cc.Deduct(SHA, int(math.Ceil(float64(callDataLength+1)/64)))
+	cc.Deduct(SHA, int(math.Ceil(float64(callDataLength+8)/64)))
 	cc.multiCall(cc.divArith, 2)
 	cc.mStore32()
 	cc.mStoreX()
@@ -1858,4 +1901,62 @@ func getRelevantNumberBytes(input []byte) int {
 		break
 	}
 	return totalLength - rel
+}
+
+func (cc *CounterCollector) preP256Verify(r, s, x, y *big.Int) {
+	cc.Deduct(S, 50)
+	cc.Deduct(B, 1)
+	cc.multiCall(cc.readFromCallDataOffset, 5)
+	cc.p256verify(r, s, x, y)
+	cc.mStore32()
+	cc.mStoreX()
+
+}
+
+var (
+	SECP256R1_N           = uint256.MustFromHex("0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551").ToBig()
+	SECP256R1_N_MINUS_ONE = SECP256R1_N.Sub(SECP256R1_N, big.NewInt(1))
+	SECP256R1_P           = uint256.MustFromHex("0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff").ToBig()
+	SECP256R1_P_MINUS_ONE = SECP256R1_N.Sub(SECP256R1_P, big.NewInt(1))
+	SECP256R1_A           = uint256.MustFromHex("0xffffffff00000001000000000000000000000000fffffffffffffffffffffffc").ToBig()
+	SECP256R1_B           = uint256.MustFromHex("0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604b").ToBig()
+)
+
+func (cc *CounterCollector) p256verify(r, s, x, y *big.Int) {
+	if r.Cmp(big.NewInt(0)) == 0 {
+		cc.Deduct(S, 13)
+		cc.Deduct(B, 1)
+	} else if SECP256R1_N_MINUS_ONE.Cmp(r) == -1 {
+		cc.Deduct(S, 15)
+		cc.Deduct(B, 2)
+	} else if s.Cmp(big.NewInt(0)) == 0 {
+		cc.Deduct(S, 17)
+		cc.Deduct(B, 3)
+	} else if SECP256R1_N_MINUS_ONE.Cmp(s) == -1 {
+		cc.Deduct(S, 19)
+		cc.Deduct(B, 4)
+	} else if SECP256R1_P_MINUS_ONE.Cmp(x) == -1 {
+		cc.Deduct(S, 22)
+		cc.Deduct(B, 5)
+	} else if SECP256R1_P_MINUS_ONE.Cmp(y) == -1 {
+		cc.Deduct(S, 24)
+		cc.Deduct(B, 6)
+	} else if x.Cmp(big.NewInt(0)) == 0 && y.Cmp(big.NewInt(0)) == 0 {
+		cc.Deduct(S, 29)
+		cc.Deduct(B, 8)
+	} else {
+		aux_x3 := new(big.Int).Exp(x, big.NewInt(3), SECP256R1_P)
+		aux_ax_b := new(big.Int).Mul(x, SECP256R1_A).Add(x, SECP256R1_B)
+		aux_x3_ax_b := aux_x3.Add(aux_x3, aux_ax_b).Mod(aux_x3, SECP256R1_P)
+		aux_y2 := new(big.Int).Exp(y, big.NewInt(2), SECP256R1_P)
+		if aux_y2.Cmp(aux_x3_ax_b) != 0 {
+			cc.Deduct(S, 104)
+			cc.Deduct(B, 15)
+			cc.Deduct(A, 12)
+			return
+		}
+		cc.Deduct(S, 7718)
+		cc.Deduct(B, 22)
+		cc.Deduct(A, 531)
+	}
 }

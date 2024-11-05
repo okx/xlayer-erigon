@@ -1,16 +1,20 @@
 package types
 
 import (
+	"strings"
 	"time"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common"
 
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon/cl/utils"
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
-	"fmt"
 )
 
 const EFFECTIVE_GAS_PRICE_PERCENTAGE_DISABLED = 0
@@ -77,13 +81,13 @@ func (l *L1InfoTreeUpdate) Unmarshall(input []byte) {
 }
 
 type L1InjectedBatch struct {
-	L1BlockNumber      uint64
-	Timestamp          uint64
-	L1BlockHash        common.Hash
-	L1ParentHash       common.Hash
-	LastGlobalExitRoot common.Hash
-	Sequencer          common.Address
-	Transaction        []byte
+	L1BlockNumber      uint64         `json:"l1BlockNumber,omitempty"`
+	Timestamp          uint64         `json:"timestamp,omitempty"`
+	L1BlockHash        common.Hash    `json:"l1BlockHash,omitempty"`
+	L1ParentHash       common.Hash    `json:"l1ParentHash,omitempty"`
+	LastGlobalExitRoot common.Hash    `json:"globalExitRoot,omitempty"`
+	Sequencer          common.Address `json:"sequencer,omitempty"`
+	Transaction        []byte         `json:"batchL2Data,omitempty"`
 }
 
 func (ib *L1InjectedBatch) Marshall() []byte {
@@ -116,4 +120,51 @@ func (ib *L1InjectedBatch) Unmarshall(input []byte) error {
 	copy(ib.Sequencer[:], input[112:132])
 	ib.Transaction = append([]byte{}, input[132:]...)
 	return nil
+}
+
+func (ib *L1InjectedBatch) MarshalJSON() ([]byte, error) {
+	type Alias L1InjectedBatch
+	return json.Marshal(&struct {
+		BatchL2Data string `json:"batchL2Data"`
+		*Alias
+	}{
+		BatchL2Data: hex.EncodeToString(ib.Transaction),
+		Alias:       (*Alias)(ib),
+	})
+}
+
+func (ib *L1InjectedBatch) UnmarshalJSON(data []byte) error {
+	type Alias L1InjectedBatch
+	aux := struct {
+		BatchL2Data string `json:"batchL2Data"`
+		*Alias
+	}{
+		Alias: (*Alias)(ib),
+	}
+
+	// Unmarshal into the intermediate struct first
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+
+	if aux.BatchL2Data == "" {
+		ib.Transaction = nil
+		return nil
+	}
+
+	decodedTxData, err := hex.DecodeString(strings.TrimPrefix(aux.BatchL2Data, "0x"))
+	if err != nil {
+		return err
+	}
+
+	ib.Transaction = decodedTxData
+
+	return nil
+}
+
+type ForkInterval struct {
+	ForkID          uint64
+	FromBatchNumber uint64
+	ToBatchNumber   uint64
+	BlockNumber     uint64
 }

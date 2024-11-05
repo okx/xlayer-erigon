@@ -3,8 +3,8 @@ package hermez_db
 import (
 	"encoding/binary"
 	"fmt"
-	
-	"github.com/ledgerwatch/erigon/common/dbutils"
+
+	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"

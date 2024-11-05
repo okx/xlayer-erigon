@@ -9,11 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
-	"github.com/gateway-fm/cdk-erigon-lib/kv"
+	"github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon/cmd/utils"
 	"github.com/ledgerwatch/erigon/zk/txpool"
-	"github.com/ledgerwatch/log/v3"
+	"github.com/ledgerwatch/erigon/zkevm/log"
 	"github.com/urfave/cli/v2"
 )
 

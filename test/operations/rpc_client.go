@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gateway-fm/cdk-erigon-lib/common"
+	"github.com/ledgerwatch/erigon-lib/common"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/erigon/zkevm/hex"

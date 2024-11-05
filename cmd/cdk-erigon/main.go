@@ -20,6 +20,11 @@ import (
 	erigoncli "github.com/ledgerwatch/erigon/turbo/cli"
 	"github.com/ledgerwatch/erigon/turbo/logging"
 	"github.com/ledgerwatch/erigon/turbo/node"
+	"github.com/ledgerwatch/erigon/zk/nacos"
+)
+
+const (
+	nacosExternalListenAddr = "NACOS_EXTERNAL_LISTEN_ADDR"
 )
 
 func main() {
@@ -68,6 +73,21 @@ func runErigon(cliCtx *cli.Context) error {
 		log.Error("Erigon startup", "err", err)
 		return err
 	}
+
+	externalListenAddr := cliCtx.String("zkevm.nacos.external-listen-addr")
+	if os.Getenv(nacosExternalListenAddr) != "" {
+		externalListenAddr = os.Getenv(nacosExternalListenAddr)
+	}
+
+	if len(cliCtx.String("zkevm.nacos.urls")) > 0 {
+		nacos.StartNacosClient(
+			cliCtx.String("zkevm.nacos.urls"),
+			cliCtx.String("zkevm.nacos.namespace-id"),
+			cliCtx.String("zkevm.nacos.application-name"),
+			externalListenAddr,
+		)
+	}
+
 	err = ethNode.Serve()
 	if err != nil {
 		log.Error("error while serving an Erigon node", "err", err)

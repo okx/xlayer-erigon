@@ -18,53 +18,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-#  tests:
-#    strategy:
-#      matrix:
-#        os: [ ubuntu-22.04, macos-14-xlarge ] # list of os: https://github.com/actions/virtual-environments
-#    runs-on: ${{ matrix.os }}
-#    timeout-minutes: ${{ matrix.os == 'macos-14-xlarge' && 40 || 30 }}
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#      - uses: actions/setup-go@v4
-#        with:
-#          go-version: '1.21'
-#      - name: Install dependencies on Linux
-#        if: runner.os == 'Linux'
-#        run: sudo apt update && sudo apt install build-essential
-#
-#      - name: Build
-#        run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm all
-#
-#      - name: Reproducible build test
-#        run: |
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon1.sha256
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon2.sha256
-#          if ! cmp -s erigon1.sha256 erigon2.sha256; then
-#            echo >&2 "Reproducible build broken"; cat erigon1.sha256; cat erigon2.sha256; exit 1
-#          fi
-#
-##      - name: Lint
-##        if: runner.os == 'Linux'
-##        uses: golangci/golangci-lint-action@v4
-##        with:
-##          version: v1.54
-#
-#      - name: Test
-#        run: make test
-#
-#      - name: SonarCloud Scan
-#        uses: SonarSource/sonarcloud-github-action@master
-#        if: ${{ matrix.os == 'ubuntu-20.04' }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Install dependencies on Linux
+        run: sudo apt update && sudo apt install build-essential
+
+      - name: Build
+        run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm cdk-erigon
+
+      - name: Test
+        run: make test
 
   kurtosis-cdk:
-    if: true
+    if: false
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -183,7 +155,7 @@ jobs:
           path: ./kurtosis-cdk/ci_logs
 
   kurtosis-cdk-post-london:
-    if: true
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout cdk-erigon

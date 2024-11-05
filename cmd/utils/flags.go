@@ -738,6 +738,26 @@ var (
 		Usage: "The file that contains the initial (injected) batch data.",
 		Value: "",
 	}
+  NacosUrls = cli.StringFlag {
+		Name:  "zkevm.nacos.urls",
+		Usage: "Nacos urls.",
+		Value: "",
+  }
+  NacosNamespaceId = cli.StringFlag {
+		Name:  "zkevm.nacos.namespace-id",
+		Usage: "Nacos namespace ID.",
+		Value: "",
+  }
+  NacosAppName = cli.StringFlag {
+		Name:  "zkevm.nacos.application-name",
+		Usage: "Nacos application name.",
+		Value: "",
+  }
+  NacosExtListenAddr = cli.StringFlag {
+		Name:  "zkevm.nacos.external-listen-addr",
+		Usage: "Nacos external listen address.",
+		Value: "",
+  }
 	ACLPrintHistory = cli.IntFlag{
 		Name:  "acl.print-history",
 		Usage: "Number of entries to print from the ACL history on node startup",

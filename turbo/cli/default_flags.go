@@ -284,4 +284,9 @@ var DefaultFlags = []cli.Flag{
 	&utils.InitialBatchCfgFile,
 
 	&utils.ACLPrintHistory,
+
+	&utils.NacosUrls,
+	&utils.NacosNamespaceId,
+	&utils.NacosAppName,
+	&utils.NacosExtListenAddr,
 }

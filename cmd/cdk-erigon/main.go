@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gateway-fm/vectorized-poseidon-gold/src/vectorizedposeidongold"
 	"github.com/ledgerwatch/log/v3"
@@ -74,20 +75,27 @@ func runErigon(cliCtx *cli.Context) error {
 		return err
 	}
 
-	externalListenAddr := cliCtx.String("zkevm.nacos.external-listen-addr")
-	if os.Getenv(nacosExternalListenAddr) != "" {
-		externalListenAddr = os.Getenv(nacosExternalListenAddr)
-	}
+	go func() {
+		externalListenAddr := cliCtx.String("zkevm.nacos.external-listen-addr")
+		if os.Getenv(nacosExternalListenAddr) != "" {
+			externalListenAddr = os.Getenv(nacosExternalListenAddr)
+		}
 
-	if len(cliCtx.String("zkevm.nacos.urls")) > 0 {
-		nacos.StartNacosClient(
-			cliCtx.String("zkevm.nacos.urls"),
-			cliCtx.String("zkevm.nacos.namespace-id"),
-			cliCtx.String("zkevm.nacos.application-name"),
-			externalListenAddr,
-		)
-	}
+		if len(cliCtx.String("zkevm.nacos.urls")) > 0 {
+			log.Info("Nacos client starting...")
+      // Give time for node to start.
+			time.Sleep(3 * time.Second)
+			nacos.StartNacosClient(
+				cliCtx.String("zkevm.nacos.urls"),
+				cliCtx.String("zkevm.nacos.namespace-id"),
+				cliCtx.String("zkevm.nacos.application-name"),
+				externalListenAddr,
+			)
+			log.Info("Nacos client started")
+		}
+	}()
 
+	// This is blocking (Wait() is being called).
 	err = ethNode.Serve()
 	if err != nil {
 		log.Error("error while serving an Erigon node", "err", err)

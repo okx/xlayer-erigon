@@ -92,6 +92,9 @@ type Zk struct {
 
 	// For X Layer
 	XLayer XLayerConfig
+
+	InfoTreeUpdateInterval time.Duration
+	BadBatches             []uint64
 }
 
 var DefaultZkConfig = Zk{

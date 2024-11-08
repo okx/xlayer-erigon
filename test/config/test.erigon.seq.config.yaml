@@ -6,7 +6,7 @@ zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url:
 zkevm.l2-datastreamer-url:
 zkevm.l1-chain-id: 1337
-zkevm.l1-rpc-url: http://erigon-mock-l1-network:8545
+zkevm.l1-rpc-url: http://xlayer-mock-l1-network:8545
 zkevm.l1-highest-block-type: latest
 
 zkevm.address-sequencer: "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
@@ -16,7 +16,7 @@ zkevm.address-rollup: "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
 zkevm.l1-rollup-id: 1
-zkevm.l1-first-block: 368
+zkevm.l1-first-block: 546
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
 zkevm.rpc-ratelimit: 300
@@ -24,8 +24,7 @@ zkevm.datastream-version: 2
 
 log.console.verbosity: info
 
-#zkevm.executor-urls: erigon-stateless-executor:50071
-zkevm.executor-urls: ""
+zkevm.executor-urls: xlayer-executor:50071
 zkevm.executor-strict: false
 zkevm.witness-full: true
 

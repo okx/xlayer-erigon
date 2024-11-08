@@ -17,19 +17,19 @@ BatchRequestsLimit = 20
 User = "pool_user"
 Password = "pool_password"
 Name = "pool_db"
-Host = "erigon-pool-db"
+Host = "xlayer-pool-db"
 Port = "5432"
 EnableLog = false
 MaxConns = 200
 
 [Sender]
-SequencerURL = "http://erigon-seq:8545"
+SequencerURL = "http://xlayer-seq:8545"
 ResendTxsCheckInterval = "1s"
 Workers = 5
 QueueSize = 25
 
 [Monitor]
-L2NodeURL = "http://erigon-seq:8545"
+L2NodeURL = "http://xlayer-seq:8545"
 Workers = 5
 QueueSize = 25
 RetryWaitInterval = "3s"

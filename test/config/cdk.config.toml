@@ -128,7 +128,7 @@ SyncModeOnlyEnabled = false
 		[Aggregator.Synchronizer.Synchronizer]
 			SyncInterval = "10s"
 			SyncChunkSize = 1000
-			GenesisBlockNumber = 546
+			GenesisBlockNumber = 353
 			SyncUpToBlock = "finalized"
 			BlockFinality = "finalized"
 			OverrideStorageCheck = false
@@ -166,7 +166,7 @@ SyncBlockChunkSize=10
 BlockFinality="LatestBlock"
 URLRPCL1="http://xlayer-rpc:8545"
 WaitForNewBlocksPeriod="100ms"
-InitialBlock= 546
+InitialBlock= 353
 
 [AggOracle]
 TargetChainType="EVM"

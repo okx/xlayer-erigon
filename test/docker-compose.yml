@@ -359,7 +359,7 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    image: datastream-relay
+    image: zjg555543/xlayer-ds:basedev-merge-upstream-v0.2.7
     ports:
       - 7900:7900
     volumes:

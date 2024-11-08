@@ -7,10 +7,10 @@ Level = "info"
 Outputs = ["stderr"]
 
 [Etherman]
-	URL="http://xlayer-rpc:8545"
+	URL="http://xlayer-mock-l1-network:8545"
 	ForkIDChunkSize=100
 	[Etherman.EthermanConfig]
-		URL="http://xlayer-rpc:8545"
+		URL="http://xlayer-mock-l1-network:8545"
 		MultiGasProvider=false
 		L1ChainID=1337
 		HTTPHeaders=[]
@@ -54,7 +54,7 @@ GetBatchWaitInterval = "10s"
 		SafeStatusL1NumberOfBlocks = 0
 		FinalizedStatusL1NumberOfBlocks = 0
 			[SequenceSender.EthTxManager.Etherman]
-				URL = "http://xlayer-rpc:8545"
+				URL = "http://xlayer-mock-l1-network:8545"
 				MultiGasProvider = false
 				L1ChainID = 1337
 [Aggregator]
@@ -114,7 +114,7 @@ SyncModeOnlyEnabled = false
 		SafeStatusL1NumberOfBlocks = 0
 		FinalizedStatusL1NumberOfBlocks = 0
 			[Aggregator.EthTxManager.Etherman]
-				URL = "http://xlayer-rpc:8545"
+				URL = "http://xlayer-mock-l1-network:8545"
 				L1ChainID = 1337
 				HTTPHeaders = []
 	[Aggregator.Synchronizer]
@@ -133,7 +133,7 @@ SyncModeOnlyEnabled = false
 			BlockFinality = "finalized"
 			OverrideStorageCheck = false
 		[Aggregator.Synchronizer.Etherman]
-			L1URL = "http://xlayer-rpc:8545"
+			L1URL = "http://xlayer-mock-l1-network:8545"
 			ForkIDChunkSize = 100
 			L1ChainID = 1337
 			PararellBlockRequest = false
@@ -196,7 +196,7 @@ WaitPeriodNextGER="100ms"
 				SafeStatusL1NumberOfBlocks = 5
 				FinalizedStatusL1NumberOfBlocks = 10
 					[AggOracle.EVMSender.EthTxManager.Etherman]
-						URL = "http://xlayer-rpc:8545"
+						URL = "http://xlayer-mock-l1-network:8545"
 						MultiGasProvider = false
 						L1ChainID = 1337
 						HTTPHeaders = []
@@ -235,7 +235,7 @@ GasOffset = 0
 		SafeStatusL1NumberOfBlocks = 5
 		FinalizedStatusL1NumberOfBlocks = 10
 			[ClaimSponsor.EthTxManager.Etherman]
-				URL = "http://xlayer-rpc:8545"
+				URL = "http://xlayer-mock-l1-network:8545"
 				MultiGasProvider = false
 				L1ChainID = 1337
 				HTTPHeaders = []

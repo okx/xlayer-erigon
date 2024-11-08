@@ -224,6 +224,7 @@ func (c *StreamClient) Stop() {
 	if c.conn == nil {
 		return
 	}
+	log.Error("zjg,Stopping data stream client")
 	log.Info(fmt.Sprintf("zjg,Stopping data stream client %s", c.id))
 	if err := c.sendStopCmd(); err != nil {
 		log.Warn(fmt.Sprintf("Failed to send the stop command to the data stream server: %s", err))

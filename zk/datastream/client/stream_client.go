@@ -210,7 +210,6 @@ func (c *StreamClient) GetProgressAtomic() *atomic.Uint64 {
 func (c *StreamClient) Start() error {
 	// Connect to server
 	var err error
-	log.Info(fmt.Sprintf("zjg,Connecting to server %s", c.server))
 	c.conn, err = net.Dial("tcp", c.server)
 	if err != nil {
 		return fmt.Errorf("error connecting to server %s: %v", c.server, err)
@@ -226,8 +225,6 @@ func (c *StreamClient) Stop() {
 		return
 	}
 	debug.PrintStack()
-	log.Error("zjg,Stopping data stream client")
-	log.Info(fmt.Sprintf("zjg,Stopping data stream client %s", c.id))
 	if err := c.sendStopCmd(); err != nil {
 		log.Warn(fmt.Sprintf("Failed to send the stop command to the data stream server: %s", err))
 	}
@@ -478,14 +475,12 @@ func (c *StreamClient) tryReConnect() error {
 	var err error
 	for i := 0; i < 50; i++ {
 		if c.conn != nil {
-			log.Info(fmt.Sprintf("zjg, [%d. iteration] closing the DS connection", i+1))
 			if err := c.conn.Close(); err != nil {
 				log.Warn(fmt.Sprintf("[%d. iteration] failed to close the DS connection: %s", i+1, err))
 				return err
 			}
 			c.conn = nil
 		}
-		log.Info(fmt.Sprintf("zjg, [%d. iteration] trying to reconnect to the DS server", i+1))
 		if err = c.Start(); err != nil {
 			log.Warn(fmt.Sprintf("[%d. iteration] failed to start the DS connection: %s", i+1, err))
 			time.Sleep(5 * time.Second)

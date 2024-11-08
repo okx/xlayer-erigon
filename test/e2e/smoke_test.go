@@ -35,11 +35,20 @@ func TestGetBatchSealTime(t *testing.T) {
 	}
 
 	// latest batch seal time
-	batchNum, err := operations.GetBatchNumber()
-	require.NoError(t, err)
-	batchSealTime, err := operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
-	require.Equal(t, batchSealTime, uint64(0))
-	log.Infof("Batch number: %d", batchNum)
+	var batchNum uint64
+	var batchSealTime uint64
+	var err error
+	for i := 0; i < 10; i++ {
+		batchNum, err = operations.GetBatchNumber()
+		require.NoError(t, err)
+		batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
+		require.Equal(t, batchSealTime, uint64(0))
+		log.Infof("Batch number: %d, times:%v", batchNum, i)
+		if batchNum > 0 {
+			break
+		}
+		time.Sleep(1 * time.Second)
+	}
 
 	// old batch seal time
 	batchNum = batchNum - 1

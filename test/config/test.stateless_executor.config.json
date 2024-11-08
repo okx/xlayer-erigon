@@ -47,7 +47,7 @@
     "hashDBURL": "local",
     "aggregatorServerPort": 50081,
     "aggregatorClientPort": 50081,
-    "aggregatorClientHost": "erigon-aggregator",
+    "aggregatorClientHost": "xlayer-agg",
     "mapConstPolsFile": false,
     "mapConstantsTreeFile": false,
     "inputFile": "input_executor_0.json",
@@ -55,7 +55,9 @@
     "keccakScriptFile": "config/scripts/keccak_script.json",
     "storageRomFile": "config/scripts/storage_sm_rom.json",
     "outputPath": "output",
-    "databaseURL": "postgresql://prover_user:prover_pass@erigon-state-db:5432/prover_db",
+    "databaseURL": "local",
+    "dbReadOnly": true,
+    "hashDBSingleton": false,
     "dbNodesTableName": "state.nodes",
     "dbProgramTableName": "state.program",
     "dbMultiWrite": true,
@@ -71,6 +73,6 @@
     "maxHashDBThreads": 8,
     "ECRecoverPrecalc": false,
     "ECRecoverPrecalcNThreads": 4,
-    "stateManager": true,
+    "stateManager": false,
     "useAssociativeCache": false
 }

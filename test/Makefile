@@ -1,24 +1,24 @@
 DOCKER_COMPOSE := docker compose -f docker-compose.yml
-DOCKER_STATELESS_EXECUTOR := erigon-stateless-executor
-DOCKER_STATE_DB := erigon-state-db
-DOCKER_SEQ_SENDER := erigon-seqsender
-DOCKER_AGGREGATOR := erigon-aggregator
-DOCKER_AGGREGATOR_DB := erigon-aggregator-db
+DOCKER_STATELESS_EXECUTOR := xlayer-executor
+DOCKER_STATE_DB := xlayer-state-db
+DOCKER_SEQ_SENDER := xlayer-seqs
+DOCKER_AGGREGATOR := xlayer-agg
+DOCKER_AGGREGATOR_DB := xlayer-agg-db
 DOCKER_BRIDGE_DB := xlayer-bridge-db
 DOCKER_BRIDGE_REDIS := xlayer-bridge-redis
 DOCKER_BRIDGE_ZOOKEEPER := kafka-zookeeper
 DOCKER_BRIDGE_COIN_KAFKA := xlayer-bridge-coin-kafka
 DOCKER_BRIDGE_SERVICE := xlayer-bridge-service
 DOCKER_BRIDGE_UI := xlayer-bridge-ui
-DOCKER_PROVER := erigon-prover
-DOCKER_APPROVE := erigon-approve
-DOCKER_SEQ := erigon-seq
-DOCKER_RPC := erigon-rpc
-DOCKER_L1_NETWORK := erigon-mock-l1-network
-DOCKER_DATA_AVAILABILITY := xlayer-data-availability
-DOCKER_DATA_AVAILABILITY_DB := xlayer-data-availability-db
-DOCKER_POOL_DB := erigon-pool-db
-DOCKER_POOL_MANAGER := erigon-pool-manager
+DOCKER_PROVER := xlayer-prover
+DOCKER_APPROVE := xlayer-approve
+DOCKER_SEQ := xlayer-seq
+DOCKER_RPC := xlayer-rpc
+DOCKER_L1_NETWORK := xlayer-mock-l1-network
+DOCKER_DATA_AVAILABILITY := xlayer-da
+DOCKER_DATA_AVAILABILITY_DB := xlayer-da-db
+DOCKER_POOL_DB := xlayer-pool-db
+DOCKER_POOL_MANAGER := xlayer-pool-manager
 DOCKER_SIGNER := xlayer-signer
 
 RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)
@@ -55,10 +55,10 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR_DB)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+	$(RUN_DOCKER_APPROVE)
 
 	# app services
-	#sleep 3
-	#$(RUN_DOCKER_STATELESS_EXECUTOR)
+	$(RUN_DOCKER_STATELESS_EXECUTOR)
 	sleep 3
 	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROVER)

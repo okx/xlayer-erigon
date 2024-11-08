@@ -3,7 +3,7 @@ ForkUpgradeNewForkId = 0
 
 [Log]
 Environment = "development" # "production" or "development"
-Level = "info"
+Level = "debug"
 Outputs = ["stderr"]
 
 [Etherman]
@@ -96,7 +96,7 @@ SyncModeOnlyEnabled = false
 		MaxConns = 200
 	[Aggregator.Log]
 		Environment = "development" # "production" or "development"
-		Level = "info"
+		Level = "debug"
 		Outputs = ["stderr"]
 	[Aggregator.EthTxManager]
 		FrequencyToMonitorTxs = "1s"
@@ -120,7 +120,7 @@ SyncModeOnlyEnabled = false
 	[Aggregator.Synchronizer]
 		[Aggregator.Synchronizer.Log]
 			Environment = "development" # "production" or "development"
-			Level = "info"
+			Level = "debug"
 			Outputs = ["stderr"]
 		[Aggregator.Synchronizer.SQLDB]
 			DriverName = "sqlite3"
@@ -128,7 +128,7 @@ SyncModeOnlyEnabled = false
 		[Aggregator.Synchronizer.Synchronizer]
 			SyncInterval = "10s"
 			SyncChunkSize = 1000
-			GenesisBlockNumber = 7022276
+			GenesisBlockNumber = 546
 			SyncUpToBlock = "finalized"
 			BlockFinality = "finalized"
 			OverrideStorageCheck = false
@@ -144,7 +144,7 @@ SyncModeOnlyEnabled = false
 			[Aggregator.Synchronizer.Etherman.Validium]
 				Enabled = true
 				# L2URL, empty ask to contract
-				TrustedSequencerURL = ""
+				TrustedSequencerURL = "http://xlayer-rpc:8123"
 				RetryOnDACErrorInterval = "1m"
 				DataSourcePriority = ["trusted", "external"]
 			[Aggregator.Synchronizer.Etherman.Validium.Translator]

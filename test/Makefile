@@ -55,6 +55,7 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR_DB)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+	$(RUN_DOCKER_APPROVE)
 
 	# app services
 	$(RUN_DOCKER_STATELESS_EXECUTOR)

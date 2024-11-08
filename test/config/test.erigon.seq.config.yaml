@@ -25,7 +25,7 @@ zkevm.datastream-version: 2
 log.console.verbosity: info
 
 zkevm.executor-urls: xlayer-executor:50071
-zkevm.executor-strict: false
+zkevm.executor-strict: true
 zkevm.witness-full: true
 
 zkevm.sequencer-block-seal-time: "3s"

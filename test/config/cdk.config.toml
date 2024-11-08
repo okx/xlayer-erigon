@@ -166,7 +166,7 @@ SyncBlockChunkSize=10
 BlockFinality="LatestBlock"
 URLRPCL1="http://xlayer-rpc:8545"
 WaitForNewBlocksPeriod="100ms"
-InitialBlock= 7022276
+InitialBlock= 546
 
 [AggOracle]
 TargetChainType="EVM"

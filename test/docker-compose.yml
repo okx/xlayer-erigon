@@ -38,7 +38,7 @@ services:
 
   xlayer-seqs:
     container_name: xlayer-seqs
-    image: ghcr.io/0xpolygon/cdk:0.4.0-beta5
+    image: cdk-node
     volumes:
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
@@ -51,7 +51,7 @@ services:
 
   xlayer-agg:
     container_name: xlayer-agg
-    image: ghcr.io/0xpolygon/cdk:0.4.0-beta5
+    image: cdk-node
     ports:
       - 50081:50081
     volumes:
@@ -148,7 +148,7 @@ services:
 
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network
-    image: zjg555543/geth:fork13-v0.0.1
+    image: zjg555543/geth:fork13-v0.0.2
     ports:
       - 8545:8545
       - 8546:8546
@@ -178,7 +178,7 @@ services:
 
   xlayer-da:
     container_name: xlayer-da
-    image: 0xpolygon/cdk-data-availability:0.0.10
+    image: xlayer-data-availability
     ports:
       - 8444:8444
     volumes:
@@ -187,7 +187,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/cdk-data-availability run --cfg /app/config.toml"
+      - "/app/xlayer-data-availability run --cfg /app/config.toml"
 
   xlayer-da-db:
     container_name: xlayer-da-db

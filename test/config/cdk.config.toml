@@ -29,7 +29,7 @@ LastBatchVirtualizationTimeMaxWaitPeriod = "10s"
 L1BlockTimestampMargin = "30s"
 MaxTxSizeForL1 = 131072
 L2Coinbase = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
-PrivateKey = {Path = "/pk/sequencer.keystore", Password = "password"}
+PrivateKey = {Path = "/pk/sequencer.keystore", Password = "testonly"}
 SequencesTxFileName = "sequencesender.json"
 GasOffset = 80000
 WaitPeriodPurgeTxFile = "60m"
@@ -44,7 +44,7 @@ GetBatchWaitInterval = "10s"
 		GetReceiptMaxTime = "250ms"
 		GetReceiptWaitInterval = "1s"
 		PrivateKeys = [
-			{Path = "/pk/sequencer.keystore", Password = "password"},
+			{Path = "/pk/sequencer.keystore", Password = "testonly"},
 		]
 		ForcedGas = 0
 		GasPriceMarginFactor = 1
@@ -85,7 +85,7 @@ AggLayerURL = ""
 SyncModeOnlyEnabled = false
 	[Aggregator.SequencerPrivateKey]
 		Path = "/pk/sequencer.keystore"
-		Password = "password"
+		Password = "testonly"
 	[Aggregator.DB]
 		Name = "aggregator_db"
 		User = "aggregator_user"
@@ -104,7 +104,7 @@ SyncModeOnlyEnabled = false
 		GetReceiptMaxTime = "250ms"
 		GetReceiptWaitInterval = "1s"
 		PrivateKeys = [
-			{Path = "/pk/aggregator.keystore", Password = "password"},
+			{Path = "/pk/aggregator.keystore", Password = "testonly"},
 		]
 		ForcedGas = 0
 		GasPriceMarginFactor = 1
@@ -283,7 +283,7 @@ GlobalExitRootManagerAddr = "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 [AggSender]
 StoragePath = "/tmp/cdk/aggsender.sqlite"
 AggLayerURL = ""
-AggsenderPrivateKey = {Path = "/pk/sequencer.keystore", Password = "password"}
+AggsenderPrivateKey = {Path = "/pk/sequencer.keystore", Password = "testonly"}
 BlockGetInterval = "2s"
 URLRPCL2="http://xlayer-rpc:8545"
 CheckSettledInterval = "2s"

@@ -281,9 +281,9 @@ var DefaultFlags = []cli.Flag{
 	&utils.DisableVirtualCounters,
 	&utils.DAUrl,
 	&utils.VirtualCountersSmtReduction,
+	&utils.BadBatches,
 	&utils.InitialBatchCfgFile,
 
-	&utils.ACLPrintHistory,
 
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
@@ -323,4 +323,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolFreeGasLimit,
 	&utils.HTTPApiKeysFlag,
 	&utils.MethodRateLimitFlag,
+	
+	&utils.ACLPrintHistory,
+	&utils.InfoTreeUpdateInterval,
+	&utils.SealBatchImmediatelyOnOverflow,
 }

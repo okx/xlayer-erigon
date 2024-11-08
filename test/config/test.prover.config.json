@@ -56,7 +56,7 @@
 
     "aggregatorServerPort": 50081,
     "aggregatorClientPort": 50081,
-    "aggregatorClientHost": "erigon-aggregator",
+    "aggregatorClientHost": "xlayer-agg",
     "aggregatorClientWatchdogTimeout": 120000000,
 
     "mapConstPolsFile": false,

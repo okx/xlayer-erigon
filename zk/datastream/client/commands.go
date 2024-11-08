@@ -1,8 +1,6 @@
 package client
 
-import (
-	"fmt"
-)
+import "fmt"
 
 const (
 	// Commands

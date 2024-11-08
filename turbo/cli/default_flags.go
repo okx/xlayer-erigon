@@ -284,8 +284,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.BadBatches,
 	&utils.InitialBatchCfgFile,
 
-	&utils.ACLPrintHistory,
-	&utils.InfoTreeUpdateInterval,
 
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
@@ -325,4 +323,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolFreeGasLimit,
 	&utils.HTTPApiKeysFlag,
 	&utils.MethodRateLimitFlag,
+	
+	&utils.ACLPrintHistory,
+	&utils.InfoTreeUpdateInterval,
+	&utils.SealBatchImmediatelyOnOverflow,
 }

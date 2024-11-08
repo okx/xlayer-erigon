@@ -1,6 +1,9 @@
 package client
 
-import "fmt"
+import (
+	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/log"
+)
 
 const (
 	// Commands
@@ -84,6 +87,7 @@ func (c *StreamClient) sendCommand(cmd Command) error {
 	if err := writeFullUint64ToConn(c.conn, uint64(cmd)); err != nil {
 		return fmt.Errorf("%s %v", c.id, err)
 	}
+	log.Infof("zjg, %s Sent command %v, local:%v", c.id, cmd, c.conn.LocalAddr().String())
 
 	// Send stream type
 	if err := writeFullUint64ToConn(c.conn, uint64(c.streamType)); err != nil {

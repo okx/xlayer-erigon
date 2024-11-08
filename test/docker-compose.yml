@@ -352,3 +352,19 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/xlayer-signer http -cfg /app/config.toml"
+
+  xlayer-ds:
+    container_name: xlayer-ds
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image: datastream-relay
+    ports:
+      - 7900:7900
+    volumes:
+      - ./config/ds-config.toml:/app/config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/dsrelay --cfg /app/config.toml"

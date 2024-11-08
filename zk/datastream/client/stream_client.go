@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"runtime/debug"
 	"sync/atomic"
 	"time"
 
@@ -224,6 +225,7 @@ func (c *StreamClient) Stop() {
 	if c.conn == nil {
 		return
 	}
+	debug.PrintStack()
 	log.Error("zjg,Stopping data stream client")
 	log.Info(fmt.Sprintf("zjg,Stopping data stream client %s", c.id))
 	if err := c.sendStopCmd(); err != nil {

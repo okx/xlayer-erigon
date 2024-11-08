@@ -38,7 +38,7 @@ services:
 
   xlayer-seqs:
     container_name: xlayer-seqs
-    image: cdk-node
+    image: cdk
     volumes:
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
@@ -51,7 +51,7 @@ services:
 
   xlayer-agg:
     container_name: xlayer-agg
-    image: cdk-node
+    image: cdk
     ports:
       - 50081:50081
     volumes:
@@ -178,7 +178,7 @@ services:
 
   xlayer-da:
     container_name: xlayer-da
-    image: xlayer-data-availability
+    image: cdk-data-availability
     ports:
       - 8444:8444
     volumes:

@@ -38,7 +38,7 @@ func TestGetBatchSealTime(t *testing.T) {
 	var batchNum uint64
 	var batchSealTime uint64
 	var err error
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		batchNum, err = operations.GetBatchNumber()
 		require.NoError(t, err)
 		batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))

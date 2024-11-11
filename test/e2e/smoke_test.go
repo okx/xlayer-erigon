@@ -334,7 +334,7 @@ func TestGasPrice(t *testing.T) {
 	gasPrice1, err := operations.GetGasPrice()
 	gasPrice2 := gasPrice1
 	require.NoError(t, err)
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 20; i++ {
 		temp, err := operations.GetGasPrice()
 		require.NoError(t, err)
 		if temp > gasPrice2 {
@@ -362,7 +362,7 @@ func TestGasPrice(t *testing.T) {
 		require.NoError(t, err)
 		log.Infof("Get GP:%v, TXGP:%v", temp, tx.GetPrice())
 		err = client.SendTransaction(ctx, signedTx)
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		//err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 		//require.NoError(t, err)
 	}

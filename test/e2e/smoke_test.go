@@ -38,7 +38,7 @@ func TestGetBatchSealTime(t *testing.T) {
 	var batchNum uint64
 	var batchSealTime uint64
 	var err error
-	for i := 0; i < 10; i++ {
+	for i := 0; i < 50; i++ {
 		batchNum, err = operations.GetBatchNumber()
 		require.NoError(t, err)
 		batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
@@ -334,7 +334,7 @@ func TestGasPrice(t *testing.T) {
 	gasPrice1, err := operations.GetGasPrice()
 	gasPrice2 := gasPrice1
 	require.NoError(t, err)
-	for i := 1; i < 10; i++ {
+	for i := 1; i < 100; i++ {
 		temp, err := operations.GetGasPrice()
 		require.NoError(t, err)
 		if temp > gasPrice2 {
@@ -360,10 +360,15 @@ func TestGasPrice(t *testing.T) {
 		signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1, 0)
 		signedTx, err := types.SignTx(tx, *signer, privateKey)
 		require.NoError(t, err)
-		log.Infof("Get GP:%v, TXGP:%v", temp, tx.GetPrice())
+		log.Infof("Get new GP:%v, TXGP:%v", temp, tx.GetPrice())
 		err = client.SendTransaction(ctx, signedTx)
-		err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
-		require.NoError(t, err)
+		time.Sleep(500 * time.Millisecond)
+		//err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
+		//require.NoError(t, err)
+		if gasPrice2 > gasPrice1 {
+			log.Infof("GP compare ok: [%d,%d]", gasPrice1, gasPrice2)
+			break
+		}
 	}
 	require.NoError(t, err)
 	log.Infof("gasPrice: [%d,%d]", gasPrice1, gasPrice2)

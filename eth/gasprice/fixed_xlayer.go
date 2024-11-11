@@ -46,7 +46,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	// Check for min/max L2 gasPrice
 	minGasPrice := new(big.Int).Set(f.cfg.Default)
 	if minGasPrice.Cmp(result) == 1 { // minGasPrice > result
-		log.Warn(fmt.Sprintf("setting DefaultGasPrice for L2: %s", f.cfg.Default.String()))
+		log.Warn(fmt.Sprintf("Fixed mode, setting DefaultGasPrice for L2: %s, result:%v", f.cfg.Default.String(), result.String()))
 		result = minGasPrice
 	}
 	maxGasPrice := new(big.Int).Set(f.cfg.MaxPrice)

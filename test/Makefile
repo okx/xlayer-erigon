@@ -94,7 +94,8 @@ all: ## Runs a full node
 	$(RUN_DOCKER_SEQ_SENDER)
 	$(RUN_DOCKER_AGGREGATOR)
 	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
+	# $(RUN_DOCKER_RPC)
+	$(DOCKER_COMPOSE) up -d xlayer-minimal-rpc # test on e2e CI
 
 	# bridge services
 	sleep 3
@@ -110,7 +111,9 @@ stop: ## Stops all services
 min-run: ## Runs a minimal node
 	# Wait a for all services to ready
 	$(RUN_DOCKER_L1_NETWORK)
+	sleep 3
 	$(RUN_DOCKER_SEQ)
+	sleep 20
 	$(DOCKER_COMPOSE) up -d xlayer-minimal-rpc
 	# $(RUN_DOCKER_RPC)
 

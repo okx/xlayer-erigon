@@ -108,10 +108,9 @@ stop: ## Stops all services
 
 .PHONY: min-run
 min-run: ## Runs a minimal node
+	# Wait a for all services to ready
 	$(RUN_DOCKER_L1_NETWORK)
-	sleep 3
 	$(RUN_DOCKER_SEQ)
-	sleep 20
 	$(RUN_DOCKER_RPC)
 
 

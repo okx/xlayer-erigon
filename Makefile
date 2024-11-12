@@ -370,3 +370,7 @@ help	:	Makefile
 
 build-docker: ## X Layer Builds a docker image with the binary
 	docker build -t cdk-erigon -f ./Dockerfile.local .
+
+RPC_PORT=8547
+build-rpc:
+	docker build --build-arg PORT=$(RPC_PORT) -t xlayer-minimal-rpc -f ./Dockerfile.rpc .

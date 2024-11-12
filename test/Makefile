@@ -111,7 +111,8 @@ min-run: ## Runs a minimal node
 	# Wait a for all services to ready
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_RPC)
+	$(DOCKER_COMPOSE) up -d xlayer-minimal-rpc
+	# $(RUN_DOCKER_RPC)
 
 
 .PHONY: test

@@ -119,11 +119,6 @@ services:
     image: cdk-erigon
     environment:
       - CDK_ERIGON_SEQUENCER=1
-    healthcheck:
-      test: "curl -f http://localhost || exit 1"
-      interval: 5s
-      timeout: 5s
-      retries: 60
     ports:
       - 8123:8545
       - 6900:6900
@@ -138,6 +133,8 @@ services:
 
   xlayer-minimal-rpc:
     container_name: xlayer-minimal-rpc
+    depends_on:
+      - xlayer-seq
     image: xlayer-minimal-rpc 
     environment:
       - CDK_ERIGON_SEQUENCER=0
@@ -154,8 +151,7 @@ services:
   xlayer-rpc:
     container_name: xlayer-rpc
     depends_on:
-      xlayer-seq:
-        condition: service_healthy
+      - xlayer-seq
     image: cdk-erigon
     environment:
       - CDK_ERIGON_SEQUENCER=0

@@ -98,7 +98,7 @@ all: ## Runs a full node
 	$(RUN_DOCKER_RPC)
 
 	# bridge services
-	sleep 3
+	sleep 30
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_UI)

@@ -210,6 +210,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		ACLPrintHistory:                        ctx.Int(utils.ACLPrintHistory.Name),
 		InfoTreeUpdateInterval:                 ctx.Duration(utils.InfoTreeUpdateInterval.Name),
 		SealBatchImmediatelyOnOverflow:         ctx.Bool(utils.SealBatchImmediatelyOnOverflow.Name),
+		MockWitnessGeneration:                  ctx.Bool(utils.MockWitnessGeneration.Name),
 	}
 
 	// For X Layer

@@ -83,10 +83,11 @@ all: ## Runs a full node
 	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
 	sleep 3
 	$(RUN_DOCKER_DATA_AVAILABILITY)
+	$(RUN_DOCKER_APPROVE)
 
 	# app services
 	#sleep 3
-	#$(RUN_DOCKER_STATELESS_EXECUTOR)
+	$(RUN_DOCKER_STATELESS_EXECUTOR)
 	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROVER)
 	sleep 10
@@ -97,7 +98,7 @@ all: ## Runs a full node
 	$(RUN_DOCKER_RPC)
 
 	# bridge services
-	sleep 3
+	sleep 30
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_UI)

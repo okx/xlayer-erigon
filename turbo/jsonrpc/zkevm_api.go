@@ -77,6 +77,8 @@ type ZkEvmAPI interface {
 	GetForkById(ctx context.Context, forkId hexutil.Uint64) (res json.RawMessage, err error)
 	GetForkIdByBatchNumber(ctx context.Context, batchNumber rpc.BlockNumber) (hexutil.Uint64, error)
 	GetForks(ctx context.Context) (res json.RawMessage, err error)
+	GetRollupAddress(ctx context.Context) (res json.RawMessage, err error)
+	GetRollupManagerAddress(ctx context.Context) (res json.RawMessage, err error)
 }
 
 const getBatchWitness = "getBatchWitness"
@@ -551,10 +553,13 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, rpcBatchNumber rp
 		batch.Timestamp = types.ArgUint64(block.Time())
 	}
 
-	// if we don't have a datastream available to verify that a batch is actually
-	// closed then we fall back to existing behaviour of checking if the next batch
-	// has any blocks in it
-	if api.datastreamServer != nil {
+	/*
+		if node is a sequencer it won't have the required data stored in the db, so use the datastream
+		server to figure out if the batch is closed, otherwise fall back. This ensures good performance
+		for RPC nodes in daisy chain node which do have a datastream (previous check was testing for
+		presence of datastream server).
+	*/
+	if sequencer.IsSequencer() {
 		highestClosed, err := api.datastreamServer.GetHighestClosedBatchNoCache()
 		if err != nil {
 			return nil, err
@@ -573,7 +578,20 @@ func (api *ZkEvmAPIImpl) GetBatchByNumber(ctx context.Context, rpcBatchNumber rp
 			return nil, err
 		}
 
-		batch.Closed = batchNo <= latestClosedbatchNum
+		if batchNo <= latestClosedbatchNum {
+			// simple check if we have a closed batch entry higher than or equal to the one requested
+			batch.Closed = true
+		} else {
+			// we might be missing a batch end along the way so lets double check if we have a block
+			// from the next batch or not
+			_, foundHigher, err := hermezDb.GetLowestBlockInBatch(batchNo + 1)
+			if err != nil {
+				return nil, err
+			}
+			if foundHigher {
+				batch.Closed = true
+			}
+		}
 	}
 
 	// verification - if we can't find one, maybe this batch was verified along with a higher batch number
@@ -718,7 +736,25 @@ func (api *ZkEvmAPIImpl) getAccInputHash(ctx context.Context, db SequenceReader,
 	}
 
 	if prevSequence == nil || batchSequence == nil {
-		return nil, fmt.Errorf("failed to get sequence data for batch %d", batchNum)
+		var missing string
+		if prevSequence == nil && batchSequence == nil {
+			missing = "previous and current batch sequences"
+		} else if prevSequence == nil {
+			missing = "previous batch sequence"
+		} else {
+			missing = "current batch sequence"
+		}
+		return nil, fmt.Errorf("failed to get %s for batch %d", missing, batchNum)
+	}
+
+	// if we are asking for the injected batch or genesis return 0x0..0
+	if (batchNum == 0 || batchNum == 1) && prevSequence.BatchNo == 0 {
+		return &common.Hash{}, nil
+	}
+
+	// if prev is 0, set to 1 (injected batch)
+	if prevSequence.BatchNo == 0 {
+		prevSequence.BatchNo = 1
 	}
 
 	// get batch range for sequence
@@ -764,6 +800,7 @@ func (api *ZkEvmAPIImpl) getAccInputHash(ctx context.Context, db SequenceReader,
 	// calculate acc input hash
 	for i := 0; i < int(batchNum-prevSequenceBatch); i++ {
 		accInputHash = accInputHashCalcFn(prevSequenceAccinputHash, i)
+		prevSequenceAccinputHash = *accInputHash
 	}
 
 	return
@@ -1009,12 +1046,12 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
 
-	blockNr, _, _, err := rpchelper.GetCanonicalBlockNumber(startBlockNrOrHash, tx, api.ethApi.filters) // DoCall cannot be executed on non-canonical blocks
+	blockNr, _, _, err := rpchelper.GetCanonicalBlockNumber_zkevm(startBlockNrOrHash, tx, api.ethApi.filters) // DoCall cannot be executed on non-canonical blocks
 	if err != nil {
 		return nil, err
 	}
 
-	endBlockNr, _, _, err := rpchelper.GetCanonicalBlockNumber(endBlockNrOrHash, tx, api.ethApi.filters) // DoCall cannot be executed on non-canonical blocks
+	endBlockNr, _, _, err := rpchelper.GetCanonicalBlockNumber_zkevm(endBlockNrOrHash, tx, api.ethApi.filters) // DoCall cannot be executed on non-canonical blocks
 
 	if err != nil {
 		return nil, err
@@ -1608,7 +1645,7 @@ func (zkapi *ZkEvmAPIImpl) GetProof(ctx context.Context, address common.Address,
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
 
-	blockNr, _, _, err := rpchelper.GetBlockNumber(blockNrOrHash, tx, api.filters)
+	blockNr, _, _, err := rpchelper.GetBlockNumber_zkevm(blockNrOrHash, tx, api.filters)
 	if err != nil {
 		return nil, err
 	}
@@ -1845,4 +1882,26 @@ func (api *ZkEvmAPIImpl) GetForks(ctx context.Context) (res json.RawMessage, err
 	}
 
 	return forksJson, err
+}
+
+func (api *ZkEvmAPIImpl) GetRollupAddress(ctx context.Context) (res json.RawMessage, err error) {
+	rollupAddress := api.config.AddressZkevm
+
+	rollupAddressJson, err := json.Marshal(rollupAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return rollupAddressJson, err
+}
+
+func (api *ZkEvmAPIImpl) GetRollupManagerAddress(ctx context.Context) (res json.RawMessage, err error) {
+	rollupManagerAddress := api.config.AddressRollup
+
+	rollupManagerAddressJson, err := json.Marshal(rollupManagerAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return rollupManagerAddressJson, err
 }

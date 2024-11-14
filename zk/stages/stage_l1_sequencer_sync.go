@@ -119,9 +119,11 @@ Loop:
 				case contracts.AddNewRollupTypeTopic:
 					fallthrough
 				case contracts.AddNewRollupTypeTopicBanana:
+					log.Info(fmt.Sprintf("[%s] zjg, AddNewRollupTypeTopic---1, %s", logPrefix, l.Topics[0].String()))
 					rollupType := l.Topics[1].Big().Uint64()
 					forkIdBytes := l.Data[64:96] // 3rd positioned item in the log data
 					forkId := new(big.Int).SetBytes(forkIdBytes).Uint64()
+					log.Info(fmt.Sprintf("[%s] zjg, AddNewRollupTypeTopic---2, rollupType:%v, forkId:%v", logPrefix, rollupType, forkId))
 					if funcErr = hermezDb.WriteRollupType(rollupType, forkId); funcErr != nil {
 						return funcErr
 					}
@@ -145,6 +147,7 @@ Loop:
 					}
 				case contracts.UpdateRollupTopic:
 					rollupId := l.Topics[1].Big().Uint64()
+					log.Info(fmt.Sprintf("[%s] zjg, UpdateRollupTopic---1, rollupId:%v, %s", logPrefix, rollupId, l.Topics[0].String()))
 					if rollupId != cfg.zkCfg.L1RollupId {
 						continue
 					}
@@ -161,6 +164,7 @@ Loop:
 					}
 					latestVerifiedBytes := l.Data[32:64]
 					latestVerified := new(big.Int).SetBytes(latestVerifiedBytes).Uint64()
+					log.Info(fmt.Sprintf("[%s] zjg, UpdateRollupTopic---2, fork:%v, latestVerified:%v, ", logPrefix, fork, latestVerified))
 					if funcErr = hermezDb.WriteNewForkHistory(fork, latestVerified); funcErr != nil {
 						return funcErr
 					}

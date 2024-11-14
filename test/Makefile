@@ -45,84 +45,36 @@ RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 
 STOP := $(DOCKER_COMPOSE) down --remove-orphans
 
-.PHONY: run
+.PHONY: all
 run: ## Runs a full node
 	# base services
-	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
-	$(RUN_DOCKER_POOL_DB)
-	$(RUN_DOCKER_STATE_DB)
-	$(RUN_DOCKER_AGGREGATOR_DB)
-	sleep 3
-	$(RUN_DOCKER_DATA_AVAILABILITY)
-	$(RUN_DOCKER_APPROVE)
-
-	# app services
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 3
-	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_PROVER)
-	sleep 10
-	$(RUN_DOCKER_SIGNER)
-	$(RUN_DOCKER_SEQ_SENDER)
-	$(RUN_DOCKER_AGGREGATOR)
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-
-.PHONY: all
-all: ## Runs a full node
-	# base services
-	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
-	$(RUN_DOCKER_POOL_DB)
-	$(RUN_DOCKER_STATE_DB)
-	$(RUN_DOCKER_AGGREGATOR_DB)
-	$(RUN_DOCKER_BRIDGE_DB)
-	$(RUN_DOCKER_BRIDGE_REDIS)
-	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
-	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
-	sleep 3
-	$(RUN_DOCKER_DATA_AVAILABILITY)
-	$(RUN_DOCKER_APPROVE)
-
-	# app services
-	#sleep 3
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	$(RUN_DOCKER_SEQ)
-	$(RUN_DOCKER_PROVER)
-	sleep 10
-	$(RUN_DOCKER_SIGNER)
-	$(RUN_DOCKER_SEQ_SENDER)
-	$(RUN_DOCKER_AGGREGATOR)
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
-
-	# bridge services
-	sleep 30
-	$(RUN_DOCKER_BRIDGE_SERVICE)
-	sleep 3
-	$(RUN_DOCKER_BRIDGE_UI)
-
-.PHONY: stop
-stop: ## Stops all services
-	$(STOP)
-
-.PHONY: min-run
-min-run: ## Runs a minimal node
-	$(RUN_DOCKER_L1_NETWORK)
-	sleep 3
-	$(RUN_DOCKER_SEQ)
-	sleep 20
-	$(RUN_DOCKER_RPC)
-
-
-.PHONY: test
-test: test-1 ## Runs all e2e tests
-	echo "Tests passed"
-	sleep 3
-
-.PHONY: test-1
-test-1: stop run ## Runs group 1 e2e tests checking race conditions
-	sleep 3
-	docker ps -a
-	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...
+#	$(RUN_DOCKER_L1_NETWORK)
+#	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
+#	$(RUN_DOCKER_POOL_DB)
+#	$(RUN_DOCKER_STATE_DB)
+#	$(RUN_DOCKER_AGGREGATOR_DB)
+#	$(RUN_DOCKER_BRIDGE_DB)
+#	$(RUN_DOCKER_BRIDGE_REDIS)
+#	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
+#	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
+#	sleep 3
+#	$(RUN_DOCKER_DATA_AVAILABILITY)
+#	$(RUN_DOCKER_APPROVE)
+#
+#	# app services
+#	#sleep 3
+#	$(RUN_DOCKER_STATELESS_EXECUTOR)
+#	$(RUN_DOCKER_SEQ)
+#	$(RUN_DOCKER_PROVER)
+#	sleep 10
+#	$(RUN_DOCKER_SIGNER)
+#	$(RUN_DOCKER_SEQ_SENDER)
+#	$(RUN_DOCKER_AGGREGATOR)
+#	$(RUN_DOCKER_POOL_MANAGER)
+#	$(RUN_DOCKER_RPC)
+#
+#	# bridge services
+#	sleep 30
+#	$(RUN_DOCKER_BRIDGE_SERVICE)
+#	sleep 3
+#	$(RUN_DOCKER_BRIDGE_UI)

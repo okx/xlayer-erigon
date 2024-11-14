@@ -1,7 +1,7 @@
 version: "3.5"
 networks:
   default:
-    name: erigon
+    name: xlayer
 services:
   xlayer-executor:
     container_name: xlayer-executor
@@ -140,6 +140,23 @@ services:
       - 9091:9095
     volumes:
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+
+  xlayer-pre-seq:
+    container_name: xlayer-pre-seq
+    image: cdk-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=0
+    ports:
+      - 8124:8545
+      - 6901:6900
+      - 9091:9095
+    volumes:
+      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
       - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json

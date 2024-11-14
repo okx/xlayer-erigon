@@ -155,7 +155,7 @@ services:
     ports:
       - 8124:8545
       - 6901:6900
-      - 9091:9095
+      - 19091:9095
     volumes:
       - ./data/seq:/home/erigon/data/
       - ./config/test.erigon.pre-seq.config.yaml:/usr/src/app/config.yaml

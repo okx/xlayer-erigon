@@ -222,8 +222,8 @@ services:
       - "-N"
       - "500"
 
-  xlayer-pool-db:
-    container_name: xlayer-pool-db
+  xlayer-pool-db-new:
+    container_name: xlayer-pool-db-new
     image: postgres:15
     ports:
       - 5440:5432

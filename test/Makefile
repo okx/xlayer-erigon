@@ -17,7 +17,7 @@ DOCKER_RPC := xlayer-json-rpc
 DOCKER_L1_NETWORK := xlayer-mock-l1-network
 DOCKER_DATA_AVAILABILITY := xlayer-data-availability
 DOCKER_DATA_AVAILABILITY_DB := xlayer-data-availability-db
-DOCKER_POOL_DB := xlayer-pool-db
+DOCKER_POOL_DB := xlayer-pool-db-new
 DOCKER_POOL_MANAGER := xlayer-pool-manager
 DOCKER_SIGNER := xlayer-signer
 

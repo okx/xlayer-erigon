@@ -15,7 +15,7 @@ zkevm.address-rollup: "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 zkevm.address-ger-manager: "0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 
 zkevm.l1-rollup-id: 1
-zkevm.l1-first-block: 353
+zkevm.l1-first-block: 368
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
 zkevm.l1-highest-block-type: latest

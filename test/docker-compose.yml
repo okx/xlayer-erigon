@@ -122,6 +122,7 @@ services:
       - 6900:6900
       - 9092:9095
     volumes:
+      - ./data/seq:/home/erigon/data/
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -129,8 +130,8 @@ services:
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
-  xlayer-rpc:
-    container_name: xlayer-rpc
+  xlayer-json-rpc:
+    container_name: xlayer-json-rpc
     image: cdk-erigon
     environment:
       - CDK_ERIGON_SEQUENCER=0
@@ -156,6 +157,7 @@ services:
       - 6901:6900
       - 9091:9095
     volumes:
+      - ./data/seq:/home/erigon/data/
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -193,8 +195,8 @@ services:
       - "full"
       - "--rpc.allow-unprotected-txs"
 
-  xlayer-da:
-    container_name: xlayer-da
+  xlayer-data-availability:
+    container_name: xlayer-data-availability
     image: zjg555543/xlayer-da:merge-v0.0.10
     ports:
       - 8444:8444
@@ -206,8 +208,8 @@ services:
       - "-c"
       - "/app/xlayer-data-availability run --cfg /app/config.toml"
 
-  xlayer-da-db:
-    container_name: xlayer-da-db
+  xlayer-data-availability-db:
+    container_name: xlayer-data-availability-db
     image: postgres:15
     ports:
       - 5438:5432
@@ -340,12 +342,12 @@ services:
       - ETHEREUM_RPC_URL=http://127.0.0.1:8545
       - ETHEREUM_EXPLORER_URL=http://127.0.0.1:4000
       - ETHEREUM_ROLLUP_MANAGER_ADDRESS=0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a
-      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
+      - ETHEREUM_BRIDGE_CONTRACT_ADDRESS=0x1089Af36bD72553008FAd0A1240B4D5641208494
       - ETHEREUM_FORCE_UPDATE_GLOBAL_EXIT_ROOT=true
       - ETHEREUM_PROOF_OF_EFFICIENCY_CONTRACT_ADDRESS=0xeb173087729c88a47568AF87b17C653039377BA6
       - POLYGON_ZK_EVM_RPC_URL=http://127.0.0.1:8123
       - POLYGON_ZK_EVM_EXPLORER_URL=http://127.0.0.1:4001
-      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x3a277Fa4E78cc1266F32E26c467F99A8eAEfF7c3
+      - POLYGON_ZK_EVM_BRIDGE_CONTRACT_ADDRESS=0x1089Af36bD72553008FAd0A1240B4D5641208494
       - POLYGON_ZK_EVM_NETWORK_ID=1
       - BRIDGE_API_URL=http://127.0.0.1:8080
       - ENABLE_FIAT_EXCHANGE_RATES=false

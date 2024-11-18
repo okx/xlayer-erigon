@@ -42,7 +42,7 @@ func SpawnSequencingStage(
 		return err
 	}
 
-	highestBatchInDs, err := cfg.datastreamServer.GetHighestBatchNumber()
+	highestBatchInDs, err := cfg.dataStreamServer.GetHighestBatchNumber()
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func sequencingBatchStep(
 			return err
 		}
 
-		if err = cfg.datastreamServer.WriteWholeBatchToStream(logPrefix, sdb.tx, sdb.hermezDb.HermezDbReader, lastBatch, injectedBatchBatchNumber); err != nil {
+		if err = cfg.dataStreamServer.WriteWholeBatchToStream(logPrefix, sdb.tx, sdb.hermezDb.HermezDbReader, lastBatch, injectedBatchBatchNumber); err != nil {
 			return err
 		}
 		if err = stages.SaveStageProgress(sdb.tx, stages.DataStream, 1); err != nil {

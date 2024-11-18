@@ -1,0 +1,6 @@
+FROM --platform=linux/amd64 zjg555543/geth:fork13-v0.0.3
+
+RUN apk add --no-cache curl
+
+ENTRYPOINT []
+CMD ["/bin/sh"]

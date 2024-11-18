@@ -1,0 +1,43 @@
+=== Container Status ===
+ed952da54bf8   zjg555543/geth:fork13-v0.0.3        "/usr/local/bin/entr…"   11 minutes ago   Up 11 minutes (unhealthy)   9545/tcp, 0.0.0.0:8545-8546->8545-8546/tcp, 30303/tcp, 30303/udp   xlayer-mock-l1-network
+
+=== Container Logs ===
+errexit         on
+noglob          off
+ignoreeof       off
+monitor         off
+noexec          off
+xtrace          on
+verbose         off
+noclobber       off
+allexport       off
+notify          off
+nounset         on
+errtrace        off
+vi              off
+pipefail        off
+
+=== Health Check Status ===
+            "Health": {
+                "Status": "unhealthy",
+                "FailingStreak": 67,
+                "Log": [
+                    {
+                        "Start": "2024-11-16T08:03:45.333766467Z",
+                        "End": "2024-11-16T08:03:45.377124967Z",
+                        "ExitCode": -1,
+                        "Output": "OCI runtime exec failed: exec failed: unable to start container process: exec: \"curl\": executable file not found in $PATH: unknown"
+                    },
+                    {
+--
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "curl",
+                    "-f",
+                    "http://localhost:8545"
+                ],
+                "Interval": 10000000000,
+                "Timeout": 5000000000,
+                "StartPeriod": 30000000000,
+                "Retries": 5

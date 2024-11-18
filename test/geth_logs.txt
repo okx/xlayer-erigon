@@ -1,0 +1,14 @@
+errexit         on
+noglob          off
+ignoreeof       off
+monitor         off
+noexec          off
+xtrace          on
+verbose         off
+noclobber       off
+allexport       off
+notify          off
+nounset         on
+errtrace        off
+vi              off
+pipefail        off

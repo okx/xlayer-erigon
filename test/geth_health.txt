@@ -1,0 +1,23 @@
+            "Health": {
+                "Status": "unhealthy",
+                "FailingStreak": 67,
+                "Log": [
+                    {
+                        "Start": "2024-11-16T08:03:45.333766467Z",
+                        "End": "2024-11-16T08:03:45.377124967Z",
+                        "ExitCode": -1,
+                        "Output": "OCI runtime exec failed: exec failed: unable to start container process: exec: \"curl\": executable file not found in $PATH: unknown"
+                    },
+                    {
+--
+            "Healthcheck": {
+                "Test": [
+                    "CMD",
+                    "curl",
+                    "-f",
+                    "http://localhost:8545"
+                ],
+                "Interval": 10000000000,
+                "Timeout": 5000000000,
+                "StartPeriod": 30000000000,
+                "Retries": 5

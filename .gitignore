@@ -113,6 +113,7 @@ vendor
 
 # X Layer
 data/
+test/sqlite
 start.sh
 xlayerconfig-mainnet.yaml
 xlayerconfig-testnet.yaml

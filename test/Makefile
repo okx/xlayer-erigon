@@ -43,7 +43,7 @@ RUN_DOCKER_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_DB)
 RUN_DOCKER_POOL_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_MANAGER)
 RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 
-STOP := $(DOCKER_COMPOSE) down --remove-orphans
+STOP := $(DOCKER_COMPOSE) down --remove-orphans; rm -rf sqlite
 
 .PHONY: run
 run: ## Runs a full node

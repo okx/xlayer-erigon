@@ -6,6 +6,9 @@ services:
   xlayer-executor:
     container_name: xlayer-executor
     image: hermeznetwork/zkevm-prover:v9.0.0-RC1-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
     ports:
       - 0.0.0.0:50061:50061 # MT
       - 0.0.0.0:50071:50071 # Executor
@@ -38,7 +41,7 @@ services:
 
   xlayer-seqs:
     container_name: xlayer-seqs
-    image: zjg555543/cdk:v0.4.0-beta5
+    image: zjg555543/cdk:basedev-merge-v0.4.0-beta10
     volumes:
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
@@ -51,7 +54,7 @@ services:
 
   xlayer-agg:
     container_name: xlayer-agg
-    image: zjg555543/cdk:v0.4.0-beta5
+    image: zjg555543/cdk:basedev-merge-v0.4.0-beta10
     ports:
       - 50081:50081
     volumes:
@@ -92,6 +95,9 @@ services:
   xlayer-prover:
     container_name: xlayer-prover
     image: hermeznetwork/zkevm-prover:v9.0.0-RC1-fork.13
+    platform: linux/amd64
+    environment:
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
     volumes:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >

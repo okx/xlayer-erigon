@@ -49,7 +49,7 @@ GetBatchWaitInterval = "10s"
 		ForcedGas = 0
 		GasPriceMarginFactor = 1
 		MaxGasPriceLimit = 0
-		StoragePath = "ethtxmanager.sqlite"
+		StoragePath = "tmp/cdk/ethtxmanager.sqlite"
 		ReadPendingL1Txs = false
 		SafeStatusL1NumberOfBlocks = 0
 		FinalizedStatusL1NumberOfBlocks = 0
@@ -124,7 +124,7 @@ SyncModeOnlyEnabled = false
 			Outputs = ["stderr"]
 		[Aggregator.Synchronizer.SQLDB]
 			DriverName = "sqlite3"
-			DataSource = "file:/tmp/cdk/aggregator_sync_db.sqlite"
+			DataSource = "/tmp/cdk/aggregator_sync_db.sqlite"
 		[Aggregator.Synchronizer.Synchronizer]
 			SyncInterval = "10s"
 			SyncChunkSize = 1000
@@ -153,13 +153,13 @@ SyncModeOnlyEnabled = false
 				NumRequests = 1000
 				Interval = "1s"
 [ReorgDetectorL1]
-DBPath = "/tmp/cdk/reorgdetectorl1"
+DBPath = "/tmp/cdk/reorg_detector_l1.sqlite"
 
 [ReorgDetectorL2]
-DBPath = "/tmp/cdk/reorgdetectorl2"
+DBPath = "/tmp/cdk/reorg_detector_l2.sqlite"
 
 [L1InfoTreeSync]
-DBPath = "/tmp/cdk/L1InfoTreeSync.sqlite"
+DBPath = "/tmp/cdk/l1_info_tree_sync.sqlite"
 GlobalExitRootAddr="0xB8cedD4B9eF683f0887C44a6E4312dC7A6e2fcdB"
 RollupManagerAddr = "0x2d42E2899662EFf08b13eeb65b154b904C7a1c8a"
 SyncBlockChunkSize=10

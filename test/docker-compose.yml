@@ -17,28 +17,6 @@ services:
     command: >
       zkProver -c /usr/src/app/config.json
 
-  xlayer-state-db:
-    container_name: xlayer-state-db
-    image: postgres
-    ports:
-      - 5432:5432
-    volumes:
-      - ./sql/init_prover_db.sql:/docker-entrypoint-initdb.d/init.sql
-    environment:
-      - POSTGRES_USER=state_user
-      - POSTGRES_PASSWORD=state_password
-      - POSTGRES_DB=state_db
-    command:
-      - "postgres"
-      - "-N"
-      - "500"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U state_user -d state_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
-
   xlayer-seqs:
     container_name: xlayer-seqs
     image: zjg555543/cdk:v0.4.0-beta10
@@ -104,9 +82,6 @@ services:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
-    depends_on:
-      xlayer-state-db:
-        condition: service_healthy
 
   xlayer-approve:
     container_name: xlayer-approve
@@ -360,3 +335,19 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/xlayer-signer http -cfg /app/config.toml"
+
+  xlayer-ds:
+    container_name: xlayer-ds
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image: zjg555543/xlayer-ds:basedev-merge-upstream-v0.2.7
+    ports:
+      - 7900:7900
+    volumes:
+      - ./config/ds-config.toml:/app/config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/dsrelay --cfg /app/config.toml"

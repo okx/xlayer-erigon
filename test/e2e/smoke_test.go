@@ -44,7 +44,7 @@ func TestGetBatchSealTime(t *testing.T) {
 		batchSealTime, err = operations.GetBatchSealTime(new(big.Int).SetUint64(batchNum))
 		require.Equal(t, batchSealTime, uint64(0))
 		log.Infof("Batch number: %d, times:%v", batchNum, i)
-		if batchNum > 0 {
+		if batchNum > 1 {
 			break
 		}
 		time.Sleep(1 * time.Second)

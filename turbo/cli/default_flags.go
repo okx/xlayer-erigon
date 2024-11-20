@@ -328,4 +328,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.ACLPrintHistory,
 	&utils.InfoTreeUpdateInterval,
 	&utils.SealBatchImmediatelyOnOverflow,
+	&utils.MockWitnessGeneration,
+	&utils.WitnessContractInclusion,
 }

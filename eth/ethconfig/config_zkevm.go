@@ -96,6 +96,8 @@ type Zk struct {
 	InfoTreeUpdateInterval         time.Duration
 	BadBatches                     []uint64
 	SealBatchImmediatelyOnOverflow bool
+	MockWitnessGeneration          bool
+	WitnessContractInclusion       []common.Address
 }
 
 var DefaultZkConfig = Zk{

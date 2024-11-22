@@ -49,6 +49,10 @@ http.corsdomain: any
 http.timeouts.read: "10s"
 http.timeouts.write: "10s"
 http.timeouts.idle: "10s"
+http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
+http.apikeys: |
+  {"project":"project1","key":"","timeout":"2033-12-12","methods":["eth_syncing"],"count":100000,"bucket":1}
+
 ws: true
 
 zkevm.apollo-enabled: false

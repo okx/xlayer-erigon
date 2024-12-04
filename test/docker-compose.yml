@@ -134,6 +134,8 @@ services:
   xlayer-integration:
     container_name: xlayer-integration
     image: cdk-erigon
+    environment:
+      - CDK_ERIGON_SEQUENCER=1
     ports:
       - 16901:6900
       - 19091:9095
@@ -144,7 +146,7 @@ services:
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
       - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
-      integration state_stages_zkevm --config=/usr/src/app/config.yaml --unwind-batch-no=10 --chain dynamic-mynetwork --datadir /home/erigon/data/
+      integration state_stages_zkevm --config=/usr/src/app/config.yaml --unwind-batch-no=9 --chain dynamic-mynetwork --datadir /home/erigon/data/
 
   xlayer-recover:
     environment:

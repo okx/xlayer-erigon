@@ -116,3 +116,6 @@ vendor
 
 datadir
 zk/tests/unwinds/datastream/hermez-dynamic-integration8-datastream
+
+test/sqlite
+test/data

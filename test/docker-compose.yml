@@ -135,17 +135,34 @@ services:
     container_name: xlayer-integration
     image: cdk-erigon
     ports:
-      - 8124:8545
-      - 6901:6900
-      - 9091:9095
+      - 16901:6900
+      - 19091:9095
     volumes:
-      - ./data/rpc:/home/erigon/data/
-      - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
+      - ./data/seq:/home/erigon/data/
+      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
       - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
-      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+      integration state_stages_zkevm --config=/usr/src/app/config.yaml --unwind-batch-no=10 --chain dynamic-mynetwork --datadir /home/erigon/data/
+
+  xlayer-recover:
+    environment:
+      - CDK_ERIGON_SEQUENCER=1
+    container_name: xlayer-recover
+    image: cdk-erigon
+    ports:
+      - 26901:6900
+      - 29091:9095
+    volumes:
+      - ./data/seq:/home/erigon/data/
+      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
+      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
+      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
+      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
+    command: >
+      cdk-erigon --pprof=true --pprof.addr 0.0.0.0 --config /usr/src/app/config.yaml --datadir /home/erigon/data/  --zkevm.sequencer-resequence-strict=false --zkevm.sequencer-resequence=true --zkevm.sequencer-resequence-reuse-l1-info-index=true
+
 
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network

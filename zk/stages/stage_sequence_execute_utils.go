@@ -409,6 +409,7 @@ func updateSequencerProgress(tx kv.RwTx, newHeight uint64, newBatch uint64, unwi
 	if err := stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, newBatch); err != nil {
 		return err
 	}
+	log.Warn(fmt.Sprintf("zjg, HighestSeenBatchNumber:%v", newBatch))
 
 	if !unwinding {
 		if err := stages.SaveStageProgress(tx, stages.IntermediateHashes, newHeight); err != nil {

@@ -26,7 +26,7 @@ log.console.verbosity: info
 
 zkevm.executor-urls: xlayer-executor:50071
 zkevm.executor-strict: true
-zkevm.witness-full: true
+zkevm.witness-full: false
 
 zkevm.sequencer-block-seal-time: "3s"
 zkevm.sequencer-batch-seal-time: "10s"

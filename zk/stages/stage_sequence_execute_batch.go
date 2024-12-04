@@ -77,6 +77,7 @@ func writeBadBatchDetails(batchContext *BatchContext, batchState *BatchState, bl
 	if err := stages.SaveStageProgress(batchContext.sdb.tx, stages.HighestSeenBatchNumber, batchState.batchNumber); err != nil {
 		return err
 	}
+	log.Warn(fmt.Sprintf("[%s] zjg, HighestSeenBatchNumber:%v", batchContext.s.LogPrefix(), batchState.batchNumber))
 	if err := batchContext.sdb.hermezDb.WriteForkId(batchState.batchNumber, batchState.forkId); err != nil {
 		return err
 	}

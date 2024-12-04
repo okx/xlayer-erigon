@@ -26,8 +26,8 @@ import (
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
-	"github.com/ledgerwatch/log/v3"
 	"github.com/ledgerwatch/erigon/zk/datastream/client"
+	"github.com/ledgerwatch/log/v3"
 )
 
 const (
@@ -375,6 +375,8 @@ func saveStageProgress(tx kv.RwTx, logPrefix string, highestHashableL2BlockNo, h
 		return fmt.Errorf("save stage progress error: %v", err)
 	}
 
+	log.Warn(fmt.Sprintf("[%s] zjg, Saving stage progress, HighestSeenBatchNumber:%v", logPrefix, highestSeenBatchNo))
+
 	// store the highest seen forkid
 	if err := stages.SaveStageProgress(tx, stages.ForkId, lastForkId); err != nil {
 		return fmt.Errorf("save stage progress error: %v", err)
@@ -579,6 +581,8 @@ func UnwindBatchesStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg BatchesCfg, c
 		return fmt.Errorf("save stage progress error: %v", err)
 	}
 
+	log.Warn(fmt.Sprintf("[%s] zjg, HighestSeenBatchNumber %v)", logPrefix, fromBatchPrev))
+
 	if err := u.Done(tx); err != nil {
 		return err
 	}
@@ -667,10 +671,10 @@ func rollback(
 	if err != nil {
 		return 0, err
 	}
-
 	if err = stages.SaveStageProgress(tx, stages.HighestSeenBatchNumber, batchNum-1); err != nil {
 		return 0, err
 	}
+	log.Warn(fmt.Sprintf("[%s] zjg, HighestSeenBatchNumber %v)", logPrefix, batchNum-1))
 	log.Warn(fmt.Sprintf("[%s] Unwinding to block %d (%s)", logPrefix, unwindBlockNum, unwindBlockHash))
 
 	u.UnwindTo(unwindBlockNum, stagedsync.BadBlock(unwindBlockHash, fmt.Errorf("unwind to block %d", unwindBlockNum)))

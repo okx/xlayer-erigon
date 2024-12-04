@@ -2,6 +2,7 @@ package stages
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -457,6 +458,7 @@ func zkIncrementIntermediateHashes(ctx context.Context, logPrefix string, s *sta
 }
 
 func unwindZkSMT(ctx context.Context, logPrefix string, from, to uint64, db kv.RwTx, checkRoot bool, expectedRootHash *common.Hash, quiet bool, quit <-chan struct{}) (common.Hash, error) {
+	debug.PrintStack()
 	if !quiet {
 		log.Info(fmt.Sprintf("[%s] Unwind trie hashes started", logPrefix))
 		defer log.Info(fmt.Sprintf("[%s] Unwind ended", logPrefix))

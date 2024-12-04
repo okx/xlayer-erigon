@@ -47,6 +47,7 @@ func SpawnSequencingStage(
 		return err
 	}
 
+	log.Info(fmt.Sprintf("[%s] Last batch %d, datastream batch %d.", s.LogPrefix(), lastBatch, highestBatchInDs))
 	if lastBatch < highestBatchInDs {
 		return resequence(s, u, ctx, cfg, historyCfg, lastBatch, highestBatchInDs)
 	}

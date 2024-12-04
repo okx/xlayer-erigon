@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
@@ -724,7 +725,7 @@ func (p *Promoter) Promote(logPrefix string, from, to uint64, storage, codes boo
 
 func (p *Promoter) UnwindOnHistoryV3(logPrefix string, agg *state.Aggregator, unwindFrom, unwindTo uint64, storage, codes bool) error {
 	p.logger.Info(fmt.Sprintf("[%s] Unwinding started", logPrefix), "from", unwindFrom, "to", unwindTo, "storage", storage, "codes", codes)
-
+	debug.PrintStack()
 	txnFrom, err := rawdbv3.TxNums.Min(p.tx, unwindTo+1)
 	if err != nil {
 		return err

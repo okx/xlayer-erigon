@@ -1,3 +1,16 @@
+# for resequence
+#zkevm.sequencer-resequence-strict: false
+#zkevm.sequencer-resequence: true
+#zkevm.sequencer-resequence-reuse-l1-info-index: true
+
+# for make an overflow issue
+#zkevm.executor-urls: ","
+#zkevm.executor-strict: false
+#zkevm.disable-virtual-counters: true
+
+zkevm.executor-urls: xlayer-executor:50071
+zkevm.executor-strict: true
+
 datadir: /home/erigon/data/
 chain: dynamic-mynetwork
 http: true
@@ -23,9 +36,6 @@ zkevm.rpc-ratelimit: 300
 zkevm.datastream-version: 2
 
 log.console.verbosity: info
-
-zkevm.executor-urls: ","
-zkevm.executor-strict: false
 zkevm.witness-full: false
 
 zkevm.sequencer-block-seal-time: "3s"

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/ethclient"
+	"gopkg.in/yaml.v2"
 
 	"github.com/ledgerwatch/erigon/test/operations"
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
@@ -103,11 +105,6 @@ func TestBridgeTx(t *testing.T) {
 	balanceAfter, err := wethToken.BalanceOf(&bind.CallOpts{}, destAddr)
 	require.NoError(t, err)
 	require.Greater(t, balanceAfter.Uint64(), balanceBefore.Uint64())
-}
-func Test2(t *testing.T) {
-	ctx := context.Background()
-	client, _ := ethclient.Dial(operations.DefaultL2NetworkURL)
-	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), blockAddress)
 }
 
 func TestClaimTx(t *testing.T) {
@@ -298,19 +295,29 @@ func TestRPCAPI(t *testing.T) {
 		t.Skip()
 	}
 
-	var err error
-	for i := 0; i < 1000; i++ {
-		_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
-		if err1 != nil {
-			err = err1
-			break
-		}
-	}
-	require.True(t, strings.Contains(err.Error(), "rate limit exceeded"))
+	config, err := LoadConfig("../../test/config/test.erigon.rpc.config.yaml")
+	require.NoError(t, err)
 
-	for i := 0; i < 1000; i++ {
-		_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL + "/45543e0adc5dd3e316044909d32501a5")
-		require.NoError(t, err1)
+	if config.HTTPAPIKeys != "" {
+
+		_, err := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "no authentication"))
+
+		_, err = operations.GetEthSyncing(operations.DefaultL2NetworkURL + "/45543e0adc5dd3e316044909d32501a5")
+		require.NoError(t, err)
+	} else {
+
+		var rateErr error
+		for i := 0; i < 1000; i++ {
+			_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
+			if err1 != nil {
+				rateErr = err1
+				break
+			}
+		}
+		t.Logf("Actual error message: %s", rateErr.Error())
+		require.True(t, strings.Contains(rateErr.Error(), "rate limit exceeded"))
 	}
 }
 
@@ -582,10 +589,8 @@ func getWETHBalance(client *ethclient.Client, owner common.Address) (*big.Int, e
 	const wethAddress = "0x17a2a2e444a7f3446877d1b71eaa2b2ae7533baf"
 	wethAddr := common.HexToAddress(wethAddress)
 
-	// ERC20 代币的 balanceOf(address) 方法签名
 	callData := append([]byte{0x70, 0xa0, 0x82, 0x31}, owner.Bytes()...)
 
-	// 使用带超时的上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -604,12 +609,10 @@ func getWETHBalance(client *ethclient.Client, owner common.Address) (*big.Int, e
 		return nil, err
 	}
 
-	// 解析返回值
 	balance := new(big.Int).SetBytes(result[:32])
 	return balance, nil
 }
 
-// 测试getWETHBalance函数
 func TestGetWETHBalance(t *testing.T) {
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
 	require.NoError(t, err)
@@ -618,6 +621,22 @@ func TestGetWETHBalance(t *testing.T) {
 	log.Infof("WETH balance: %v", balance)
 }
 
-func Test1(t *testing.T) {
-	log.Infof("这是一条测试日志")
+type Config struct {
+	HTTPMethodRateLimit string `yaml:"http.methodratelimit"`
+	HTTPAPIKeys         string `yaml:"http.apikeys"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }

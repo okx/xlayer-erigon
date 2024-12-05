@@ -51,7 +51,7 @@ http.timeouts.write: "10s"
 http.timeouts.idle: "10s"
 http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
 http.apikeys: |
-  {"project":"project1","key":"","timeout":"2033-12-12","methods":["eth_syncing"],"count":100000,"bucket":1}
+  {"project":"Biconomy","key":"45543e0adc5dd3e316044909d32501a5","timeout":"2030-12-31","methods":["eth_syncing"],"count":10000,"bucket":1}
 
 ws: true
 

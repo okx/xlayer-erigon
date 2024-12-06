@@ -3,9 +3,14 @@ on:
   push:
     branches:
       - dev
+      - zkevm
+      - zkevm-2.60
   pull_request:
     branches:
       - dev
+      - zkevm
+      - zkevm-2.60
+      - stable*
     types:
       - opened
       - reopened
@@ -22,74 +27,52 @@ env:
   DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 jobs:
-#  tests:
-#    strategy:
-#      max-parallel: 2
-#      fail-fast: true
-#      matrix:
-#        os: [ ubuntu-22.04, macos-14-xlarge ] # list of os: https://github.com/actions/virtual-environments
-#    runs-on: ${{ matrix.os }}
-#    timeout-minutes: ${{ matrix.os == 'macos-14-xlarge' && 40 || 30 }}
-#
-#    steps:
-#      - uses: actions/checkout@v3
-#      - uses: actions/setup-go@v4
-#        with:
-#          go-version: '1.21'
-#      - name: Install dependencies on Linux
-#        if: runner.os == 'Linux'
-#        run: sudo apt update && sudo apt install build-essential
-#
-#      - name: Build
-#        run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm cdk-erigon
-#
-#      - name: Reproducible build test
-#        run: |
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon1.sha256
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon2.sha256
-#          if ! cmp -s erigon1.sha256 erigon2.sha256; then
-#            echo >&2 "Reproducible build broken"; cat erigon1.sha256; cat erigon2.sha256; exit 1
-#          fi
+  tests:
+    strategy:
+      max-parallel: 2
+      fail-fast: true
+      matrix:
+        os: [ ubuntu-22.04, macos-14-xlarge ] # list of os: https://github.com/actions/virtual-environments
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: ${{ matrix.os == 'macos-14-xlarge' && 40 || 30 }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      - name: Install dependencies on Linux
+        if: runner.os == 'Linux'
+        run: sudo apt update && sudo apt install build-essential
+
+      - name: Build
+        run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm cdk-erigon
+
+      - name: Reproducible build test
+        run: |
+          make cdk-erigon
+          shasum -a256 ./build/bin/cdk-erigon > erigon1.sha256
+          make cdk-erigon
+          shasum -a256 ./build/bin/cdk-erigon > erigon2.sha256
+          if ! cmp -s erigon1.sha256 erigon2.sha256; then
+            echo >&2 "Reproducible build broken"; cat erigon1.sha256; cat erigon2.sha256; exit 1
+          fi
 
 #      - name: Lint
 #        if: runner.os == 'Linux'
 #        uses: golangci/golangci-lint-action@v4
 #        with:
-#          go-version: '1.21'
-#      - name: Install dependencies on Linux
-#        if: runner.os == 'Linux'
-#        run: sudo apt update && sudo apt install build-essential
-#
-#      - name: Build
-#        run: make BUILD_TAGS=nosqlite,noboltdb,nosilkworm all
-#
-#      - name: Reproducible build test
-#        run: |
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon1.sha256
-#          make cdk-erigon
-#          shasum -a256 ./build/bin/cdk-erigon > erigon2.sha256
-#          if ! cmp -s erigon1.sha256 erigon2.sha256; then
-#            echo >&2 "Reproducible build broken"; cat erigon1.sha256; cat erigon2.sha256; exit 1
-#          fi
-#
-##      - name: Lint
-##        if: runner.os == 'Linux'
-##        uses: golangci/golangci-lint-action@v4
-##        with:
-##          version: v1.54
-#
-#      - name: Test
-#        run: make test
-#
-#      - name: SonarCloud Scan
-#        uses: SonarSource/sonarcloud-github-action@master
-#        if: ${{ matrix.os == 'ubuntu-20.04' }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#          version: v1.54
+
+      - name: Test
+        run: make test
+      
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@master
+        if: ${{ matrix.os == 'ubuntu-20.04' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   kurtosis-cdk:
     if: true

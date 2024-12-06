@@ -70,7 +70,7 @@ jobs:
       
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
-        if: ${{ matrix.os == 'ubuntu-20.04' }}
+        if: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

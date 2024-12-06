@@ -177,7 +177,7 @@ for file in "$dataPath/phase2-dump1"/*; do
         echo "Phase 2 No difference found in $filename"
     else
         # file where it should be different
-        if [ "$filename" = "BadHeaderNumber.txt" ] || [ "$filename" = "InnerTx.tx" ]; then
+        if [ "$filename" = "BadHeaderNumber.txt" ] || [ "$filename" = "InnerTx.txt" ]; then
             echo "Phase 2 - Expected differences in $filename"
         else
             echo "Phase 2 - Error unexpected differences in $filename"

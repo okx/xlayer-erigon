@@ -47,10 +47,10 @@ RUN apk add --no-cache curl jq bind-tools
 # from the perspective of the container, uid=1000, gid=1000 is a sensible choice
 # (mimicking Ubuntu Server), but if caller creates a .env (example in repo root),
 # these defaults will get overridden when make calls docker-compose
-ARG UID=1000
-ARG GID=1000
-RUN adduser -D -u $UID -g $GID erigon
-USER erigon
+#ARG UID=1000
+#ARG GID=1000
+#RUN adduser -D -u $UID -g $GID erigon
+#USER erigon
 RUN mkdir -p ~/.local/share/erigon
 WORKDIR /home/erigon
 

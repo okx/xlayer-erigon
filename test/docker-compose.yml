@@ -21,7 +21,7 @@ services:
     container_name: xlayer-seqs
     image: zjg555543/cdk:v0.4.0-beta10
     volumes:
-      - ./sqlite/seqs:/tmp/cdk
+      - ./data/seqs:/tmp/cdk
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
       - ./config/cdk.config.toml:/app/config.toml
@@ -37,7 +37,7 @@ services:
     ports:
       - 50081:50081
     volumes:
-      - ./sqlite/agg:/tmp/cdk
+      - ./data/agg:/tmp/cdk
       - ./keystore/aggregator.keystore:/pk/aggregator.keystore
       - ./config/cdk.config.toml:/app/config.toml
       - ./config/test.genesis.config.json:/app/genesis.json
@@ -105,6 +105,7 @@ services:
       - 6900:6900
       - 9092:9095
     volumes:
+      - ./data/seq/:/home/erigon/data/
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -122,6 +123,7 @@ services:
       - 6901:6900
       - 9091:9095
     volumes:
+      - ./data/rpc/:/home/erigon/data/
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -346,6 +348,7 @@ services:
     ports:
       - 7900:7900
     volumes:
+#      - ./data/ds/:/home/dsrelay/
       - ./config/ds-config.toml:/app/config.toml
     command:
       - "/bin/sh"

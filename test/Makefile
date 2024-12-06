@@ -43,7 +43,7 @@ RUN_DOCKER_POOL_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_MANAGER)
 RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 RUN_DOCKER_DS := $(DOCKER_COMPOSE) up -d $(DOCKER_DS)
 
-STOP := $(DOCKER_COMPOSE) down --remove-orphans; rm -rf data
+STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 
 .PHONY: run
 run: ## Runs a full node

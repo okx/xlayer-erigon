@@ -3,11 +3,9 @@ on:
   push:
     branches:
       - zkevm
-      - stable*
   pull_request:
     branches:
       - zkevm
-      - stable*
     types:
       - opened
       - reopened

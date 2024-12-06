@@ -4,7 +4,6 @@ on:
     branches:
       - zkevm
       - zkevm-2.60
-      - stable*
   workflow_dispatch:
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
 
       - name: Install dependencies on Linux
         if: runner.os == 'Linux'
-        run: sudo apt update && sudo apt install build-essential
+        run: sudo apt update && sudo apt install -y build-essential
 
       - name: Build
         run: |

@@ -68,12 +68,12 @@ jobs:
       - name: Test
         run: make test
       
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        if: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+#      - name: SonarCloud Scan
+#        uses: SonarSource/sonarcloud-github-action@master
+#        if: ${{ matrix.os == 'ubuntu-20.04' }}
+#        env:
+#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+#          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   kurtosis-cdk:
     if: true

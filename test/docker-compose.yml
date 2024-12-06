@@ -348,7 +348,7 @@ services:
     ports:
       - 7900:7900
     volumes:
-      - ./data/ds/:/home/dsrelay/
+#      - ./data/ds/:/home/dsrelay/
       - ./config/ds-config.toml:/app/config.toml
     command:
       - "/bin/sh"

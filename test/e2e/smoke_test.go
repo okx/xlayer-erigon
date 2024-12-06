@@ -74,7 +74,6 @@ func TestGetBatchSealTime(t *testing.T) {
 }
 
 func TestBridgeTx(t *testing.T) {
-	//done
 	ctx := context.Background()
 	l1Client, err := ethclient.Dial(operations.DefaultL1NetworkURL)
 	require.NoError(t, err)
@@ -316,7 +315,7 @@ func TestRPCAPI(t *testing.T) {
 				break
 			}
 		}
-		t.Logf("Actual error message: %s", rateErr.Error())
+
 		require.True(t, strings.Contains(rateErr.Error(), "rate limit exceeded"))
 	}
 }
@@ -584,41 +583,6 @@ func sendBridgeAsset(
 	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
 	return operations.WaitTxToBeMined(ctx, c, tx, txTimeout)
-}
-func getWETHBalance(client *ethclient.Client, owner common.Address) (*big.Int, error) {
-	const wethAddress = "0x17a2a2e444a7f3446877d1b71eaa2b2ae7533baf"
-	wethAddr := common.HexToAddress(wethAddress)
-
-	callData := append([]byte{0x70, 0xa0, 0x82, 0x31}, owner.Bytes()...)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	result, err := client.CallContract(ctx, ethereum.CallMsg{
-		To:   &wethAddr,
-		Data: callData,
-	}, nil)
-	if err != nil {
-		log.Infof("Error calling contract: %v", err)
-		return nil, err
-	}
-
-	if len(result) < 32 {
-		err := fmt.Errorf("result too short")
-		log.Infof("Error: %v", err)
-		return nil, err
-	}
-
-	balance := new(big.Int).SetBytes(result[:32])
-	return balance, nil
-}
-
-func TestGetWETHBalance(t *testing.T) {
-	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
-	require.NoError(t, err)
-	balance, err := getWETHBalance(client, common.HexToAddress(operations.DefaultL2AdminAddress))
-	require.NoError(t, err)
-	log.Infof("WETH balance: %v", balance)
 }
 
 type Config struct {

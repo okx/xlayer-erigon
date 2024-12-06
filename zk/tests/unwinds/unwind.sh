@@ -117,6 +117,7 @@ different_files=(
     "SyncStage.txt"
     "BadHeaderNumber.txt"
     "CallToIndex.txt"
+    "InnerTx.txt"
 )
 
 is_in_array() {

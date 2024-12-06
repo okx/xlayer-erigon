@@ -2,9 +2,11 @@ name: Resequence test
 on:
   push:
     branches:
+      - dev
       - zkevm
   pull_request:
     branches:
+      - dev
       - zkevm
     types:
       - opened

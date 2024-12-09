@@ -17,7 +17,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 	"github.com/ledgerwatch/erigon-lib/kv/kvcache"
 	"github.com/ledgerwatch/erigon/accounts/abi/bind/backends"
-	"github.com/ledgerwatch/erigon/cmd/rpcdaemon/commands/mocks"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
@@ -30,6 +29,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
 	rpctypes "github.com/ledgerwatch/erigon/zk/rpcdaemon"
 	"github.com/ledgerwatch/erigon/zk/syncer"
+	"github.com/ledgerwatch/erigon/zk/syncer/mocks"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/stretchr/testify/assert"
@@ -480,7 +480,7 @@ func TestGetBatchByNumber(t *testing.T) {
 	assert.Equal(gers[len(gers)-1], batch.GlobalExitRoot)
 	assert.Equal(mainnetExitRoots[len(mainnetExitRoots)-1], batch.MainnetExitRoot)
 	assert.Equal(rollupExitRoots[len(rollupExitRoots)-1], batch.RollupExitRoot)
-	assert.Equal(common.HexToHash(common.Hash{}.String()), batch.AccInputHash)
+	assert.Equal(common.HexToHash("0x97d1524156ccb46723e5c3c87951da9a390499ba288161d879df1dbc03d49afc"), batch.AccInputHash)
 	assert.Equal(common.HexToHash("0x22ddb9a356815c3fac1026b6dec5df3124afbadb485c9ba5a3e3398a04b7ba97"), *batch.SendSequencesTxHash)
 	assert.Equal(rpctypes.ArgUint64(1714427009), batch.Timestamp)
 	assert.Equal(true, batch.Closed)

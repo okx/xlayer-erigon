@@ -24,17 +24,16 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumber rpc.B
 		return 0, err
 	}
 	defer tx.Rollback()
-
-	blocks, err := getAllBlocksInBatchNumber(tx, uint64(batchNumber.Int64()))
+	var lastBlockNum = uint64(0)
+	lastBlockNum, err = getLastBlockInBatchNumber(tx, uint64(batchNumber.Int64()))
 	if err != nil {
 		return 0, err
 	}
 
-	if len(blocks) == 0 {
-		return 0, errors.New("batch is empty")
+	lastBlock, err := api.GetFullBlockByNumber(ctx, rpc.BlockNumber(lastBlockNum), false)
+	if err != nil {
+		return 0, err
 	}
-
-	lastBlock, err := api.GetFullBlockByNumber(ctx, rpc.BlockNumber(blocks[len(blocks)-1]), false)
 
 	return lastBlock.Timestamp, nil
 }

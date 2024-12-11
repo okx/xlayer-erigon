@@ -98,12 +98,25 @@ func TestBridgeTx(t *testing.T) {
 	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
 	require.NoError(t, err)
 
-	//wait for the bridge service
-	time.Sleep(30 * time.Second)
+	const maxAttempts = 20
 
-	balanceAfter, err := wethToken.BalanceOf(&bind.CallOpts{}, destAddr)
-	require.NoError(t, err)
-	require.Greater(t, balanceAfter.Uint64(), balanceBefore.Uint64())
+	var balanceAfter *big.Int
+	for i := 0; i < maxAttempts; i++ {
+		time.Sleep(1 * time.Second)
+
+		balanceAfter, err = wethToken.BalanceOf(&bind.CallOpts{}, destAddr)
+		require.NoError(t, err)
+
+		if balanceAfter.Cmp(balanceBefore) > 0 {
+			return
+		}
+	}
+
+	t.Errorf("bridge transaction failed after %d seconds: balance did not increase (before: %s, after: %s)",
+		maxAttempts,
+		balanceBefore.String(),
+		balanceAfter.String(),
+	)
 }
 
 func TestClaimTx(t *testing.T) {

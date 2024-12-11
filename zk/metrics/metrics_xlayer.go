@@ -20,11 +20,17 @@ var (
 	SeqPrefix            = "sequencer_"
 	BatchExecuteTimeName = SeqPrefix + "batch_execute_time"
 	PoolTxCountName      = SeqPrefix + "pool_tx_count"
+
+	RpcPrefix = "rpc_"
+	RpcDynamicGasPriceName = RpcPrefix + "dynamic_gas_price"
+	RpcInnerTxExecutedName = RpcPrefix + "inner_tx_executed"
 )
 
 func Init() {
 	prometheus.MustRegister(BatchExecuteTimeGauge)
 	prometheus.MustRegister(PoolTxCount)
+	prometheus.MustRegister(RpcDynamicGasPrice)
+	prometheus.MustRegister(RpcInnerTxExecuted)
 }
 
 var BatchExecuteTimeGauge = prometheus.NewGaugeVec(
@@ -54,3 +60,17 @@ func AddPoolTxCount(pending, baseFee, queued int) {
 	PoolTxCount.WithLabelValues("basefee").Set(float64(baseFee))
 	PoolTxCount.WithLabelValues("queued").Set(float64(queued))
 }
+
+var RpcDynamicGasPrice = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: RpcDynamicGasPriceName,
+		Help: "[RPC] dynamic gas price",
+	},
+)
+
+var RpcInnerTxExecuted = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: RpcInnerTxExecutedName,
+		Help: "[RPC] inner tx executed, used to trace contract calls in blockchain explorer",
+	},
+)

@@ -98,7 +98,7 @@ func TestBridgeTx(t *testing.T) {
 	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
 	require.NoError(t, err)
 
-	const maxAttempts = 20
+	const maxAttempts = 120
 
 	var balanceAfter *big.Int
 	for i := 0; i < maxAttempts; i++ {

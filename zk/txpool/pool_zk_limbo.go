@@ -8,6 +8,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/types"
+	"github.com/ledgerwatch/log/v3"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
@@ -79,7 +80,11 @@ func newLimboBlockTransactionDetails(rlp, streamBytes []byte, hash common.Hash, 
 }
 
 func (_this *LimboBlockTransactionDetails) hasRoot() bool {
-	return _this.Root != emptyHash
+	hasRoot := _this.Root != emptyHash
+	log.Info("Checking transaction root",
+		"tx_hash", _this.Hash.String(),
+		"has_root", hasRoot)
+	return hasRoot
 }
 
 type Limbo struct {
@@ -133,18 +138,21 @@ func (_this *Limbo) getFirstTxWithoutRootByBlockNumber(blockNumber uint64) (*Lim
 	for _, limboBlock := range _this.uncheckedLimboBlocks {
 		for _, limboTx := range limboBlock.Transactions {
 			if !limboTx.hasRoot() {
+				log.Info("Found transaction without root",
+					"block_number", blockNumber,
+					"tx_hash", limboTx.Hash.String())
 				if blockNumber < limboBlock.BlockNumber {
 					return nil, nil
 				}
 				if blockNumber > limboBlock.BlockNumber {
 					panic(fmt.Errorf("requested block %d while the network is already on %d", limboBlock.BlockNumber, blockNumber))
 				}
-
 				return limboBlock, limboTx
 			}
 		}
 	}
-
+	log.Info("No transaction without root found",
+		"block_number", blockNumber)
 	return nil, nil
 }
 
@@ -188,6 +196,10 @@ func (_this *LimboBlockDetails) resizeTransactions(txIndex int) {
 }
 
 func (_this *LimboBlockDetails) AppendTransaction(rlp, streamBytes []byte, hash common.Hash, sender common.Address) uint32 {
+	log.Info("Adding transaction to limbo block",
+		"tx_hash", hash.String(),
+		"sender", sender.String())
+
 	_this.Transactions = append(_this.Transactions, newLimboBlockTransactionDetails(rlp, streamBytes, hash, sender))
 	return uint32(len(_this.Transactions))
 }
@@ -208,8 +220,13 @@ func (p *TxPool) GetLimboDetailsForRecovery(blockNumber uint64) (*LimboBlockDeta
 
 	limboBlock, limboTx := p.limbo.getFirstTxWithoutRootByBlockNumber(blockNumber)
 	if limboBlock == nil {
+		log.Info("No limbo block found for recovery",
+			"block_number", blockNumber)
 		return nil, nil
 	}
+	log.Info("Limbo block found for recovery",
+		"block_number", blockNumber,
+		"tx_hash", limboTx.Hash.String())
 	return limboBlock, &limboTx.Hash
 }
 
@@ -248,6 +265,11 @@ func (p *TxPool) UpdateLimboRootByTxHash(txHash *common.Hash, stateRoot *common.
 func (p *TxPool) ProcessUncheckedLimboBlockDetails(limboBlock *LimboBlockDetails) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	log.Info("Adding new block to limbo",
+		"block_number", limboBlock.BlockNumber,
+		"tx_count", len(limboBlock.Transactions))
+
 	p.limbo.uncheckedLimboBlocks = append(p.limbo.uncheckedLimboBlocks, limboBlock)
 
 	/*
@@ -279,6 +301,11 @@ func (p *TxPool) GetUncheckedLimboBlocksDetailsClonedWeak() []*LimboBlockDetails
 func (p *TxPool) MarkProcessedLimboDetails(size int, invalidBatchesIndices []int, invalidTxs []*string) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
+
+	log.Info("Marking processed limbo details",
+		"processed_size", size,
+		"invalid_batches_count", len(invalidBatchesIndices),
+		"invalid_txs_count", len(invalidTxs))
 
 	for _, idHash := range invalidTxs {
 		p.limbo.invalidTxsMap[*idHash] = 0

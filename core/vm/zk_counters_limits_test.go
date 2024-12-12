@@ -42,6 +42,7 @@ func TestGetTotalSteps(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := getTotalSteps(tt.forkID)
+			t.Logf("ForkID: %d, Total Steps: %d", tt.forkID, got)
 			if got != tt.expected {
 				t.Errorf("getTotalSteps(%d) = %d, want %d", tt.forkID, got, tt.expected)
 			}

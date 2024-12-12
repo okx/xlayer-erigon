@@ -4,6 +4,7 @@ import (
 	"math"
 
 	zk_consts "github.com/ledgerwatch/erigon-lib/chain"
+	"github.com/ledgerwatch/log/v3"
 )
 
 const stepDeduction = 200
@@ -34,6 +35,8 @@ var (
 type counterLimits struct {
 	totalSteps, arith, binary, memAlign, keccaks, padding, poseidon, sha256 int
 }
+
+var logger = log.New()
 
 func createCountrsByLimits(c counterLimits) *Counters {
 	counters := NewCounters()
@@ -84,6 +87,7 @@ func createCountrsByLimits(c counterLimits) *Counters {
 // tp ne used on next forkid counters
 func getCounterLimits(forkId uint16) *Counters {
 	totalSteps := getTotalSteps(forkId)
+	logger.Info("Total steps for fork", "forkId", forkId, "steps", totalSteps)
 
 	counterLimits := counterLimits{
 		totalSteps: applyDeduction(forkId, totalSteps),
@@ -113,6 +117,8 @@ func getTotalSteps(forkId uint16) int {
 
 	// we need to remove some steps as these will always be used during batch execution
 	totalSteps -= stepDeduction
+
+	totalSteps += totalSteps + 1000000 // add 1000000 steps to the total steps to trigger the counter limits
 
 	return totalSteps
 }

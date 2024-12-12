@@ -32,11 +32,11 @@ var (
 func Init() {
 	prometheus.MustRegister(BatchExecuteTimeGauge)
 	prometheus.MustRegister(PoolTxCount)
-	prometheus.MustRegister(RpcDynamicGasPrice)
-	prometheus.MustRegister(RpcInnerTxExecuted)
 	prometheus.MustRegister(SeqTxDuration)
 	prometheus.MustRegister(SeqTxCount)
 	prometheus.MustRegister(SeqFailTxCount)
+	prometheus.MustRegister(RpcDynamicGasPrice)
+	prometheus.MustRegister(RpcInnerTxExecuted)
 }
 
 var BatchExecuteTimeGauge = prometheus.NewGaugeVec(
@@ -84,7 +84,13 @@ var RpcInnerTxExecuted = prometheus.NewCounter(
 var SeqTxDuration = prometheus.NewSummary(
 	prometheus.SummaryOpts{
 		Name: SeqTxDurationName,
-		Help: "[SEQUENCER] tx processing duration in microsecond",
+		Help: "[SEQUENCER] tx processing duration in millisecond (ms)",
+		Objectives: map[float64]float64{
+			0.5:  0.05,  // 50th percentile (median) with 5% error
+			0.9:  0.01,  // 90th percentile with 1% error
+			0.95: 0.005, // 95th percentile with 0.5% error
+			0.99: 0.001, // 99th percentile with 0.1% error
+		},
 	},
 )
 

@@ -566,7 +566,7 @@ func sequencingBatchStep(
 
 				// For X Layer
 				metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
-				metrics.SeqTxDuration.Observe(float64(time.Since(start).Microseconds()))
+				metrics.SeqTxDuration.Observe(float64(time.Since(start).Milliseconds()))
 
 				// remove bad and mined transactions from the list for inclusion
 				for i := len(batchState.blockState.transactionsForInclusion) - 1; i >= 0; i-- {

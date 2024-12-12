@@ -34,7 +34,7 @@ func newForkID4InstructionSet() JumpTable {
 
 	instructionSet[DIFFICULTY].execute = opDifficulty_zkevm
 
-	instructionSet[BLOCKHASH].execute = opBlockhash_zkevm
+	//instructionSet[BLOCKHASH].execute = opBlockhash_zkevm
 
 	instructionSet[EXTCODEHASH].execute = opExtCodeHash_zkevm
 

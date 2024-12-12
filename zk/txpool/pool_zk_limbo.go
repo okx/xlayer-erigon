@@ -2,6 +2,7 @@ package txpool
 
 import (
 	"fmt"
+	"github.com/ledgerwatch/log/v3"
 	"math"
 	"sync/atomic"
 
@@ -246,6 +247,7 @@ func (p *TxPool) UpdateLimboRootByTxHash(txHash *common.Hash, stateRoot *common.
 }
 
 func (p *TxPool) ProcessUncheckedLimboBlockDetails(limboBlock *LimboBlockDetails) {
+	log.Info("zjg, adding limbo block to tx pool")
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	p.limbo.uncheckedLimboBlocks = append(p.limbo.uncheckedLimboBlocks, limboBlock)

@@ -106,10 +106,12 @@ func updateStreamAndCheckRollback(
 	}
 
 	for _, verifierBundle := range checkedVerifierBundles {
+		log.Info(fmt.Sprintf("[%s] zjg,Verifying block %d", batchContext.s.LogPrefix(), verifierBundle.Request.GetLastBlockNumber()))
 		if verifierBundle.Response.Valid {
+			log.Info("zjg, Block %d is valid")
 			continue
 		}
-
+		log.Info(fmt.Sprintf("[%s] zjg, Block %d is invalid", batchContext.s.LogPrefix(), verifierBundle.Request.GetLastBlockNumber()))
 		// The sequencer can goes to this point of the code only in L1Recovery mode or Default Mode.
 		// There is no way to get here in LimboRecoveryMode
 		// If we are here in L1RecoveryMode then let's stop everything by using an infinite loop because something is quite wrong

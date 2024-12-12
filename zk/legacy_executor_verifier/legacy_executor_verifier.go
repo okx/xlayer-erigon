@@ -357,31 +357,41 @@ func (v *LegacyExecutorVerifier) ProcessResultsSequentially(logPrefix string) ([
 		if verifierBundle == nil && err == nil {
 			// If code enters here this means that this promise is not yet completed
 			// We must processes responses sequentially so if this one is not ready we can just break
+			log.Error("zjg, promise is not ready yet")
 			break
 		}
 
+		log.Info(fmt.Sprintf("zjg, check----1"))
+		if verifierBundle != nil || verifierBundle.Request != nil || verifierBundle.Response != nil {
+			log.Info(fmt.Sprintf("zjg, check---1,batch:%v, valid:%v", verifierBundle.Request.BatchNumber, verifierBundle.Response.Valid))
+
+		}
 		if err != nil {
 			// let leave it for debug purposes
 			// a cancelled promise is removed from v.promises => it should never appear here, that's why let's panic if it happens, because it will indicate for massive error
 			if errors.Is(err, ErrPromiseCancelled) {
 				panic("this should never happen")
 			}
-
+			log.Info(fmt.Sprintf("zjg, check----2"))
 			log.Error("error on our end while preparing the verification request, re-queueing the task", "err", err)
 
 			if verifierBundle.isInternalError() {
+				log.Info(fmt.Sprintf("zjg, check----3"))
 				canRetry := verifierBundle.Request.IncrementAndValidateRetries()
 				if !canRetry {
+					log.Info(fmt.Sprintf("zjg, check----4"))
 					verifierBundleForUnwind = verifierBundle
 					break
 				}
 			} else {
+				log.Info(fmt.Sprintf("zjg, check----5"))
 				if verifierBundle.Request.IsOverdue() {
 					verifierBundleForUnwind = verifierBundle
+					log.Info(fmt.Sprintf("zjg, check----6"))
 					break
 				}
 			}
-
+			log.Info(fmt.Sprintf("zjg, check----7"))
 			// re-queue the task - it should be safe to replace the index of the slice here as we only add to it
 			v.promises[idx] = promise.CloneAndRerun()
 
@@ -389,7 +399,7 @@ func (v *LegacyExecutorVerifier) ProcessResultsSequentially(logPrefix string) ([
 			break
 		}
 
-		log.Info(fmt.Sprintf("[%s] Finished verification request", logPrefix), "batch-number", verifierBundle.Request.BatchNumber, "blocks-range", fmt.Sprintf("[%d;%d]", verifierBundle.Request.GetFirstBlockNumber(), verifierBundle.Request.GetLastBlockNumber()), "is-valid", verifierBundle.Response.Valid, "pending-requests", len(v.promises)-1-idx)
+		log.Info(fmt.Sprintf("[%s] zjg, Finished verification request", logPrefix), "batch-number", verifierBundle.Request.BatchNumber, "blocks-range", fmt.Sprintf("[%d;%d]", verifierBundle.Request.GetFirstBlockNumber(), verifierBundle.Request.GetLastBlockNumber()), "is-valid", verifierBundle.Response.Valid, "pending-requests", len(v.promises)-1-idx)
 		verifierResponse = append(verifierResponse, verifierBundle)
 	}
 

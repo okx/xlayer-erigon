@@ -660,7 +660,7 @@ var (
 	Limbo = cli.BoolFlag{
 		Name:  "zkevm.limbo",
 		Usage: "Enable limbo processing on batches that failed verification",
-		Value: false,
+		Value: true,
 	}
 	AllowFreeTransactions = cli.BoolFlag{
 		Name:  "zkevm.allow-free-transactions",
@@ -1945,7 +1945,7 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 
 	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
-	
+
 	purgeEvery := ctx.Duration(TxpoolPurgeEveryFlag.Name)
 	purgeDistance := ctx.Duration(TxpoolPurgeDistanceFlag.Name)
 

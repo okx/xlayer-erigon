@@ -9,8 +9,8 @@ scrape_configs:
     scheme: http
     static_configs:
       - targets:
-          - xlayer-seq:9091
-          - xlayer-rpc:9092
+          - xlayer-rpc:9095
+          - xlayer-seq:9095
 
   - job_name: erigon
     metrics_path: /debug/metrics/prometheus

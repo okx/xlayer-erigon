@@ -23,7 +23,7 @@ var (
 	SeqTxDurationName    = SeqPrefix + "tx_duration"
 	SeqTxCountName       = SeqPrefix + "tx_count"
 	SeqFailTxCountName   = SeqPrefix + "fail_tx_count"
-	SeqGasPerSecondName  = SeqPrefix + "gas_per_second"
+	SeqBlockGasUsedName  = SeqPrefix + "block_gas_used"
 
 	RpcPrefix              = "rpc_"
 	RpcDynamicGasPriceName = RpcPrefix + "dynamic_gas_price"
@@ -36,7 +36,7 @@ func Init() {
 	prometheus.MustRegister(SeqTxDuration)
 	prometheus.MustRegister(SeqTxCount)
 	prometheus.MustRegister(SeqFailTxCount)
-	prometheus.MustRegister(SeqGasPerSecond)
+	prometheus.MustRegister(SeqBlockGasUsed)
 	prometheus.MustRegister(RpcDynamicGasPrice)
 	prometheus.MustRegister(RpcInnerTxExecuted)
 }
@@ -110,9 +110,9 @@ var SeqFailTxCount = prometheus.NewCounter(
 	},
 )
 
-var SeqGasPerSecond = prometheus.NewGauge(
+var SeqBlockGasUsed = prometheus.NewGauge(
 	prometheus.GaugeOpts{
-		Name: SeqGasPerSecondName,
-		Help: "[SEQUENCER] gas per second",
+		Name: SeqBlockGasUsedName,
+		Help: "[SEQUENCER] gas used per block",
 	},
 )

@@ -635,6 +635,7 @@ func sequencingBatchStep(
 		if elapsedSeconds != 0 {
 			gasPerSecond = float64(block.GasUsed()) / elapsedSeconds
 		}
+		metrics.SeqGasPerSecond.Set(gasPerSecond)
 
 		if gasPerSecond != 0 {
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions... (%d gas/s)", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions), int(gasPerSecond)), "info-tree-index", infoTreeIndexProgress)

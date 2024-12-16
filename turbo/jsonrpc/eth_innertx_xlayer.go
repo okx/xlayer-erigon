@@ -10,6 +10,7 @@ import (
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/log/v3"
 )
@@ -108,6 +109,7 @@ func (api *APIImpl) GetBlockInternalTransactions(ctx context.Context, number rpc
 	} else if len(blockInnerTxs) > len(block.Transactions()) {
 		log.Warn(fmt.Sprintf("block inner tx count %d is greater than block tx count %d", len(blockInnerTxs), len(block.Transactions())))
 	}
+	metrics.RpcInnerTxExecuted.Add(float64(len(blockInnerTxs)))
 
 	res := make(map[libcommon.Hash][]*zktypes.InnerTx)
 	for index, innerTxs := range blockInnerTxs[:len(block.Transactions())] {

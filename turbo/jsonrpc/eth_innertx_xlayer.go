@@ -33,6 +33,8 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 		if err != nil {
 			return nil, fmt.Errorf("json.Unmarshal failed: %v", err)
 		}
+		log.Info(fmt.Sprintf("%x GetInternalTransactions: %d inner txs", txnHash, len(innerTxs)))
+
 		return innerTxs, nil
 	}
 	if !api.EnableInnerTx {

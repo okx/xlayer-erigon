@@ -3,6 +3,8 @@ package hermez_db
 import (
 	"encoding/binary"
 	"fmt"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/types"
@@ -36,6 +38,12 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 	binary.BigEndian.PutUint64(prefix, blockNum)
 
 	it, err := db.tx.Prefix(INNER_TX, prefix)
+	defer func() {
+		if casted, ok := it.(kv.Closer); ok {
+			casted.Close()
+		}
+	}()
+
 	if err != nil {
 		log.Error("inner txs fetching failed", "err", err)
 		return nil
@@ -59,32 +67,50 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 	return blockInnerTxs
 }
 
-// TruncateInnerTx deletes inner txs from `from` to `to` block number
-func (db *HermezDb) TruncateInnerTx(from, to uint64) error {
-	for i := to; i <= from; i++ {
-		prefix := make([]byte, 8)
-		binary.BigEndian.PutUint64(prefix, i)
-		it, err := db.tx.Prefix(INNER_TX, prefix)
+// TruncateInnerTx deletes all inner txs of a block
+func (db *HermezDb) TruncateInnerTx(block uint64) error {
+	prefix := make([]byte, 8)
+	binary.BigEndian.PutUint64(prefix, block)
+
+	it, err := db.tx.Prefix(INNER_TX, prefix)
+	defer func() {
+		if casted, ok := it.(kv.Closer); ok {
+			casted.Close()
+		}
+	}()
+
+	if err != nil {
+		log.Error("inner txs fetching failed", "err", err)
+		return nil
+	}
+	var keyList [][]byte
+	for it.HasNext() {
+		k, v, err := it.Next()
+		if err != nil {
+			log.Error("inner txs fetching failed", "err", err)
+			return nil
+		}
+		innerTxs := make([]*types.InnerTx, 0)
+		if err := rlp.DecodeBytes(v, &innerTxs); err != nil {
+			err = fmt.Errorf("inner txs unmarshal failed:  %w", err)
+			log.Error("inner txs fetching failed", "err", err)
+			return nil
+		}
+		keyCopy := make([]byte, len(k))
+		copy(keyCopy, k)
+		keyList = append(keyList, keyCopy)
+	}
+
+	for _, k := range keyList {
+		err = db.tx.Delete(INNER_TX, k)
 		if err != nil {
 			log.Error("inner txs fetching failed", "err", err)
 			return err
 		}
-		var count int
-		for it.HasNext() {
-			k, _, err := it.Next()
-			if err != nil {
-				log.Error("inner txs fetching failed", "err", err)
-				return err
-			}
-			count = count + 1
-			err = db.tx.Delete(INNER_TX, k)
-			if err != nil {
-				log.Error("inner txs fetching failed", "err", err)
-				return err
-			}
-		}
-		log.Info("deleting inner txs", "block", i, "count", count)
 	}
 
+	afterTxs := db.GetInnerTxs(block)
+	afterCount := len(afterTxs)
+	log.Info("Delete inner txs", "block", block, "delete count", len(keyList), "after count", afterCount)
 	return nil
 }

@@ -981,12 +981,10 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 
 	// For X Layer
 	hermezDb := hermez_db.NewHermezDb(txc.Tx)
-	if err := hermezDb.TruncateInnerTx(s.BlockNumber, u.UnwindPoint+1); err != nil {
-		return fmt.Errorf("truncate hermez db: %w", err)
-	}
 	for i := u.UnwindPoint + 1; i <= s.BlockNumber; i++ {
-		txs := hermezDb.GetInnerTxs(i)
-		log.Info("Inner txs", "block", i, "txs", len(txs))
+		if err := hermezDb.TruncateInnerTx(i); err != nil {
+			return fmt.Errorf("truncate inner tx: %w", err)
+		}
 	}
 
 	// Truncate CallTraceSet

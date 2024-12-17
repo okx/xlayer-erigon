@@ -484,7 +484,6 @@ func executeBlockZk(
 }
 
 func UnwindExecutionStageZk(u *UnwindState, s *StageState, tx kv.RwTx, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool) (err error) {
-	log.Info(fmt.Sprintf("zjg,----------------UnwindExecutionStageZk---0,%v,%v", u.UnwindPoint, s.BlockNumber))
 	if u.UnwindPoint >= s.BlockNumber {
 		return nil
 	}
@@ -495,7 +494,6 @@ func UnwindExecutionStageZk(u *UnwindState, s *StageState, tx kv.RwTx, ctx conte
 		}
 		defer tx.Rollback()
 	}
-	log.Info("zjg,----------------UnwindExecutionStageZk---1")
 	log.Info(fmt.Sprintf("[%s] Unwind Execution", u.LogPrefix()), "from", s.BlockNumber, "to", u.UnwindPoint)
 
 	logger := log.New()

@@ -832,7 +832,6 @@ func logProgress(logPrefix string, total, initialBlock, prevBlock uint64, prevTi
 }
 
 func UnwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, ctx context.Context, cfg ExecuteBlockCfg, initialCycle bool, logger log.Logger) (err error) {
-	log.Info("zjg,----------------UnwindExecutionStage---0")
 	if u.UnwindPoint >= s.BlockNumber {
 		return nil
 	}
@@ -866,7 +865,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 	logPrefix := s.LogPrefix()
 	stateBucket := kv.PlainState
 	storageKeyLength := length.Addr + length.Incarnation + length.Hash
-	log.Info("zjg,----------------0")
 	var accumulator *shards.Accumulator
 	if cfg.stateStream && s.BlockNumber-u.UnwindPoint < stateStreamLimit {
 		accumulator = cfg.accumulator
@@ -881,21 +879,17 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 		}
 		accumulator.StartChange(u.UnwindPoint, hash, txs, true)
 	}
-	log.Info("zjg,----------------1")
 	if cfg.historyV3 {
 		return unwindExec3(u, s, txc, ctx, cfg, accumulator, logger)
 	}
-	log.Info("zjg,----------------2")
 	changes := etl.NewCollector(logPrefix, cfg.dirs.Tmp, etl.NewOldestEntryBuffer(etl.BufferOptimalSize), logger)
 	defer changes.Close()
 	errRewind := changeset.RewindData(txc.Tx, s.BlockNumber, u.UnwindPoint, changes, ctx.Done())
 	if errRewind != nil {
 		return fmt.Errorf("getting rewind data: %w", errRewind)
 	}
-	log.Info("zjg,----------------3")
 	if err := changes.Load(txc.Tx, stateBucket, func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
 		if len(k) == 20 {
-			log.Info("zjg,----------------4")
 			if len(v) > 0 {
 				var acc accounts.Account
 				if err := acc.DecodeForStorage(v); err != nil {
@@ -921,7 +915,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 						}
 					}
 				}
-				log.Info("zjg,----------------5")
 				newV := make([]byte, acc.EncodingLengthForStorage())
 				acc.EncodeForStorage(newV)
 				if accumulator != nil {
@@ -931,7 +924,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 					return err
 				}
 			} else {
-				log.Info("zjg,----------------6")
 				if accumulator != nil {
 					var address common.Address
 					copy(address[:], k)
@@ -943,7 +935,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 			}
 			return nil
 		}
-		log.Info("zjg,----------------7")
 		if accumulator != nil {
 			var address common.Address
 			var incarnation uint64
@@ -968,7 +959,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 	}, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
 		return err
 	}
-	log.Info("zjg,----------------8")
 	if err := historyv2.Truncate(txc.Tx, u.UnwindPoint+1); err != nil {
 		return err
 	}
@@ -983,11 +973,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 		return fmt.Errorf("delete newer epochs: %w", err)
 	}
 
-	if err := rawdb.TruncateReceipts(txc.Tx, u.UnwindPoint+1); err != nil {
-		return fmt.Errorf("truncate receipts: %w", err)
-	}
-
-	log.Info("zjg,----------------9")
 	//For X Layer
 	hermezDb := hermez_db.NewHermezDb(txc.Tx)
 	if err := hermezDb.TruncateInnerTx(s.BlockNumber, u.UnwindPoint+1); err != nil {
@@ -1009,7 +994,6 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 			return err
 		}
 	}
-	log.Info("zjg,----------------9")
 	return nil
 }
 

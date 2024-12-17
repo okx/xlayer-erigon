@@ -89,9 +89,6 @@ type BatchesCfg struct {
 	miningConfig         *params.MiningConfig
 }
 
-var isNeedToUnwind = true
-var unwindBlock = uint64(30)
-
 func StageBatchesCfg(db kv.RwDB, dsClient DatastreamClient, zkCfg *ethconfig.Zk, chainConfig *chain.Config, miningConfig *params.MiningConfig, options ...Option) BatchesCfg {
 	cfg := BatchesCfg{
 		db:                  db,
@@ -225,12 +222,6 @@ func SpawnStageBatches(
 		// thus we should unwind as well and continue from there
 		if highestDSL2Block != stageProgressBlockNo {
 			log.Info(fmt.Sprintf("[%s] Highest block in datastream", logPrefix), "datastreamBlock", highestDSL2Block, "stageProgressBlockNo", stageProgressBlockNo)
-			break
-		}
-		if isNeedToUnwind && highestDSL2Block == unwindBlock {
-			isNeedToUnwind = false
-			highestDSL2Block = 10
-			log.Info("zjg, need to unwind")
 			break
 		}
 

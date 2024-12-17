@@ -865,6 +865,7 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 	logPrefix := s.LogPrefix()
 	stateBucket := kv.PlainState
 	storageKeyLength := length.Addr + length.Incarnation + length.Hash
+
 	var accumulator *shards.Accumulator
 	if cfg.stateStream && s.BlockNumber-u.UnwindPoint < stateStreamLimit {
 		accumulator = cfg.accumulator
@@ -879,15 +880,18 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 		}
 		accumulator.StartChange(u.UnwindPoint, hash, txs, true)
 	}
+
 	if cfg.historyV3 {
 		return unwindExec3(u, s, txc, ctx, cfg, accumulator, logger)
 	}
+
 	changes := etl.NewCollector(logPrefix, cfg.dirs.Tmp, etl.NewOldestEntryBuffer(etl.BufferOptimalSize), logger)
 	defer changes.Close()
 	errRewind := changeset.RewindData(txc.Tx, s.BlockNumber, u.UnwindPoint, changes, ctx.Done())
 	if errRewind != nil {
 		return fmt.Errorf("getting rewind data: %w", errRewind)
 	}
+
 	if err := changes.Load(txc.Tx, stateBucket, func(k, v []byte, table etl.CurrentTableReader, next etl.LoadNextFunc) error {
 		if len(k) == 20 {
 			if len(v) > 0 {
@@ -915,6 +919,7 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 						}
 					}
 				}
+
 				newV := make([]byte, acc.EncodingLengthForStorage())
 				acc.EncodeForStorage(newV)
 				if accumulator != nil {
@@ -959,6 +964,7 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 	}, etl.TransformArgs{Quit: ctx.Done()}); err != nil {
 		return err
 	}
+
 	if err := historyv2.Truncate(txc.Tx, u.UnwindPoint+1); err != nil {
 		return err
 	}
@@ -994,6 +1000,7 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 			return err
 		}
 	}
+
 	return nil
 }
 

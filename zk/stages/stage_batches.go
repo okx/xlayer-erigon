@@ -224,7 +224,6 @@ func SpawnStageBatches(
 			log.Info(fmt.Sprintf("[%s] Highest block in datastream", logPrefix), "datastreamBlock", highestDSL2Block, "stageProgressBlockNo", stageProgressBlockNo)
 			break
 		}
-
 		if time.Since(newBlockCheckStartTIme) > 10*time.Second {
 			log.Info(fmt.Sprintf("[%s] Waiting for at least one new block in datastream", logPrefix), "datastreamBlock", highestDSL2Block, "last processed block", stageProgressBlockNo)
 			newBlockCheckStartTIme = time.Now()

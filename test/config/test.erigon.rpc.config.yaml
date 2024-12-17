@@ -39,7 +39,7 @@ zkevm.default-gas-price: 1000000000
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
 zkevm.allow-free-transactions: true
-zkevm.allow-internal-transactions: true
+zkevm.allow-internal-transactions: false
 externalcl: true
 http.api: [eth, debug, net, trace, web3, erigon, txpool, zkevm]
 http.addr: 0.0.0.0

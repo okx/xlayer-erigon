@@ -3,7 +3,6 @@ package hermez_db
 import (
 	"encoding/binary"
 	"fmt"
-
 	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/types"
@@ -58,4 +57,34 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 		blockInnerTxs = append(blockInnerTxs, innerTxs)
 	}
 	return blockInnerTxs
+}
+
+// TruncateInnerTx removes all inner txs with block number greater than the given number
+func (db *HermezDb) TruncateInnerTx(from, to uint64) error {
+	for i := to; i <= from; i++ {
+		prefix := make([]byte, 8)
+		binary.BigEndian.PutUint64(prefix, i)
+		it, err := db.tx.Prefix(INNER_TX, prefix)
+		if err != nil {
+			log.Error("inner txs fetching failed", "err", err)
+			return err
+		}
+		var count int
+		for it.HasNext() {
+			k, _, err := it.Next()
+			if err != nil {
+				log.Error("inner txs fetching failed", "err", err)
+				return err
+			}
+			count = count + 1
+			err = db.tx.Delete(INNER_TX, k)
+			if err != nil {
+				log.Error("inner txs fetching failed", "err", err)
+				return err
+			}
+		}
+		log.Info("deleting inner txs", "block", i, "count", count)
+	}
+
+	return nil
 }

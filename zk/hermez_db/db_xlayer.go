@@ -38,16 +38,16 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 	binary.BigEndian.PutUint64(prefix, blockNum)
 
 	it, err := db.tx.Prefix(INNER_TX, prefix)
+	if err != nil {
+		log.Error("inner txs fetching failed", "err", err)
+		return nil
+	}
 	defer func() {
 		if casted, ok := it.(kv.Closer); ok {
 			casted.Close()
 		}
 	}()
 
-	if err != nil {
-		log.Error("inner txs fetching failed", "err", err)
-		return nil
-	}
 	for it.HasNext() {
 		_, v, err := it.Next()
 		if err != nil {
@@ -73,16 +73,16 @@ func (db *HermezDb) TruncateInnerTx(block uint64) error {
 	binary.BigEndian.PutUint64(prefix, block)
 
 	it, err := db.tx.Prefix(INNER_TX, prefix)
+	if err != nil {
+		log.Error("inner txs fetching failed", "err", err)
+		return nil
+	}
 	defer func() {
 		if casted, ok := it.(kv.Closer); ok {
 			casted.Close()
 		}
 	}()
 
-	if err != nil {
-		log.Error("inner txs fetching failed", "err", err)
-		return nil
-	}
 	var keyList [][]byte
 	for it.HasNext() {
 		k, v, err := it.Next()

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/c2h5oh/datasize"
@@ -21,8 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
 	"github.com/ledgerwatch/erigon/zk/hermez_db"
-
-	"os"
 
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/core/rawdb"
@@ -465,8 +464,8 @@ func executeBlockZk(
 
 	// For X Layer
 	if writeInnerTxs {
-		if err := woHermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
-			return nil, err
+		if err = woHermezDb.WriteInnerTxs(blockNum, execRs.InnerTxs); err != nil {
+			log.Warn(fmt.Sprintf("Write inner tx error %s", err))
 		}
 	}
 

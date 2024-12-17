@@ -85,14 +85,8 @@ func (db *HermezDb) TruncateInnerTx(block uint64) error {
 
 	var keyList [][]byte
 	for it.HasNext() {
-		k, v, err := it.Next()
+		k, _, err := it.Next()
 		if err != nil {
-			log.Error("inner txs fetching failed", "err", err)
-			return nil
-		}
-		innerTxs := make([]*types.InnerTx, 0)
-		if err := rlp.DecodeBytes(v, &innerTxs); err != nil {
-			err = fmt.Errorf("inner txs unmarshal failed:  %w", err)
 			log.Error("inner txs fetching failed", "err", err)
 			return nil
 		}
@@ -109,8 +103,7 @@ func (db *HermezDb) TruncateInnerTx(block uint64) error {
 		}
 	}
 
-	afterTxs := db.GetInnerTxs(block)
-	afterCount := len(afterTxs)
-	log.Info("Delete inner txs", "block", block, "delete count", len(keyList), "after count", afterCount)
+	remainTxs := db.GetInnerTxs(block)
+	log.Info("Delete inner txs", "block", block, "deleted count", len(keyList), "expect remain count 0:", len(remainTxs))
 	return nil
 }

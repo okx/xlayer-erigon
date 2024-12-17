@@ -59,7 +59,7 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 	return blockInnerTxs
 }
 
-// TruncateInnerTx removes all inner txs with block number greater than the given number
+// TruncateInnerTx deletes inner txs from `from` to `to` block number
 func (db *HermezDb) TruncateInnerTx(from, to uint64) error {
 	for i := to; i <= from; i++ {
 		prefix := make([]byte, 8)

@@ -72,8 +72,6 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR)
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
 
 .PHONY: all
 all: ## Runs a full node
@@ -108,6 +106,10 @@ all: ## Runs a full node
 	$(RUN_DOCKER_BRIDGE_SERVICE)
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_UI)
+
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)
 
 .PHONY: stop
 stop: ## Stops all services

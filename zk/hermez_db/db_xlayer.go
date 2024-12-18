@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon/rlp"
 	"github.com/ledgerwatch/erigon/zk/types"
@@ -41,6 +42,12 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 		log.Error("inner txs fetching failed", "err", err)
 		return nil
 	}
+	defer func() {
+		if casted, ok := it.(kv.Closer); ok {
+			casted.Close()
+		}
+	}()
+
 	for it.HasNext() {
 		_, v, err := it.Next()
 		if err != nil {
@@ -58,4 +65,45 @@ func (db *HermezDbReader) GetInnerTxs(blockNum uint64) [][]*types.InnerTx {
 		blockInnerTxs = append(blockInnerTxs, innerTxs)
 	}
 	return blockInnerTxs
+}
+
+// TruncateInnerTx deletes all inner txs of a block
+func (db *HermezDb) TruncateInnerTx(block uint64) error {
+	prefix := make([]byte, 8)
+	binary.BigEndian.PutUint64(prefix, block)
+
+	it, err := db.tx.Prefix(INNER_TX, prefix)
+	if err != nil {
+		log.Error("inner txs fetching failed", "err", err)
+		return nil
+	}
+	defer func() {
+		if casted, ok := it.(kv.Closer); ok {
+			casted.Close()
+		}
+	}()
+
+	var keyList [][]byte
+	for it.HasNext() {
+		k, _, err := it.Next()
+		if err != nil {
+			log.Error("inner txs fetching failed", "err", err)
+			return nil
+		}
+		keyCopy := make([]byte, len(k))
+		copy(keyCopy, k)
+		keyList = append(keyList, keyCopy)
+	}
+
+	for _, k := range keyList {
+		err = db.tx.Delete(INNER_TX, k)
+		if err != nil {
+			log.Error("inner txs fetching failed", "err", err)
+			return err
+		}
+	}
+
+	remainTxs := db.GetInnerTxs(block)
+	log.Info("Delete inner txs", "block", block, "deleted count", len(keyList), "expect remain count 0:", len(remainTxs))
+	return nil
 }

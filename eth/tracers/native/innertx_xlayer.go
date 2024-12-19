@@ -352,7 +352,12 @@ func internalTxTraceToInnerTx(currentTx okFrame, name string, depth int, index i
 		IsError:      false,
 		//ReturnGas:    currentTx.Gas - currentTx.GasUsed,
 	}
-	callTx.InternalIndex = *big.NewInt(int64(index - 2))
+	if index-2 >= 0 {
+		callTx.InternalIndex = *big.NewInt(int64(index - 2))
+	} else {
+		callTx.InternalIndex = *big.NewInt(0)
+		log.Error("internalTxTraceToInnerTx got -ve internal index.", "index", index, "calc idx", index-2)
+	}
 	if strings.ToLower(currentTx.Type.String()) == "callcode" {
 		callTx.CodeAddress = currentTx.To.String()
 	}

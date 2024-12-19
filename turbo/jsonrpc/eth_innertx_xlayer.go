@@ -26,14 +26,14 @@ func (api *APIImpl) GetInternalTransactions(ctx context.Context, txnHash libcomm
 		stream := jsoniter.NewStream(jsoniter.ConfigDefault, &buf, 4096)
 		err := api.getInternalTransactionsByTracer(ctx, txnHash, stream)
 		if err != nil {
-			return nil, fmt.Errorf("getInternalTransactionsByTracer failed: %v", err)
+			return nil, fmt.Errorf("getInternalTransactionsByTracer failed: %w", err)
 		}
 		var innerTxs = make([]*zktypes.InnerTx, 0)
 		err = json.Unmarshal(buf.Bytes(), &innerTxs)
 		if err != nil {
-			return nil, fmt.Errorf("json.Unmarshal failed: %v", err)
+			return nil, fmt.Errorf("json.Unmarshal failed: %w", err)
 		}
-		log.Info(fmt.Sprintf("%x GetInternalTransactions: %d inner txs", txnHash, len(innerTxs)))
+		log.Info("GetInternalTransactions", "tx hash", txnHash, "inner txs count", len(innerTxs))
 
 		return innerTxs, nil
 	}

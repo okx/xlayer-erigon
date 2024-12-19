@@ -342,7 +342,7 @@ func internalTxTraceToInnerTx(currentTx okFrame, name string, depth int, index i
 		From:         currentTx.From.String(),
 		To:           toAddress,
 		ValueWei:     value.String(),
-		CallValueWei: value.String(),
+		CallValueWei: hexutil.EncodeBig(value),
 		CallType:     strings.ToLower(currentTx.Type.String()),
 		Name:         name,
 		Input:        hexutil.Encode(currentTx.Input),
@@ -352,7 +352,7 @@ func internalTxTraceToInnerTx(currentTx okFrame, name string, depth int, index i
 		IsError:      false,
 		//ReturnGas:    currentTx.Gas - currentTx.GasUsed,
 	}
-	callTx.InternalIndex = *big.NewInt(int64(index - 1))
+	callTx.InternalIndex = *big.NewInt(int64(index))
 	if strings.ToLower(currentTx.Type.String()) == "callcode" {
 		callTx.CodeAddress = currentTx.To.String()
 	}

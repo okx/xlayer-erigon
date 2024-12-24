@@ -101,6 +101,7 @@ services:
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
+      - 6060:6060
       - 8123:8545
       - 6900:6900
       - 9092:9095

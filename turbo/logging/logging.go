@@ -1,18 +1,25 @@
 package logging
 
 import (
+	"encoding/json"
 	"flag"
-	"os"
-	"path/filepath"
-	"strconv"
-
+	"fmt"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spf13/cobra"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common/metrics"
 )
+
+const timeFormat = "2006-01-02T15:04:05-0700"
+const errorKey = "LOG15_ERROR"
 
 // Determine the log dir path based on the given urfave context
 func LogDirPath(ctx *cli.Context) string {
@@ -198,7 +205,7 @@ func initSeparatedLogging(
 	var consoleHandler log.Handler
 
 	if consoleJson {
-		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StreamHandler(os.Stderr, log.JsonFormat()))
+		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StreamHandler(os.Stderr, JsonFormatEx(true, true)))
 	} else {
 		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StderrHandler)
 	}
@@ -214,7 +221,6 @@ func initSeparatedLogging(
 		logger.Warn("failed to create log dir, console logging only")
 		return
 	}
-
 	dirFormat := log.TerminalFormatNoColor()
 	if dirJson {
 		dirFormat = log.JsonFormat()
@@ -231,6 +237,91 @@ func initSeparatedLogging(
 	mux := log.MultiHandler(consoleHandler, log.LvlFilterHandler(dirLevel, userLog))
 	logger.SetHandler(mux)
 	logger.Info("logging to file system", "log dir", dirPath, "file prefix", filePrefix, "log level", dirLevel, "json", dirJson)
+}
+
+func JsonFormatEx(pretty, lineSeparated bool) log.Format {
+	jsonMarshal := json.Marshal
+	if pretty {
+		jsonMarshal = func(v interface{}) ([]byte, error) {
+			return json.MarshalIndent(v, "", "    ")
+		}
+	}
+
+	return log.FormatFunc(func(r *log.Record) []byte {
+
+		r.KeyNames = log.RecordKeyNames{
+			Time: "time",
+			Msg:  "content",
+			Lvl:  "level",
+		}
+
+		props := make(map[string]interface{})
+
+		props[r.KeyNames.Time] = r.Time
+		props[r.KeyNames.Lvl] = strings.ToUpper(r.Lvl.String())
+		props[r.KeyNames.Msg] = r.Msg
+
+		for i := 0; i < len(r.Ctx); i += 2 {
+			k, ok := r.Ctx[i].(string)
+			if !ok {
+				props[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
+			}
+			props[k] = formatJSONValue(r.Ctx[i+1])
+		}
+
+		b, err := jsonMarshal(props)
+		if err != nil {
+			b, _ = jsonMarshal(map[string]string{
+				errorKey: err.Error(),
+			})
+			return b
+		}
+
+		if lineSeparated {
+			b = append(b, '\n')
+		}
+
+		return b
+	})
+}
+
+func formatJSONValue(value interface{}) interface{} {
+	value = formatShared(value)
+
+	switch value.(type) {
+	case int, int8, int16, int32, int64, float32, float64, uint, uint8, uint16, uint32, uint64, string:
+		return value
+	case interface{}, map[string]interface{}, []interface{}:
+		return value
+	default:
+		return fmt.Sprintf("%+v", value)
+	}
+}
+
+func formatShared(value interface{}) (result interface{}) {
+	defer func() {
+		if err := recover(); err != nil {
+			if v := reflect.ValueOf(value); v.Kind() == reflect.Ptr && v.IsNil() {
+				result = "nil"
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
+	switch v := value.(type) {
+	case time.Time:
+		return v.Format(timeFormat)
+
+	case error:
+		return v.Error()
+
+	case fmt.Stringer:
+		return v.String()
+
+	default:
+		return v
+	}
 }
 
 func tryGetLogLevel(s string) (log.Lvl, error) {

@@ -23,3 +23,11 @@ scrape_configs:
           - host.docker.internal:6060 # this is how docker-for-mac allow to access host machine
           - host.docker.internal:6061
           - host.docker.internal:6062
+  
+  - job_name: panoptichain
+    metrics_path: /metrics
+    scheme: http
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - panoptichain:9090

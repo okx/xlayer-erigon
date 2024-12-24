@@ -46,7 +46,7 @@ RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 RUN_DOCKER_DS := $(DOCKER_COMPOSE) up -d $(DOCKER_DS)
 RUN_DOCKER_PROMETHEUS := $(DOCKER_COMPOSE) up -d $(DOCKER_PROMETHEUS)
 RUN_DOCKER_GRAFANA := $(DOCKER_COMPOSE) up -d $(DOCKER_GRAFANA)
-
+RUN_DOCKER_PANOPTICHAIN := $(DOCKER_COMPOSE) up -d $(DOCKER_PANOPTICHAIN)
 STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 
 .PHONY: run
@@ -72,6 +72,11 @@ run: ## Runs a full node
 	$(RUN_DOCKER_AGGREGATOR)
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
+
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)
+	$(RUN_DOCKER_PANOPTICHAIN)
 
 .PHONY: all
 all: ## Runs a full node
@@ -110,7 +115,7 @@ all: ## Runs a full node
 	# monitoring services
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
-
+	$(RUN_DOCKER_PANOPTICHAIN)
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)

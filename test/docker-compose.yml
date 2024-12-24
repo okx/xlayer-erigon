@@ -16,6 +16,10 @@ services:
       - ./config/test.stateless_executor.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
 
   xlayer-seqs:
     container_name: xlayer-seqs
@@ -378,3 +382,10 @@ services:
       - ${XDG_DATA_HOME:-~/.local/share}/erigon-grafana:/var/lib/grafana
     restart: unless-stopped
 
+  panoptichain:
+    image: minhdvu/panoptichain:0.1.62
+    environment:
+      - PANOPTICHAIN_HTTP_ADDRESS=0.0.0.0
+      - PANOPTICHAIN_HTTP_PORT=9090
+    volumes:
+      - ../cmd/prometheus/panoptichain.yml:/etc/panoptichain/config.yml

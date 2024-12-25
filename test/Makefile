@@ -73,6 +73,10 @@ run: ## Runs a full node
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
 
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)
+
 .PHONY: all
 all: ## Runs a full node
 	# base services

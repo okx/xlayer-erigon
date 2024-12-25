@@ -212,12 +212,6 @@ services:
   xlayer-pool-manager:
     container_name: xlayer-pool-manager
     image: hermeznetwork/zkevm-pool-manager:v0.1.0-RC1
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 512M
     ports:
       - 8125:8545
     volumes:

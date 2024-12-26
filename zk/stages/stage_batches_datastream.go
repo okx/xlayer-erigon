@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"math/rand"
 	"sync/atomic"
-
-	"github.com/ledgerwatch/log/v3"
 	"time"
+
+	"github.com/ledgerwatch/erigon/zk/datastream/client"
+	"github.com/ledgerwatch/log/v3"
 )
 
 type DatastreamClientRunner struct {
@@ -23,8 +24,13 @@ func NewDatastreamClientRunner(dsClient DatastreamClient, logPrefix string) *Dat
 	}
 }
 
-func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
-	r.dsClient.RenewEntryChannel()
+func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}, diffBlock uint64) error {
+	if diffBlock > client.DefaultEntryChannelSize {
+		r.dsClient.RenewMaxEntryChannel()
+	} else {
+		r.dsClient.RenewEntryChannel()
+	}
+
 	if r.isReading.Load() {
 		return fmt.Errorf("tried starting datastream client runner thread while another is running")
 	}

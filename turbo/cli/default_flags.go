@@ -176,7 +176,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.L2ChainIdFlag,
 	&utils.L2RpcUrlFlag,
 	&utils.L2DataStreamerUrlFlag,
-	&utils.L2DataStreamerEntryChanSizeFlag,
+	&utils.L2DataStreamerMaxEntryChanFlag,
 	&utils.L2DataStreamerTimeout,
 	&utils.L2ShortCircuitToVerifiedBatchFlag,
 	&utils.L1SyncStartBlock,

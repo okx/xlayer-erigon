@@ -415,9 +415,9 @@ var (
 		Usage: "L2 datastreamer endpoint",
 		Value: "",
 	}
-	L2DataStreamerEntryChanSizeFlag = cli.Uint64Flag{
-		Name:  "zkevm.l2-datastreamer-entry-channel-size",
-		Usage: "L2 datastreamer entry channel size",
+	L2DataStreamerMaxEntryChanFlag = cli.Uint64Flag{
+		Name:  "zkevm.l2-datastreamer-max-entrychan",
+		Usage: "L2 datastreamer max entry channel size",
 		Value: 1000000,
 	}
 	L2DataStreamerTimeout = cli.StringFlag{

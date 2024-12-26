@@ -60,6 +60,7 @@ type HermezDb interface {
 
 type DatastreamClient interface {
 	RenewEntryChannel()
+	RenewMaxEntryChannel()
 	ReadAllEntriesToChannel() error
 	StopReadingToChannel()
 	GetEntryChan() *chan interface{}
@@ -281,7 +282,7 @@ func SpawnStageBatches(
 	// start routine to download blocks and push them in a channel
 	errorChan := make(chan struct{})
 	dsClientRunner := NewDatastreamClientRunner(dsQueryClient, logPrefix)
-	dsClientRunner.StartRead(errorChan)
+	dsClientRunner.StartRead(errorChan, highestDSL2Block-stageProgressBlockNo)
 	defer dsClientRunner.StopRead()
 
 	entryChan := dsQueryClient.GetEntryChan()

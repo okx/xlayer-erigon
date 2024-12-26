@@ -91,7 +91,7 @@ func NewClient(ctx context.Context, server string, version int, checkTimeout tim
 		server:       server,
 		version:      version,
 		streamType:   StSequencer,
-		entryChan:    make(chan interface{}, 100000),
+		entryChan:    make(chan interface{}, 100000000),
 		currentFork:  uint64(latestDownloadedForkId),
 		mtxStreaming: &sync.Mutex{},
 	}

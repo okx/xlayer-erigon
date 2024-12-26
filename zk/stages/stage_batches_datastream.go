@@ -41,25 +41,14 @@ func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
 		if err := r.dsClient.ReadAllEntriesToChannel(); err != nil {
-			time.Sleep(1 * time.Second)
+			for len(*r.dsClient.GetEntryChan()) > 0 {
+				log.Info("Waiting for all entries to be processed before stopping....")
+				time.Sleep(1 * time.Second)
+			}
 			errorChan <- struct{}{}
 			log.Warn(fmt.Sprintf("[%s] Error downloading blocks from datastream", r.logPrefix), "error", err)
 		}
 	}()
-
-	return nil
-}
-
-func (r *DatastreamClientRunner) AutoPauseOrResume() error {
-	entryChanLen := len(*r.dsClient.GetEntryChan())
-	if r.isPausing.Load() && entryChanLen < 10000 {
-		r.dsClient.Resume()
-		r.isPausing.Store(false)
-	}
-	if !r.isPausing.Load() && entryChanLen > 90000 {
-		r.dsClient.Pause()
-		r.isPausing.Store(true)
-	}
 
 	return nil
 }

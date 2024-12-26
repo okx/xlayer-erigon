@@ -315,7 +315,6 @@ func SpawnStageBatches(
 				return fmt.Errorf("ProcessEntry: %w", err)
 			}
 			dsClientProgress.Store(batchProcessor.LastBlockHeight())
-			dsClientRunner.AutoPauseOrResume()
 		case <-ctx.Done():
 			log.Warn(fmt.Sprintf("[%s] Context done", logPrefix))
 			endLoop = true

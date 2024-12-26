@@ -41,8 +41,8 @@ func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
 		if err := r.dsClient.ReadAllEntriesToChannel(); err != nil {
+			log.Info("Waiting for all entries to be processed before stopping....")
 			for len(*r.dsClient.GetEntryChan()) > 0 {
-				log.Info("Waiting for all entries to be processed before stopping....")
 				time.Sleep(1 * time.Second)
 			}
 			errorChan <- struct{}{}

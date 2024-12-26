@@ -28,7 +28,7 @@ type EntityDefinition struct {
 const (
 	versionProto         = 2 // converted to proto
 	versionAddedBlockEnd = 3 // Added block end
-	entryChannelSize     = 100000
+	entryChannelSize     = 10000000
 )
 
 var (
@@ -91,7 +91,7 @@ func NewClient(ctx context.Context, server string, version int, checkTimeout tim
 		server:       server,
 		version:      version,
 		streamType:   StSequencer,
-		entryChan:    make(chan interface{}, 100000000),
+		entryChan:    make(chan interface{}, entryChannelSize),
 		currentFork:  uint64(latestDownloadedForkId),
 		mtxStreaming: &sync.Mutex{},
 	}

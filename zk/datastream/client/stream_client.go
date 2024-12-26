@@ -26,9 +26,9 @@ type EntityDefinition struct {
 }
 
 const (
-	versionProto         = 2 // converted to proto
-	versionAddedBlockEnd = 3 // Added block end
-	entryChannelSize     = 10000000
+	versionProto            = 2 // converted to proto
+	versionAddedBlockEnd    = 3 // Added block end
+	DefaultEntryChannelSize = 1000000
 )
 
 var (
@@ -56,7 +56,8 @@ type StreamClient struct {
 	stopReadingToChannel atomic.Bool
 
 	// Channels
-	entryChan chan interface{}
+	entryChan     chan interface{}
+	entryChanSize uint64
 
 	// keeps track of the latest fork from the stream to assign to l2 blocks
 	currentFork uint64
@@ -84,16 +85,17 @@ const (
 
 // Creates a new client fo datastream
 // server must be in format "url:port"
-func NewClient(ctx context.Context, server string, version int, checkTimeout time.Duration, latestDownloadedForkId uint16) *StreamClient {
+func NewClient(ctx context.Context, server string, version int, checkTimeout time.Duration, latestDownloadedForkId uint16, entryChanSize uint64) *StreamClient {
 	c := &StreamClient{
-		ctx:          ctx,
-		checkTimeout: checkTimeout,
-		server:       server,
-		version:      version,
-		streamType:   StSequencer,
-		entryChan:    make(chan interface{}, entryChannelSize),
-		currentFork:  uint64(latestDownloadedForkId),
-		mtxStreaming: &sync.Mutex{},
+		ctx:           ctx,
+		checkTimeout:  checkTimeout,
+		server:        server,
+		version:       version,
+		streamType:    StSequencer,
+		entryChan:     make(chan interface{}, entryChanSize),
+		entryChanSize: entryChanSize,
+		currentFork:   uint64(latestDownloadedForkId),
+		mtxStreaming:  &sync.Mutex{},
 	}
 
 	return c
@@ -303,37 +305,6 @@ func (c *StreamClient) Stop() error {
 	return nil
 }
 
-func (c *StreamClient) Pause() error {
-	if c.conn != nil {
-		return nil
-	}
-	if err := c.sendStopCmd(); err != nil {
-		return fmt.Errorf("sendStopCmd: %w", err)
-	}
-	return nil
-}
-
-func (c *StreamClient) Resume() error {
-	var bookmark *types.BookmarkProto
-	progress := c.progress.Load()
-	if progress == 0 {
-		bookmark = types.NewBookmarkProto(0, datastream.BookmarkType_BOOKMARK_TYPE_BATCH)
-	} else {
-		bookmark = types.NewBookmarkProto(progress+1, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
-	}
-
-	protoBookmark, err := bookmark.Marshal()
-	if err != nil {
-		return err
-	}
-
-	// send start command
-	if _, err := c.initiateDownloadBookmark(protoBookmark); err != nil {
-		return fmt.Errorf("initiateDownloadBookmark: %w", err)
-	}
-	return nil
-}
-
 // Command header: Get status
 // Returns the current status of the header.
 // If started, terminate the connection.
@@ -444,7 +415,7 @@ func (c *StreamClient) clearEntryCHannel() {
 // close old entry chan and read all elements before opening a new one
 func (c *StreamClient) RenewEntryChannel() {
 	c.clearEntryCHannel()
-	c.entryChan = make(chan interface{}, entryChannelSize)
+	c.entryChan = make(chan interface{}, c.entryChanSize)
 }
 
 func (c *StreamClient) ReadAllEntriesToChannel() (err error) {

@@ -14,7 +14,6 @@ type DatastreamClientRunner struct {
 	logPrefix  string
 	stopRunner atomic.Bool
 	isReading  atomic.Bool
-	isPausing  atomic.Bool
 }
 
 func NewDatastreamClientRunner(dsClient DatastreamClient, logPrefix string) *DatastreamClientRunner {

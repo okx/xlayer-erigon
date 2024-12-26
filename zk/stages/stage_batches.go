@@ -299,10 +299,13 @@ func SpawnStageBatches(
 		case <-errorChan:
 			log.Warn("Error in datastream client, stopping consumption")
 			endLoop = true
+			log.Info("zjg, end loop true --- 10")
 		case entry := <-*entryChan:
+			log.Info(fmt.Sprintf("zjg, entryChan:%v", len(*entryChan)))
 			// DEBUG LIMIT - don't write more than we need to
 			if cfg.zkCfg.DebugLimit > 0 && batchProcessor.LastBlockHeight() >= cfg.zkCfg.DebugLimit {
 				endLoop = true
+				log.Info("zjg, end loop true --- 11")
 				break
 			}
 			if endLoop, err = batchProcessor.ProcessEntry(entry); err != nil {
@@ -315,6 +318,7 @@ func SpawnStageBatches(
 			dsClientProgress.Store(batchProcessor.LastBlockHeight())
 		case <-ctx.Done():
 			log.Warn(fmt.Sprintf("[%s] Context done", logPrefix))
+			log.Info("zjg, end loop true --- 12")
 			endLoop = true
 		default:
 			time.Sleep(10 * time.Millisecond)
@@ -328,6 +332,7 @@ func SpawnStageBatches(
 		// this can be after the loop break because we save progress at the end of stage anyways. no need to do it twice
 		// commit progress from time to time
 		if batchProcessor.TotalBlocksWritten() != prevAmountBlocksWritten && batchProcessor.TotalBlocksWritten()%STAGE_PROGRESS_SAVE == 0 {
+			log.Info("zjg, freshTx---1")
 			if err = saveStageProgress(tx, logPrefix, batchProcessor.HighestHashableL2BlockNo(), batchProcessor.HighestSeenBatchNumber(), batchProcessor.LastBlockHeight(), batchProcessor.LastForkId()); err != nil {
 				return fmt.Errorf("saveStageProgress: %w", err)
 			}
@@ -336,6 +341,7 @@ func SpawnStageBatches(
 			}
 
 			if freshTx {
+				log.Info("zjg, freshTx---2")
 				if err := tx.Commit(); err != nil {
 					return fmt.Errorf("failed to commit tx, %w", err)
 				}

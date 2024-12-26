@@ -39,7 +39,6 @@ func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
 
 		r.isReading.Store(true)
 		defer r.isReading.Store(false)
-
 		if err := r.dsClient.ReadAllEntriesToChannel(); err != nil {
 			time.Sleep(1 * time.Second)
 			errorChan <- struct{}{}

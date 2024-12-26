@@ -148,7 +148,6 @@ func (p *BatchesProcessor) ProcessEntry(entry interface{}) (endLoop bool, err er
 	case *types.GerUpdate:
 		return false, p.processGerUpdate(entry)
 	case nil: // we use nil to indicate the end of stream read
-		log.Info("zjg, end loop true --- nomoal")
 		return true, nil
 	default:
 		return false, fmt.Errorf("unknown entry type: %T", entry)
@@ -209,7 +208,6 @@ func (p *BatchesProcessor) unwind(blockNum uint64) (uint64, error) {
 func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endLoop bool, err error) {
 	log.Debug(fmt.Sprintf("[%s] Retrieved %d (%s) block from stream", p.logPrefix, blockEntry.L2BlockNumber, blockEntry.L2Blockhash.String()))
 	if p.syncBlockLimit > 0 && blockEntry.L2BlockNumber >= p.syncBlockLimit {
-		log.Info("zjg, end loop true --- 0")
 		// stop the node going into a crazy loop
 		log.Info(fmt.Sprintf("[%s] Sync block limit reached, stopping stage", p.logPrefix), "blockLimit", p.syncBlockLimit, "block", blockEntry.L2BlockNumber)
 		return true, nil
@@ -306,7 +304,6 @@ func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endL
 	// exit stage when debug bisection flags set and we're at the limit block
 	if p.debugBlockLimit > 0 && blockEntry.L2BlockNumber > p.debugBlockLimit {
 		log.Info(fmt.Sprintf("[%s] Debug limit reached, stopping stage\n", p.logPrefix))
-		log.Info("zjg, end loop true --- 1")
 		endLoop = true
 	}
 
@@ -314,7 +311,6 @@ func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endL
 	if p.debugStep > 0 && p.debugStepAfter > 0 && blockEntry.L2BlockNumber > p.debugStepAfter {
 		if blockEntry.L2BlockNumber%p.debugStep == 0 {
 			log.Info(fmt.Sprintf("[%s] Debug step reached, stopping stage\n", p.logPrefix))
-			log.Info("zjg, end loop true --- 2")
 			endLoop = true
 		}
 	}

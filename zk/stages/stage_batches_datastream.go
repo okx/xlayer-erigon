@@ -52,16 +52,13 @@ func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
 
 func (r *DatastreamClientRunner) AutoPauseOrResume() error {
 	entryChanLen := len(*r.dsClient.GetEntryChan())
-	log.Info(fmt.Sprintf("zjg, entryChanLen: %d, pause:%v", entryChanLen, r.isPausing.Load()))
 	if r.isPausing.Load() && entryChanLen < 10000 {
 		r.dsClient.Resume()
 		r.isPausing.Store(false)
-		log.Info("zjg, resuming datastream client")
 	}
 	if !r.isPausing.Load() && entryChanLen > 90000 {
 		r.dsClient.Pause()
 		r.isPausing.Store(true)
-		log.Info("zjg, pausing datastream client")
 	}
 
 	return nil

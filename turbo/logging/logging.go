@@ -223,7 +223,7 @@ func initSeparatedLogging(
 	}
 	dirFormat := log.TerminalFormatNoColor()
 	if dirJson {
-		dirFormat = log.JsonFormat()
+		dirFormat = JsonFormatEx(true, true)
 	}
 
 	lumberjack := &lumberjack.Logger{

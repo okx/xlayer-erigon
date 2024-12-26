@@ -303,7 +303,7 @@ func SpawnStageBatches(
 			endLoop = true
 			log.Info("zjg, end loop true --- 10")
 		case entry := <-*entryChan:
-			log.Info(fmt.Sprintf("zjg, entryChan:%v", len(*entryChan)))
+			//log.Info(fmt.Sprintf("zjg, entryChan:%v", len(*entryChan)))
 			// DEBUG LIMIT - don't write more than we need to
 			if cfg.zkCfg.DebugLimit > 0 && batchProcessor.LastBlockHeight() >= cfg.zkCfg.DebugLimit {
 				endLoop = true

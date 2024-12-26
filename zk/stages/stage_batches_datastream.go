@@ -14,6 +14,7 @@ type DatastreamClientRunner struct {
 	logPrefix  string
 	stopRunner atomic.Bool
 	isReading  atomic.Bool
+	isPausing  atomic.Bool
 }
 
 func NewDatastreamClientRunner(dsClient DatastreamClient, logPrefix string) *DatastreamClientRunner {
@@ -45,6 +46,22 @@ func (r *DatastreamClientRunner) StartRead(errorChan chan struct{}) error {
 			log.Warn(fmt.Sprintf("[%s] Error downloading blocks from datastream", r.logPrefix), "error", err)
 		}
 	}()
+
+	return nil
+}
+
+func (r *DatastreamClientRunner) AutoPauseOrResume() error {
+	entryChanLen := len(*r.dsClient.GetEntryChan())
+	if r.isPausing.Load() && entryChanLen < 10000 {
+		r.dsClient.Resume()
+		r.isPausing.Store(false)
+		log.Info("zjg, resuming datastream client")
+	}
+	if !r.isPausing.Load() && entryChanLen > 90000 {
+		r.dsClient.Pause()
+		r.isPausing.Store(true)
+		log.Info("zjg, pausing datastream client")
+	}
 
 	return nil
 }

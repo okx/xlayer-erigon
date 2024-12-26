@@ -303,6 +303,37 @@ func (c *StreamClient) Stop() error {
 	return nil
 }
 
+func (c *StreamClient) Pause() error {
+	if c.conn != nil {
+		return nil
+	}
+	if err := c.sendStopCmd(); err != nil {
+		return fmt.Errorf("sendStopCmd: %w", err)
+	}
+	return nil
+}
+
+func (c *StreamClient) Resume() error {
+	var bookmark *types.BookmarkProto
+	progress := c.progress.Load()
+	if progress == 0 {
+		bookmark = types.NewBookmarkProto(0, datastream.BookmarkType_BOOKMARK_TYPE_BATCH)
+	} else {
+		bookmark = types.NewBookmarkProto(progress+1, datastream.BookmarkType_BOOKMARK_TYPE_L2_BLOCK)
+	}
+
+	protoBookmark, err := bookmark.Marshal()
+	if err != nil {
+		return err
+	}
+
+	// send start command
+	if _, err := c.initiateDownloadBookmark(protoBookmark); err != nil {
+		return fmt.Errorf("initiateDownloadBookmark: %w", err)
+	}
+	return nil
+}
+
 // Command header: Get status
 // Returns the current status of the header.
 // If started, terminate the connection.

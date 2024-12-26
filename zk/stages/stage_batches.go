@@ -68,6 +68,8 @@ type DatastreamClient interface {
 	GetProgressAtomic() *atomic.Uint64
 	Start() error
 	Stop() error
+	Pause() error
+	Resume() error
 	PrepUnwind()
 	HandleStart() error
 }
@@ -316,6 +318,7 @@ func SpawnStageBatches(
 				return fmt.Errorf("ProcessEntry: %w", err)
 			}
 			dsClientProgress.Store(batchProcessor.LastBlockHeight())
+			dsClientRunner.AutoPauseOrResume()
 		case <-ctx.Done():
 			log.Warn(fmt.Sprintf("[%s] Context done", logPrefix))
 			log.Info("zjg, end loop true --- 12")

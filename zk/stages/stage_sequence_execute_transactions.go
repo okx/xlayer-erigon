@@ -17,7 +17,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/ledgerwatch/secp256k1"
 )
 
 func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
@@ -89,8 +88,8 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 	ids := make([]common.Hash, 0, len(slot.TxIds))
 	transactions := make([]types.Transaction, 0, len(slot.Txs))
 	toRemove := make([]common.Hash, 0)
-	signer := types.MakeSigner(cfg.chainConfig, currentHeight, 0)
-	cryptoContext := secp256k1.ContextForThread(1)
+	// signer := types.MakeSigner(cfg.chainConfig, currentHeight, 0)
+	// cryptoContext := secp256k1.ContextForThread(1)
 	for idx, txBytes := range slot.Txs {
 		transaction, err := types.DecodeTransaction(txBytes)
 		if err == io.EOF {
@@ -106,15 +105,17 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 			continue
 		}
 
+		var sender common.Address
+		copy(sender[:], slot.Senders.At(idx))
 		// now attempt to recover the sender
-		sender, err := signer.SenderWithContext(cryptoContext, transaction)
-		if err != nil {
-			log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
-				"error", err,
-				"hash", transaction.Hash())
-			toRemove = append(toRemove, slot.TxIds[idx])
-			continue
-		}
+		// sender, err := signer.SenderWithContext(cryptoContext, transaction)
+		// if err != nil {
+		// 	log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
+		// 		"error", err,
+		// 		"hash", transaction.Hash())
+		// 	toRemove = append(toRemove, slot.TxIds[idx])
+		// 	continue
+		// }
 
 		transaction.SetSender(sender)
 		transactions = append(transactions, transaction)

@@ -12,7 +12,7 @@ const baseSafetyPercentage float64 = 0.05
 var (
 	preForkId10TotalSteps = 1 << 23
 	forkId10TotalSteps    = 1 << 24
-	forkId11TotalSteps    = 1 << 25
+	forkId11TotalSteps    = 1 << 27
 
 	unlimitedCounters = counterLimits{
 		totalSteps: math.MaxInt32,

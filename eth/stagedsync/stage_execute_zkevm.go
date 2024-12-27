@@ -13,7 +13,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/wrap"
 
-	"github.com/ledgerwatch/erigon-lib/kv/dbutils"
 	"github.com/ledgerwatch/erigon-lib/kv/membatch"
 	"github.com/ledgerwatch/log/v3"
 
@@ -335,36 +334,36 @@ func postExecuteCommitValues(
 	blockNum := block.NumberU64()
 
 	// if datastream hash was wrong, remove old data
-	if blockHash != datastreamBlockHash {
-		if cfg.chainConfig.IsForkId9Elderberry2(blockNum) {
-			log.Warn(fmt.Sprintf("[%s] Blockhash mismatch", logPrefix), "blockNumber", blockNum, "datastreamBlockHash", datastreamBlockHash, "calculatedBlockHash", blockHash)
-		}
-		if err := rawdbZk.DeleteSenders(tx, datastreamBlockHash, blockNum); err != nil {
-			return fmt.Errorf("DeleteSenders: %w", err)
-		}
-		if err := rawdbZk.DeleteHeader(tx, datastreamBlockHash, blockNum); err != nil {
-			return fmt.Errorf("DeleteHeader: %w", err)
-		}
-
-		bodyForStorage, err := rawdb.ReadBodyForStorageByKey(tx, dbutils.BlockBodyKey(blockNum, datastreamBlockHash))
-		if err != nil {
-			return fmt.Errorf("ReadBodyForStorageByKey: %w", err)
-		}
-
-		if err := rawdb.DeleteBodyAndTransactions(tx, blockNum, datastreamBlockHash); err != nil {
-			return fmt.Errorf("DeleteBodyAndTransactions: %w", err)
-		}
-		if err := rawdb.WriteBodyAndTransactions(tx, blockHash, blockNum, block.Transactions(), bodyForStorage); err != nil {
-			return fmt.Errorf("WriteBodyAndTransactions: %w", err)
-		}
-
-		// [zkevm] senders were saved in stage_senders for headerHashes based on incomplete headers
-		// in stage execute we complete the headers and senders should be moved to the correct headerHash
-		// also we should delete other data based on the old hash, since it is unaccessable now
-		if err := rawdb.WriteSenders(tx, blockHash, blockNum, senders); err != nil {
-			return fmt.Errorf("failed to write senders: %w", err)
-		}
-	}
+	//if blockHash != datastreamBlockHash {
+	//if cfg.chainConfig.IsForkId9Elderberry2(blockNum) {
+	//	log.Warn(fmt.Sprintf("[%s] Blockhash mismatch", logPrefix), "blockNumber", blockNum, "datastreamBlockHash", datastreamBlockHash, "calculatedBlockHash", blockHash)
+	//}
+	//if err := rawdbZk.DeleteSenders(tx, datastreamBlockHash, blockNum); err != nil {
+	//	return fmt.Errorf("DeleteSenders: %w", err)
+	//}
+	//if err := rawdbZk.DeleteHeader(tx, datastreamBlockHash, blockNum); err != nil {
+	//	return fmt.Errorf("DeleteHeader: %w", err)
+	//}
+	//
+	//bodyForStorage, err := rawdb.ReadBodyForStorageByKey(tx, dbutils.BlockBodyKey(blockNum, datastreamBlockHash))
+	//if err != nil {
+	//	return fmt.Errorf("ReadBodyForStorageByKey: %w", err)
+	//}
+	//
+	//if err := rawdb.DeleteBodyAndTransactions(tx, blockNum, datastreamBlockHash); err != nil {
+	//	return fmt.Errorf("DeleteBodyAndTransactions: %w", err)
+	//}
+	//if err := rawdb.WriteBodyAndTransactions(tx, blockHash, blockNum, block.Transactions(), bodyForStorage); err != nil {
+	//	return fmt.Errorf("WriteBodyAndTransactions: %w", err)
+	//}
+	//
+	//// [zkevm] senders were saved in stage_senders for headerHashes based on incomplete headers
+	//// in stage execute we complete the headers and senders should be moved to the correct headerHash
+	//// also we should delete other data based on the old hash, since it is unaccessable now
+	//if err := rawdb.WriteSenders(tx, blockHash, blockNum, senders); err != nil {
+	//	return fmt.Errorf("failed to write senders: %w", err)
+	//}
+	//}
 
 	// TODO: how can we store this data right first time?  Or mop up old data as we're currently duping storage
 	/*

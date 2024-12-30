@@ -43,6 +43,8 @@ func OkLogV1Format(r *log.Record) []byte {
 		return b
 	}
 
+	b = append(b, '\n')
+
 	return b
 }
 

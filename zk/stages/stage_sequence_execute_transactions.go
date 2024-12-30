@@ -166,7 +166,7 @@ func attemptAddTransaction(
 	}
 	anyOverflow := overflow || batchDataOverflow
 	if anyOverflow && !l1Recovery {
-		log.Info("Transaction preexecute overflow detected", "txHash", transaction.Hash(), "counters", batchCounters.CombineCollectorsNoChanges().UsedAsString())
+		log.Debug("Transaction preexecute overflow detected", "txHash", transaction.Hash(), "counters", batchCounters.CombineCollectorsNoChanges().UsedAsString())
 		return nil, nil, overflowCounters, nil
 	}
 
@@ -214,16 +214,16 @@ func attemptAddTransaction(
 
 	counters := batchCounters.CombineCollectorsNoChanges().UsedAsString()
 	if overflow {
-		log.Info("Transaction overflow detected", "txHash", transaction.Hash(), "coutners", counters)
+		log.Debug("Transaction overflow detected", "txHash", transaction.Hash(), "coutners", counters)
 		ibs.RevertToSnapshot(snapshot)
 		return nil, nil, overflowCounters, nil
 	}
 	if gasUsed > header.GasLimit {
-		log.Info("Transaction overflows block gas limit", "txHash", transaction.Hash(), "txGas", receipt.GasUsed, "blockGasUsed", header.GasUsed)
+		log.Debug("Transaction overflows block gas limit", "txHash", transaction.Hash(), "txGas", receipt.GasUsed, "blockGasUsed", header.GasUsed)
 		ibs.RevertToSnapshot(snapshot)
 		return nil, nil, overflowGas, nil
 	}
-	log.Info("Transaction added", "txHash", transaction.Hash(), "coutners", counters)
+	log.Debug("Transaction added", "txHash", transaction.Hash(), "coutners", counters)
 
 	// add the gas only if not reverted. This should not be moved above the overflow check
 	header.GasUsed = gasUsed

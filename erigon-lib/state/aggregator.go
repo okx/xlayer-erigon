@@ -789,7 +789,7 @@ func (a *Aggregator) rotate() []flusher {
 }
 func (a *Aggregator) Flush(ctx context.Context, tx kv.RwTx) error {
 	flushers := a.rotate()
-	defer func(t time.Time) { log.Info("[snapshots] history flush", "took", time.Since(t)) }(time.Now())
+	defer func(t time.Time) { log.Debug("[snapshots] history flush", "took", time.Since(t)) }(time.Now())
 	for _, f := range flushers {
 		if err := f.Flush(ctx, tx); err != nil {
 			return err

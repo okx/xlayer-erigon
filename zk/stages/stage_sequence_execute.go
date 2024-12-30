@@ -243,7 +243,7 @@ func sequencingBatchStep(
 		// For X Layer
 		metrics.GetLogStatistics().CumulativeCounting(metrics.BlockCounter)
 		if batchTimedOut {
-			log.Info(fmt.Sprintf("[%s] Closing batch due to timeout", logPrefix))
+			log.Debug(fmt.Sprintf("[%s] Closing batch due to timeout", logPrefix))
 			break
 		}
 		log.Info(fmt.Sprintf("[%s] Starting block %d (forkid %v)...", logPrefix, blockNumber, batchState.forkId))
@@ -342,7 +342,7 @@ func sequencingBatchStep(
 				}
 			case <-batchTicker.C:
 				if !batchState.isAnyRecovery() {
-					log.Info(fmt.Sprintf("[%s] Batch timeout reached", logPrefix))
+					log.Debug(fmt.Sprintf("[%s] Batch timeout reached", logPrefix))
 					batchTimedOut = true
 				}
 			case <-infoTreeTicker.C:

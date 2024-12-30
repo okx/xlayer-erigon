@@ -273,7 +273,7 @@ func deleteTxLookupRange(tx kv.RwTx, logPrefix string, blockFrom, blockTo uint64
 			return err
 		}
 		if body == nil {
-			log.Info("TxLookup pruning, empty block body", "height", blocknum)
+			log.Debug("TxLookup pruning, empty block body", "height", blocknum)
 			return nil
 		}
 

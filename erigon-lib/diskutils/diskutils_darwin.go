@@ -14,7 +14,7 @@ func MountPointForDirPath(dirPath string) string {
 
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(actualPath, &stat); err != nil {
-		log.Info("[diskutils] Error getting mount point for dir path:", actualPath, "Error:", err)
+		log.Debug("[diskutils] Error getting mount point for dir path:", actualPath, "Error:", err)
 		return "/"
 	}
 
@@ -33,14 +33,14 @@ func MountPointForDirPath(dirPath string) string {
 func SmlinkForDirPath(dirPath string) string {
 	fileInfo, err := os.Lstat(dirPath)
 	if err != nil {
-		log.Info("[diskutils] Error getting file info for dir path:", dirPath, "Error:", err)
+		log.Debug("[diskutils] Error getting file info for dir path:", dirPath, "Error:", err)
 		return dirPath
 	}
 
 	if fileInfo.Mode()&os.ModeSymlink != 0 {
 		targetPath, err := os.Readlink(dirPath)
 		if err != nil {
-			log.Info("[diskutils] Error getting target path for symlink:", dirPath, "Error:", err)
+			log.Debug("[diskutils] Error getting target path for symlink:", dirPath, "Error:", err)
 			return dirPath
 		} else {
 			return targetPath

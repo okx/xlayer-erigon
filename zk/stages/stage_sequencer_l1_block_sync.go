@@ -179,7 +179,7 @@ LOOP:
 				// from the latest batch in the original event
 				initBatch := lastBatchSequenced - uint64(len(batches)-1)
 
-				log.Info(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
+				log.Debug(fmt.Sprintf("[%s] Processing L1 sequence transaction", logPrefix),
 					"hash", transaction.Hash().String(),
 					"initBatch", initBatch,
 					"batches", len(batches),

@@ -865,7 +865,7 @@ func (c *RCloneSession) syncFiles(ctx context.Context) {
 		select {
 		case <-gctx.Done():
 			if syncCount := int(c.activeSyncCount.Load()) + len(c.syncQueue); syncCount > 0 {
-				log.Info("[rclone] Synced files", "processed", fmt.Sprintf("%d/%d", c.activeSyncCount.Load(), syncCount))
+				log.Debug("[rclone] Synced files", "processed", fmt.Sprintf("%d/%d", c.activeSyncCount.Load(), syncCount))
 			}
 
 			c.Lock()
@@ -880,7 +880,7 @@ func (c *RCloneSession) syncFiles(ctx context.Context) {
 			return
 		case <-logEvery.C:
 			if syncCount := int(c.activeSyncCount.Load()) + len(c.syncQueue); syncCount > 0 {
-				log.Info("[rclone] Syncing files", "progress", fmt.Sprintf("%d/%d", c.activeSyncCount.Load(), syncCount))
+				log.Debug("[rclone] Syncing files", "progress", fmt.Sprintf("%d/%d", c.activeSyncCount.Load(), syncCount))
 			}
 		}
 	}()

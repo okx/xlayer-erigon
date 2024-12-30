@@ -149,7 +149,7 @@ func (fv *ForkValidator) ValidatePayload(tx kv.Tx, header *types.Header, body *t
 		return
 	}
 
-	log.Info("Execution ForkValidator.ValidatePayload", "extendCanonical", extendCanonical)
+	log.Debug("Execution ForkValidator.ValidatePayload", "extendCanonical", extendCanonical)
 	if extendCanonical {
 		extendingFork := membatchwithdb.NewMemoryBatch(tx, fv.tmpDir, logger)
 		defer extendingFork.Close()

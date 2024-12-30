@@ -170,7 +170,7 @@ func (p *BatchesProcessor) processGerUpdate(gerUpdate *types.GerUpdate) error {
 
 func (p *BatchesProcessor) processBatchEndEntry(batchEnd *types.BatchEnd) (err error) {
 	if batchEnd.StateRoot != p.lastBlockRoot {
-		log.Info(fmt.Sprintf("[%s] batch end state root mismatches last block's: %x, expected: %x", p.logPrefix, batchEnd.StateRoot, p.lastBlockRoot))
+		log.Debug(fmt.Sprintf("[%s] batch end state root mismatches last block's: %x, expected: %x", p.logPrefix, batchEnd.StateRoot, p.lastBlockRoot))
 	}
 	// keep a record of the last block processed when we receive the batch end
 	if err = p.hermezDb.WriteBatchEnd(p.lastBlockHeight); err != nil {
@@ -206,7 +206,7 @@ func (p *BatchesProcessor) unwind(blockNum uint64) (uint64, error) {
 }
 
 func (p *BatchesProcessor) processFullBlock(blockEntry *types.FullL2Block) (endLoop bool, err error) {
-	log.Info(fmt.Sprintf("[%s] Retrieved %d (%s) block from stream", p.logPrefix, blockEntry.L2BlockNumber, blockEntry.L2Blockhash.String()))
+	log.Debug(fmt.Sprintf("[%s] Retrieved %d (%s) block from stream", p.logPrefix, blockEntry.L2BlockNumber, blockEntry.L2Blockhash.String()))
 	if p.syncBlockLimit > 0 && blockEntry.L2BlockNumber >= p.syncBlockLimit {
 		// stop the node going into a crazy loop
 		log.Info(fmt.Sprintf("[%s] Sync block limit reached, stopping stage", p.logPrefix), "blockLimit", p.syncBlockLimit, "block", blockEntry.L2BlockNumber)

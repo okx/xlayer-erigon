@@ -190,7 +190,7 @@ func (f *Fetch) receiveMessage(ctx context.Context, sentryClient sentry.SentryCl
 			}
 
 			if rlp.IsRLPError(err) {
-				log.Info("[txpool.fetch] Handling incoming message", "msg", req.Id.String(), "err", err)
+				log.Debug("[txpool.fetch] Handling incoming message", "msg", req.Id.String(), "err", err)
 			} else {
 				log.Warn("[txpool.fetch] Handling incoming message", "msg", req.Id.String(), "err", err)
 			}

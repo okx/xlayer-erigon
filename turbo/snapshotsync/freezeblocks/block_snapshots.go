@@ -1041,7 +1041,7 @@ func SegmentsCaplin(dir string, minBlock uint64) (res []snaptype.FileInfo, missi
 		l, m = noGaps(noOverlaps(l), minBlock)
 		if len(m) > 0 {
 			lst := m[len(m)-1]
-			log.Info("[snapshots] see gap", "type", snaptype.CaplinEnums.BeaconBlocks, "from", lst.from)
+			log.Debug("[snapshots] see gap", "type", snaptype.CaplinEnums.BeaconBlocks, "from", lst.from)
 		}
 		res = append(res, l...)
 		res = append(res, lSidecars...)
@@ -1083,7 +1083,7 @@ func typedSegments(dir string, minBlock uint64, types []snaptype.Type, allowGaps
 			}
 			if len(m) > 0 {
 				lst := m[len(m)-1]
-				log.Info("[snapshots] see gap", "type", segType, "from", lst.from)
+				log.Debug("[snapshots] see gap", "type", segType, "from", lst.from)
 			}
 			res = append(res, l...)
 			missingSnapshots = append(missingSnapshots, m...)
@@ -1227,7 +1227,7 @@ func (br *BlockRetire) dbHasEnoughDataForBlocksRetire(ctx context.Context) (bool
 		lastInFiles := br.snapshots().SegmentsMax() + 1
 		haveGap = lastInFiles < firstInDB
 		if haveGap {
-			log.Info("[snapshots] not enough blocks in db to create snapshots", "lastInFiles", lastInFiles, " firstBlockInDB", firstInDB, "recommendations", "it's ok to ignore this message. can fix by: downloading more files `rm datadir/snapshots/prohibit_new_downloads.lock datdir/snapshots/snapshots-lock.json`, or downloading old blocks to db `integration stage_headers --reset`")
+			log.Debug("[snapshots] not enough blocks in db to create snapshots", "lastInFiles", lastInFiles, " firstBlockInDB", firstInDB, "recommendations", "it's ok to ignore this message. can fix by: downloading more files `rm datadir/snapshots/prohibit_new_downloads.lock datdir/snapshots/snapshots-lock.json`, or downloading old blocks to db `integration stage_headers --reset`")
 		}
 		return nil
 	}); err != nil {

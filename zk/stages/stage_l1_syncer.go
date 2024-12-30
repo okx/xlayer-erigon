@@ -89,7 +89,7 @@ func SpawnStageL1Syncer(
 	var internalTxOpened bool
 	if tx == nil {
 		internalTxOpened = true
-		log.Info("l1 sync: no tx provided, creating a new one")
+		log.Debug("l1 sync: no tx provided, creating a new one")
 		var err error
 		tx, err = cfg.db.BeginRw(ctx)
 		if err != nil {
@@ -222,7 +222,7 @@ Loop:
 	}
 
 	if internalTxOpened {
-		log.Info("l1 sync: first cycle, committing tx")
+		log.Debug("l1 sync: first cycle, committing tx")
 		if err := tx.Commit(); err != nil {
 			return fmt.Errorf("tx.Commit: %w", err)
 		}

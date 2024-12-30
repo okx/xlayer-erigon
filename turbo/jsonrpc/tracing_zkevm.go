@@ -195,7 +195,7 @@ func (api *PrivateDebugAPIImpl) TraceCallMany(ctx context.Context, bundles []Bun
 		}
 		hash, err := rawdb.ReadCanonicalHash(tx, i)
 		if err != nil {
-			log.Info("Can't get block hash by number", "number", i, "only-canonical", true)
+			log.Debug("Can't get block hash by number", "number", i, "only-canonical", true)
 		}
 		return hash
 	}

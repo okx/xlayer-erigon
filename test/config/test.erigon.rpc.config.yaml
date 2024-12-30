@@ -81,5 +81,5 @@ http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}
 
 pprof: true
 pprof.port: 6060
-pprof.addr: 127.0.0.1
+pprof.addr: 0.0.0.0
 

@@ -26,8 +26,8 @@ log.console.verbosity: info
 log.json: true
 log.dir.json: true
 
-zkevm.executor-urls: xlayer-executor:50071
-zkevm.executor-strict: true
+#zkevm.executor-urls: xlayer-executor:50071
+zkevm.executor-strict: false
 zkevm.witness-full: false
 
 zkevm.sequencer-block-seal-time: "3s"
@@ -94,4 +94,4 @@ networkid: 195
 
 pprof: true
 pprof.port: 6060
-pprof.addr: 127.0.0.1
+pprof.addr: 0.0.0.0

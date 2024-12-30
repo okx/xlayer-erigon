@@ -408,7 +408,6 @@ func sequencingBatchStep(
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
 					// For X Layer
 					metrics.GetLogStatistics().CumulativeCounting(metrics.TxCounter)
-					metrics.SeqTxCount.Inc()
 
 					// quick check if we should stop handling transactions
 					select {
@@ -642,6 +641,9 @@ func sequencingBatchStep(
 		} else {
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions...", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions)), "info-tree-index", infoTreeIndexProgress)
 		}
+
+		// For X Layer
+		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
 
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)

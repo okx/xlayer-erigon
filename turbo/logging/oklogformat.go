@@ -35,15 +35,13 @@ func OkLogV1Format(r *log.Record) []byte {
 		props[k] = formatJSONValue(r.Ctx[i+1])
 	}
 
-	b, err := json.MarshalIndent(props, "", "    ")
+	b, err := json.Marshal(props)
 	if err != nil {
-		b, _ = json.MarshalIndent(map[string]string{
+		b, _ = json.Marshal(map[string]string{
 			errorKey: err.Error(),
-		}, "", "    ")
+		})
 		return b
 	}
-
-	b = append(b, '\n')
 
 	return b
 }

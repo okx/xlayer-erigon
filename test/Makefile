@@ -20,6 +20,8 @@ DOCKER_POOL_DB := xlayer-pool-db
 DOCKER_POOL_MANAGER := xlayer-pool-manager
 DOCKER_SIGNER := xlayer-signer
 DOCKER_DS := xlayer-ds
+DOCKER_PROMETHEUS := prometheus
+DOCKER_GRAFANA := grafana
 
 RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)
 RUN_DOCKER_SEQ_SENDER := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ_SENDER)
@@ -42,6 +44,8 @@ RUN_DOCKER_POOL_DB := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_DB)
 RUN_DOCKER_POOL_MANAGER := $(DOCKER_COMPOSE) up -d $(DOCKER_POOL_MANAGER)
 RUN_DOCKER_SIGNER := $(DOCKER_COMPOSE) up -d $(DOCKER_SIGNER)
 RUN_DOCKER_DS := $(DOCKER_COMPOSE) up -d $(DOCKER_DS)
+RUN_DOCKER_PROMETHEUS := $(DOCKER_COMPOSE) up -d $(DOCKER_PROMETHEUS)
+RUN_DOCKER_GRAFANA := $(DOCKER_COMPOSE) up -d $(DOCKER_GRAFANA)
 
 STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 
@@ -103,6 +107,10 @@ all: ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_BRIDGE_UI)
 
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)
+
 .PHONY: stop
 stop: ## Stops all services
 	$(STOP)
@@ -125,7 +133,7 @@ test: test-1 ## Runs all e2e tests
 	sleep 3
 
 .PHONY: test-1
-test-1: stop run ## Runs group 1 e2e tests checking race conditions
+test-1: stop all ## Runs group 1 e2e tests checking race conditions
 	sleep 3
 	docker ps -a
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...

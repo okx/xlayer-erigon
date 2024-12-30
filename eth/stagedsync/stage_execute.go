@@ -979,6 +979,14 @@ func unwindExecutionStage(u *UnwindState, s *StageState, txc wrap.TxContainer, c
 		return fmt.Errorf("delete newer epochs: %w", err)
 	}
 
+	// For X Layer
+	hermezDb := hermez_db.NewHermezDb(txc.Tx)
+	for blk := u.UnwindPoint + 1; blk <= s.BlockNumber; blk++ {
+		if err := hermezDb.TruncateInnerTx(blk); err != nil {
+			return fmt.Errorf("truncate inner tx: %w", err)
+		}
+	}
+
 	// Truncate CallTraceSet
 	keyStart := hexutility.EncodeTs(u.UnwindPoint + 1)
 	c, err := txc.Tx.RwCursorDupSort(kv.CallTraceSet)

@@ -15,6 +15,7 @@ import (
 	"github.com/ledgerwatch/erigon/eth/gasprice"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/zk/apollo"
+	"github.com/ledgerwatch/erigon/zk/metrics"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"github.com/ledgerwatch/erigon/zkevm/jsonrpc/client"
 	"github.com/ledgerwatch/log/v3"
@@ -163,6 +164,7 @@ func (api *APIImpl) updateDynamicGP(ctx context.Context) {
 	lasthash, _ := api.gasCache.GetLatest()
 	api.gasCache.SetLatest(lasthash, gasResult)
 
+	metrics.RpcDynamicGasPrice.Set(float64(gasResult.Uint64()))
 	log.Info(fmt.Sprintf("Updated dynamic gas price: %s", gasResult.String()))
 }
 

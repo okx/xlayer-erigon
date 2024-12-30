@@ -408,6 +408,8 @@ func sequencingBatchStep(
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
 					// For X Layer
 					metrics.GetLogStatistics().CumulativeCounting(metrics.TxCounter)
+					metrics.SeqTxCount.Inc()
+
 					// quick check if we should stop handling transactions
 					select {
 					case <-blockTicker.C:
@@ -425,7 +427,10 @@ func sequencingBatchStep(
 					backupDataSizeChecker := *blockDataSizeChecker
 					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, &backupDataSizeChecker)
 					if err != nil {
+						// For X Layer
 						metrics.GetLogStatistics().CumulativeCounting(metrics.FailTxCounter)
+						metrics.SeqFailTxCount.Inc()
+
 						if batchState.isLimboRecovery() {
 							panic("limbo transaction has already been executed once so they must not fail while re-executing")
 						}
@@ -561,6 +566,7 @@ func sequencingBatchStep(
 
 				// For X Layer
 				metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
+				metrics.SeqTxDuration.Observe(float64(time.Since(start).Milliseconds()))
 
 				// remove bad and mined transactions from the list for inclusion
 				for i := len(batchState.blockState.transactionsForInclusion) - 1; i >= 0; i-- {
@@ -629,6 +635,7 @@ func sequencingBatchStep(
 		if elapsedSeconds != 0 {
 			gasPerSecond = float64(block.GasUsed()) / elapsedSeconds
 		}
+		metrics.SeqBlockGasUsed.Set(float64(block.GasUsed()))
 
 		if gasPerSecond != 0 {
 			log.Info(fmt.Sprintf("[%s] Finish block %d with %d transactions... (%d gas/s)", logPrefix, blockNumber, len(batchState.blockState.builtBlockElements.transactions), int(gasPerSecond)), "info-tree-index", infoTreeIndexProgress)

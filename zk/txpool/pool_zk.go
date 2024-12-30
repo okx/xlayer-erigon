@@ -114,9 +114,9 @@ func (p *TxPool) onSenderStateChange(senderID uint64, senderNonce uint64, sender
 					newGpBig.Set(dGp)
 					if claim {
 						newGpBig = newGpBig.Mul(newGpBig, big.NewInt(int64(p.xlayerCfg.GasPriceMultiple)))
-						log.Info(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGpBig))
+						log.Debug(fmt.Sprintf("Free tx: type claim. dGp:%v, factor:%d, newGp:%d", dGp, p.xlayerCfg.GasPriceMultiple, newGpBig))
 					} else {
-						log.Info(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%d", mt.Tx.Nonce, dGp, newGpBig))
+						log.Debug(fmt.Sprintf("Free tx: type newAddr. nonce:%d, dGp:%v, newGp:%d", mt.Tx.Nonce, dGp, newGpBig))
 					}
 				}
 			}

@@ -2,17 +2,18 @@ package logging
 
 import (
 	"flag"
-	"os"
-	"path/filepath"
-	"strconv"
-
+	"github.com/ledgerwatch/erigon-lib/common/metrics"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spf13/cobra"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/natefinch/lumberjack.v2"
-
-	"github.com/ledgerwatch/erigon-lib/common/metrics"
+	"os"
+	"path/filepath"
+	"strconv"
 )
+
+const timeFormat = "2006-01-02T15:04:05-0700"
+const errorKey = "LOG15_ERROR"
 
 // Determine the log dir path based on the given urfave context
 func LogDirPath(ctx *cli.Context) string {
@@ -197,8 +198,10 @@ func initSeparatedLogging(
 
 	var consoleHandler log.Handler
 
+	okLogFormatFunc := log.FormatFunc(OkLogV1Format)
+
 	if consoleJson {
-		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StreamHandler(os.Stderr, log.JsonFormat()))
+		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StreamHandler(os.Stderr, okLogFormatFunc))
 	} else {
 		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StderrHandler)
 	}
@@ -214,10 +217,9 @@ func initSeparatedLogging(
 		logger.Warn("failed to create log dir, console logging only")
 		return
 	}
-
 	dirFormat := log.TerminalFormatNoColor()
 	if dirJson {
-		dirFormat = log.JsonFormat()
+		dirFormat = okLogFormatFunc
 	}
 
 	lumberjack := &lumberjack.Logger{

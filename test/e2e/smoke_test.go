@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -15,10 +16,13 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 	"github.com/ledgerwatch/erigon/ethclient"
+	"gopkg.in/yaml.v2"
+
 	"github.com/ledgerwatch/erigon/test/operations"
 	"github.com/ledgerwatch/erigon/zkevm/encoding"
 	"github.com/ledgerwatch/erigon/zkevm/etherman/smartcontracts/polygonzkevmbridge"
 	"github.com/ledgerwatch/erigon/zkevm/log"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -77,13 +81,42 @@ func TestBridgeTx(t *testing.T) {
 	require.NoError(t, err)
 	transToken(t, ctx, l2Client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 
-	amount := new(big.Int).SetUint64(10)
+	amount := new(big.Int).SetUint64(100)
+	//layer2 network id
 	var destNetwork uint32 = 1
-	destAddr := common.HexToAddress(operations.DefaultL1AdminAddress)
+	destAddr := common.HexToAddress(operations.DefaultL2AdminAddress)
 	auth, err := operations.GetAuth(operations.DefaultL1AdminPrivateKey, operations.DefaultL1ChainID)
 	require.NoError(t, err)
+
+	wethAddress := common.HexToAddress("0x17a2a2e444a7f3446877d1b71eaa2b2ae7533baf")
+	wethToken, err := operations.NewToken(wethAddress, l2Client)
+	require.NoError(t, err)
+
+	balanceBefore, err := wethToken.BalanceOf(&bind.CallOpts{}, destAddr)
+	require.NoError(t, err)
+
 	err = sendBridgeAsset(ctx, common.Address{}, amount, destNetwork, &destAddr, []byte{}, auth, common.HexToAddress(operations.BridgeAddr), l1Client)
 	require.NoError(t, err)
+
+	const maxAttempts = 120
+
+	var balanceAfter *big.Int
+	for i := 0; i < maxAttempts; i++ {
+		time.Sleep(1 * time.Second)
+
+		balanceAfter, err = wethToken.BalanceOf(&bind.CallOpts{}, destAddr)
+		require.NoError(t, err)
+
+		if balanceAfter.Cmp(balanceBefore) > 0 {
+			return
+		}
+	}
+
+	t.Errorf("bridge transaction failed after %d seconds: balance did not increase (before: %s, after: %s)",
+		maxAttempts,
+		balanceBefore.String(),
+		balanceAfter.String(),
+	)
 }
 
 func TestClaimTx(t *testing.T) {
@@ -126,11 +159,11 @@ func TestClaimTx(t *testing.T) {
 
 func TestNewAccFreeGas(t *testing.T) {
 	ctx := context.Background()
-	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	client, _ := ethclient.Dial(operations.DefaultL2NetworkURL)
 	transToken(t, ctx, client, uint256.NewInt(encoding.Gwei), operations.DefaultL2AdminAddress)
 	var gas uint64 = 21000
 
-	// newAcc transfer failed
+	//newAcc transfer failed
 	from := common.HexToAddress(operations.DefaultL2NewAcc1Address)
 	to := common.HexToAddress(operations.DefaultL2AdminAddress)
 	nonce, err := client.PendingNonceAt(ctx, from)
@@ -151,8 +184,10 @@ func TestNewAccFreeGas(t *testing.T) {
 	require.NoError(t, err)
 	err = client.SendTransaction(ctx, signedTx)
 	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "RPC error response: FEE_TOO_LOW: underpriced"), "Expected error message not found")
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, 5)
 	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "context deadline exceeded"), "Expected error message not found")
 
 	// seq -> newAcc
 	from = common.HexToAddress(operations.DefaultL2AdminAddress)
@@ -200,27 +235,45 @@ func TestNewAccFreeGas(t *testing.T) {
 	err = operations.WaitTxToBeMined(ctx, client, signedTx, operations.DefaultTimeoutTxToBeMined)
 	require.NoError(t, err)
 }
-
 func TestWhiteAndBlockList(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
 	ctx := context.Background()
 	client, err := ethclient.Dial(operations.DefaultL2NetworkURL)
+	require.NoError(t, err)
+
 	from := common.HexToAddress(operations.DefaultL2AdminAddress)
-	to := common.HexToAddress(blockAddress)
+	blockAddressConverted := common.HexToAddress(blockAddress)
+	nonBlockAddress := common.HexToAddress(operations.DefaultL2NewAcc1Address)
+
 	nonce, err := client.PendingNonceAt(ctx, from)
+	require.NoError(t, err)
+
 	gasPrice, err := client.SuggestGasPrice(ctx)
+	require.NoError(t, err)
+
 	gas, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		From:  from,
-		To:    &to,
+		To:    &blockAddressConverted,
 		Value: uint256.NewInt(10),
 	})
 	require.NoError(t, err)
-	var tx types.Transaction = &types.LegacyTx{
+
+	var txToBlockAddress types.Transaction = &types.LegacyTx{
 		CommonTx: types.CommonTx{
 			Nonce: nonce,
-			To:    &to,
+			To:    &blockAddressConverted,
+			Gas:   gas,
+			Value: uint256.NewInt(10),
+		},
+		GasPrice: uint256.MustFromBig(gasPrice),
+	}
+
+	var txToNonBlockAddress types.Transaction = &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			Nonce: nonce,
+			To:    &nonBlockAddress,
 			Gas:   gas,
 			Value: uint256.NewInt(10),
 		},
@@ -231,32 +284,53 @@ func TestWhiteAndBlockList(t *testing.T) {
 	require.NoError(t, err)
 
 	signer := types.MakeSigner(operations.GetTestChainConfig(operations.DefaultL2ChainID), 1, 0)
-	signedTx, err := types.SignTx(tx, *signer, privateKey)
+
+	signedTxToBlockAddress, err := types.SignTx(txToBlockAddress, *signer, privateKey)
 	require.NoError(t, err)
 
-	err = client.SendTransaction(ctx, signedTx)
+	err = client.SendTransaction(ctx, signedTxToBlockAddress)
 	log.Infof("err:%v", err)
 	require.True(t, strings.Contains(err.Error(), "INTERNAL_ERROR: blocked receiver"))
+
+	signedTxToNonBlockAddress, err := types.SignTx(txToNonBlockAddress, *signer, privateKey)
+	require.NoError(t, err)
+
+	err = client.SendTransaction(ctx, signedTxToNonBlockAddress)
+	require.NoError(t, err)
+
+	//TODO: sender in blocklist should fail
+	//now only admin account have balance. So we may add another account that has balance.
 }
 
 func TestRPCAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip()
 	}
-	var err error
-	for i := 0; i < 1000; i++ {
-		_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
-		if err1 != nil {
-			err = err1
-			break
-		}
-	}
-	require.True(t, strings.Contains(err.Error(), "rate limit exceeded"))
 
-	//for i := 0; i < 1000; i++ {
-	//	_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL + "/apikey1")
-	//	require.NoError(t, err1)
-	//}
+	config, err := LoadConfig("../../test/config/test.erigon.rpc.config.yaml")
+	require.NoError(t, err)
+
+	if config.HTTPAPIKeys != "" {
+
+		_, err := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
+		require.Error(t, err)
+		require.True(t, strings.Contains(err.Error(), "no authentication"))
+
+		_, err = operations.GetEthSyncing(operations.DefaultL2NetworkURL + "/45543e0adc5dd3e316044909d32501a5")
+		require.NoError(t, err)
+	} else {
+
+		var rateErr error
+		for i := 0; i < 1000; i++ {
+			_, err1 := operations.GetEthSyncing(operations.DefaultL2NetworkURL)
+			if err1 != nil {
+				rateErr = err1
+				break
+			}
+		}
+
+		require.True(t, strings.Contains(rateErr.Error(), "rate limit exceeded"))
+	}
 }
 
 func TestChainID(t *testing.T) {
@@ -402,6 +476,8 @@ func transToken(t *testing.T, ctx context.Context, client *ethclient.Client, amo
 		Value: amount,
 	})
 	require.NoError(t, err)
+	log.Infof("gas: %d", gas)
+	log.Infof("gasPrice: %d", gasPrice)
 
 	var tx types.Transaction = &types.LegacyTx{
 		CommonTx: types.CommonTx{
@@ -520,4 +596,24 @@ func sendBridgeAsset(
 	// wait transfer to be included in a batch
 	const txTimeout = 60 * time.Second
 	return operations.WaitTxToBeMined(ctx, c, tx, txTimeout)
+}
+
+type Config struct {
+	HTTPMethodRateLimit string `yaml:"http.methodratelimit"`
+	HTTPAPIKeys         string `yaml:"http.apikeys"`
+}
+
+func LoadConfig(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = yaml.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }

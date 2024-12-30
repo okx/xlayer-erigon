@@ -19,10 +19,12 @@ zkevm.l1-rollup-id: 1
 zkevm.l1-first-block: 353
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
-zkevm.rpc-ratelimit: 300
+zkevm.rpc-ratelimit: 0
 zkevm.datastream-version: 2
 
 log.console.verbosity: info
+log.json: true
+log.dir.json: true
 
 zkevm.executor-urls: xlayer-executor:50071
 zkevm.executor-strict: true

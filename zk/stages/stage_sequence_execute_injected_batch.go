@@ -41,7 +41,7 @@ func processInjectedInitialBatch(
 	)
 
 	if batchContext.cfg.zk.ShouldImportInitialBatch() {
-		log.Debug(fmt.Sprintf("Initial batch is provided in the file '%s'", batchContext.cfg.zk.InitialBatchCfgFile))
+		log.Info(fmt.Sprintf("Initial batch is provided in the file '%s'", batchContext.cfg.zk.InitialBatchCfgFile))
 		// import injected batch from file
 		importResult, err := loadInjectedBatchDataFromFile(batchContext.cfg.zk.InitialBatchCfgFile)
 		if err != nil {
@@ -181,7 +181,7 @@ func loadInjectedBatchDataFromFile(fileName string) (*injectedBatchImportResult,
 		return nil, fmt.Errorf("failed to unmarshal JSON from file %s: %v", fileName, err)
 	}
 
-	log.Debug(fmt.Sprintf("Initializing with first batch data...\n%s", string(rawBytes)))
+	log.Info(fmt.Sprintf("Initializing with first batch data...\n%s", string(rawBytes)))
 
 	return &injectedBatchImportResult{injectedBatch: &injectedBatch}, nil
 }

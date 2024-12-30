@@ -246,7 +246,7 @@ func (rp *KafkaProcessor) parseCoinPrice(value []byte, coinIds []int) (map[int]f
 		if coin, ok := mp[coinId]; ok {
 			results[coinId] = coin.Price
 		} else {
-			log.Debug("not find a correct coin price coin id is =", coinId)
+			log.Info("not find a correct coin price coin id is =", coinId)
 		}
 	}
 	if len(results) == 0 {

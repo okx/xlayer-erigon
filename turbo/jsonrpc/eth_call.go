@@ -208,7 +208,7 @@ func (api *APIImpl) EstimateGas(ctx context.Context, argsOrNil *ethapi2.CallArgs
 			if transfer == nil {
 				transfer = new(hexutil.Big)
 			}
-			log.Debug("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+			log.Info("Gas estimation capped by limited funds", "original", hi, "balance", balance,
 				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
 			hi = allowance.Uint64()
 		}
@@ -216,7 +216,7 @@ func (api *APIImpl) EstimateGas(ctx context.Context, argsOrNil *ethapi2.CallArgs
 
 	// Recap the highest gas allowance with specified gascap.
 	if hi > api.GasCap {
-		log.Debug("Caller gas above allowance, capping", "requested", hi, "cap", api.GasCap)
+		log.Info("Caller gas above allowance, capping", "requested", hi, "cap", api.GasCap)
 		hi = api.GasCap
 	}
 	gasCap = hi

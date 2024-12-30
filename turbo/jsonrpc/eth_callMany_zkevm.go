@@ -106,7 +106,7 @@ func (api *APIImpl) CallMany(ctx context.Context, bundles []Bundle, simulateCont
 		}
 		hash, err := rawdb.ReadCanonicalHash(tx, i)
 		if err != nil {
-			log.Debug("Can't get block hash by number", "number", i, "only-canonical", true)
+			log.Info("Can't get block hash by number", "number", i, "only-canonical", true)
 		}
 		return hash
 	}

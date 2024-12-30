@@ -7,6 +7,6 @@ import (
 )
 
 func MountPointForDirPath(dirPath string) string {
-	log.Debug("[diskutils] Implemented only for darwin")
+	log.Info("[diskutils] Implemented only for darwin")
 	return "/"
 }

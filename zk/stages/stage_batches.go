@@ -135,7 +135,7 @@ func SpawnStageBatches(
 	freshTx := false
 	if tx == nil {
 		freshTx = true
-		log.Debug(fmt.Sprintf("[%s] batches: no tx provided, creating a new one", logPrefix))
+		log.Info(fmt.Sprintf("[%s] batches: no tx provided, creating a new one", logPrefix))
 		var err error
 		tx, err = cfg.db.BeginRw(ctx)
 		if err != nil {
@@ -231,7 +231,7 @@ func SpawnStageBatches(
 		time.Sleep(50 * time.Millisecond)
 	}
 
-	log.Debug(fmt.Sprintf("[%s] Highest block in db and datastream", logPrefix), "datastreamBlock", highestDSL2Block, "dbBlock", stageProgressBlockNo)
+	log.Info(fmt.Sprintf("[%s] Highest block in db and datastream", logPrefix), "datastreamBlock", highestDSL2Block, "dbBlock", stageProgressBlockNo)
 	unwindFn := func(unwindBlock uint64) (uint64, error) {
 		return rollback(ctx, cfg, logPrefix, eriDb, hermezDb, unwindBlock, uint16(latestForkId), tx, u)
 	}
@@ -680,7 +680,7 @@ func rollback(
 	if err != nil {
 		return 0, fmt.Errorf("findCommonAncestor: %w", err)
 	}
-	log.Debug(fmt.Sprintf("[%s] The common ancestor for datastream and db is block %d (%s)", logPrefix, ancestorBlockNum, ancestorBlockHash))
+	log.Info(fmt.Sprintf("[%s] The common ancestor for datastream and db is block %d (%s)", logPrefix, ancestorBlockNum, ancestorBlockHash))
 
 	unwindBlockNum, unwindBlockHash, batchNum, err := getUnwindPoint(eriDb, hermezDb, ancestorBlockNum, ancestorBlockHash)
 	if err != nil {

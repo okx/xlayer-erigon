@@ -224,7 +224,7 @@ func HandleInitialSequenceBatches(
 	// TX without trimming these off
 	injectedBatchLogTrailingBytes := getTrailingCutoffLen(l.Data)
 	trailingCutoff := len(l.Data) - injectedBatchLogTrailingBytes
-	log.Debug(fmt.Sprintf("Handle initial sequence batches, trail len:%v, log data: %v", injectedBatchLogTrailingBytes, l.Data))
+	log.Info(fmt.Sprintf("Handle initial sequence batches, trail len:%v, log data: %v", injectedBatchLogTrailingBytes, l.Data))
 
 	txData := l.Data[injectedBatchLogTransactionStartByte:trailingCutoff]
 

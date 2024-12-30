@@ -320,7 +320,7 @@ func (d *WebSeeds) Discover(ctx context.Context, files []string, rootDir string)
 }
 
 func (d *WebSeeds) constructListsOfFiles(ctx context.Context, httpProviders []*url.URL, diskProviders []string) []snaptype.WebSeedsFromProvider {
-	log.Debug("[snapshots.webseed] providers", "http", len(httpProviders), "disk", len(diskProviders))
+	log.Info("[snapshots.webseed] providers", "http", len(httpProviders), "disk", len(diskProviders))
 	listsOfFiles := make([]snaptype.WebSeedsFromProvider, 0, len(httpProviders)+len(diskProviders))
 
 	for _, webSeedProviderURL := range httpProviders {

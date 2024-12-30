@@ -339,7 +339,7 @@ func (s *L1Syncer) queryBlocks() error {
 	// It should not be checked again in the new cycle, so +1 is added here.
 	startBlock := s.lastCheckedL1Block.Load() + 1
 
-	log.Debug("GetHighestSequence", "startBlock", startBlock)
+	log.Info("GetHighestSequence", "startBlock", startBlock)
 
 	// define the blocks we're going to fetch up front
 	fetches := make([]fetchJob, 0)
@@ -449,7 +449,7 @@ func (s *L1Syncer) getSequencedLogs(jobs <-chan fetchJob, results chan jobResult
 				em := s.getNextEtherman()
 				logs, err = em.FilterLogs(context.Background(), query)
 				if err != nil {
-					log.Debug("getSequencedLogs retry error", "err", err)
+					log.Info("getSequencedLogs retry error", "err", err)
 					retry++
 					if retry > 5 {
 						results <- jobResult{

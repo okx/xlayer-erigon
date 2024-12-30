@@ -99,10 +99,10 @@ func (p *PeerStats) GetPeers() map[string]*PeerStatistics {
 			if loadedValue, ok := value.(PeerStatistics); ok {
 				stats[loadedKey] = &loadedValue
 			} else {
-				log.Debug("Failed to cast value to PeerStatistics struct", value)
+				log.Info("Failed to cast value to PeerStatistics struct", value)
 			}
 		} else {
-			log.Debug("Failed to cast key to string", key)
+			log.Info("Failed to cast key to string", key)
 		}
 
 		return true

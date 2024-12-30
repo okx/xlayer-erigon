@@ -47,7 +47,7 @@ func SpawnStageDataStreamCatchup(
 
 	createdTx := false
 	if tx == nil {
-		log.Debug(fmt.Sprintf("[%s] data stream: no tx provided, creating a new one", logPrefix))
+		log.Info(fmt.Sprintf("[%s] data stream: no tx provided, creating a new one", logPrefix))
 		var err error
 		tx, err = cfg.db.BeginRw(ctx)
 		if err != nil {

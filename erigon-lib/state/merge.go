@@ -1223,10 +1223,10 @@ func (d *Domain) deleteGarbageFiles() {
 		}
 		f1 := fmt.Sprintf("%s.%d-%d.kv", d.filenameBase, item.startTxNum/d.aggregationStep, item.endTxNum/d.aggregationStep)
 		os.Remove(filepath.Join(d.dir, f1))
-		log.Debug("[snapshots] delete garbage", f1)
+		log.Info("[snapshots] delete garbage", f1)
 		f2 := fmt.Sprintf("%s.%d-%d.kvi", d.filenameBase, item.startTxNum/d.aggregationStep, item.endTxNum/d.aggregationStep)
 		os.Remove(filepath.Join(d.dir, f2))
-		log.Debug("[snapshots] delete garbage", f2)
+		log.Info("[snapshots] delete garbage", f2)
 	}
 	d.garbageFiles = nil
 	d.History.deleteGarbageFiles()
@@ -1239,10 +1239,10 @@ func (h *History) deleteGarbageFiles() {
 		}
 		f1 := fmt.Sprintf("%s.%d-%d.v", h.filenameBase, item.startTxNum/h.aggregationStep, item.endTxNum/h.aggregationStep)
 		os.Remove(filepath.Join(h.dir, f1))
-		log.Debug("[snapshots] delete garbage", f1)
+		log.Info("[snapshots] delete garbage", f1)
 		f2 := fmt.Sprintf("%s.%d-%d.vi", h.filenameBase, item.startTxNum/h.aggregationStep, item.endTxNum/h.aggregationStep)
 		os.Remove(filepath.Join(h.dir, f2))
-		log.Debug("[snapshots] delete garbage", f2)
+		log.Info("[snapshots] delete garbage", f2)
 	}
 	h.garbageFiles = nil
 	h.InvertedIndex.deleteGarbageFiles()
@@ -1255,10 +1255,10 @@ func (ii *InvertedIndex) deleteGarbageFiles() {
 		}
 		f1 := fmt.Sprintf("%s.%d-%d.ef", ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 		os.Remove(filepath.Join(ii.dir, f1))
-		log.Debug("[snapshots] delete garbage", f1)
+		log.Info("[snapshots] delete garbage", f1)
 		f2 := fmt.Sprintf("%s.%d-%d.efi", ii.filenameBase, item.startTxNum/ii.aggregationStep, item.endTxNum/ii.aggregationStep)
 		os.Remove(filepath.Join(ii.dir, f2))
-		log.Debug("[snapshots] delete garbage", f2)
+		log.Info("[snapshots] delete garbage", f2)
 	}
 	ii.garbageFiles = nil
 }

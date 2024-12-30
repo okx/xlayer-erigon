@@ -119,7 +119,7 @@ func startProvider(ctx context.Context, infoType Type, provider Provider, logger
 func Send[I Info](info I) {
 	defer func() {
 		if r := recover(); r != nil {
-			log.Debug("diagnostic Send panic recovered: %v, stack: %s", r, dbg.Stack())
+			log.Info("diagnostic Send panic recovered: %v, stack: %s", r, dbg.Stack())
 		}
 	}()
 
@@ -130,7 +130,7 @@ func Send[I Info](info I) {
 			return
 		}
 
-		log.Debug("diagnostic send failed: context error", "err", ctx.Err())
+		log.Info("diagnostic send failed: context error", "err", ctx.Err())
 	}
 
 	cval := ctx.Value(ckChan)
@@ -149,7 +149,7 @@ func Send[I Info](info I) {
 			return
 		}
 
-		log.Debug(fmt.Sprintf("unexpected channel type: %T", cval))
+		log.Info(fmt.Sprintf("unexpected channel type: %T", cval))
 	}
 }
 

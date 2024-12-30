@@ -90,7 +90,7 @@ func SpawnStageWitness(
 	freshTx := false
 	if tx == nil {
 		freshTx = true
-		log.Debug(fmt.Sprintf("[%s] no tx provided, creating a new one", logPrefix))
+		log.Info(fmt.Sprintf("[%s] no tx provided, creating a new one", logPrefix))
 		var err error
 		tx, err = cfg.db.BeginRw(ctx)
 		if err != nil {

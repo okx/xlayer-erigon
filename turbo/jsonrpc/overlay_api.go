@@ -154,7 +154,7 @@ func (api *OverlayAPIImpl) CallConstructor(ctx context.Context, address common.A
 		}
 		hash, err := api._blockReader.CanonicalHash(ctx, tx, i)
 		if err != nil {
-			log.Debug("Can't get block hash by number", "number", i, "only-canonical", true)
+			log.Info("Can't get block hash by number", "number", i, "only-canonical", true)
 		}
 		return hash
 	}
@@ -328,9 +328,9 @@ func (api *OverlayAPIImpl) GetLogs(ctx context.Context, crit filters.FilterCrite
 					results[task.idx] = &blockReplayResult{BlockNumber: task.BlockNumber, Error: err.Error()}
 					continue
 				}
-				log.Debug("[GetLogs]", "len(blockLogs)", len(blockLogs))
+				log.Info("[GetLogs]", "len(blockLogs)", len(blockLogs))
 				logs := filterLogs(blockLogs, crit.Addresses, crit.Topics)
-				log.Debug("[GetLogs]", "len(logs)", len(logs))
+				log.Info("[GetLogs]", "len(logs)", len(logs))
 
 				results[task.idx] = &blockReplayResult{BlockNumber: task.BlockNumber, Logs: logs}
 			}
@@ -362,7 +362,7 @@ func (api *OverlayAPIImpl) GetLogs(ctx context.Context, crit filters.FilterCrite
 blockLoop:
 	for blockNumber := begin; blockNumber <= end; blockNumber++ {
 		if hasOverrides && !allBlocks.Contains(blockNumber) {
-			log.Debug("skipping untouched blocked", "blockNumber", blockNumber)
+			log.Info("skipping untouched blocked", "blockNumber", blockNumber)
 			continue
 		}
 
@@ -405,7 +405,7 @@ func filterLogs(logs types.Logs, addresses []common.Address, topics [][]common.H
 }
 
 func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, statedb *state.IntraBlockState, chainConfig *chain.Config, tx kv.Tx) ([]*types.Log, error) {
-	log.Debug("[replayBlock] begin", "block", blockNum)
+	log.Info("[replayBlock] begin", "block", blockNum)
 	var (
 		hash               common.Hash
 		replayTransactions types.Transactions
@@ -431,7 +431,7 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 	}
 
 	replayTransactions = block.Transactions()
-	log.Debug("[replayBlock] replayTx", "length", len(replayTransactions))
+	log.Info("[replayBlock] replayTx", "length", len(replayTransactions))
 
 	parent := block.Header()
 
@@ -445,7 +445,7 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 		}
 		hash, err := api._blockReader.CanonicalHash(ctx, tx, i)
 		if err != nil {
-			log.Debug("Can't get block hash by number", "number", i, "only-canonical", true)
+			log.Info("Can't get block hash by number", "number", i, "only-canonical", true)
 		}
 		return hash
 	}
@@ -503,7 +503,7 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 
 	// try to replay all transactions in this block
 	for idx, txn := range replayTransactions {
-		log.Debug("[replayBlock] replaying transaction", "idx", idx, "transactionHash", txn.Hash())
+		log.Info("[replayBlock] replaying transaction", "idx", idx, "transactionHash", txn.Hash())
 
 		msg, err := txn.AsMessage(*signer, block.BaseFee(), rules)
 		if err != nil {
@@ -513,10 +513,10 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 		msg.ChangeGas(api.GasCap, api.GasCap)
 
 		receipt := receipts[uint64(idx)]
-		log.Debug("[replayBlock]", "receipt.TransactionIndex", receipt.TransactionIndex, "receipt.TxHash", receipt.TxHash, "receipt.Status", receipt.Status)
+		log.Info("[replayBlock]", "receipt.TransactionIndex", receipt.TransactionIndex, "receipt.TxHash", receipt.TxHash, "receipt.Status", receipt.Status)
 		// check if this tx has failed in the original context
 		if receipt.Status == types.ReceiptStatusFailed {
-			log.Debug("[replayBlock] skipping transaction because it has status=failed", "transactionHash", txn.Hash())
+			log.Info("[replayBlock] skipping transaction because it has status=failed", "transactionHash", txn.Hash())
 
 			contractCreation := msg.To() == nil
 			if !contractCreation {
@@ -551,12 +551,12 @@ func (api *OverlayAPIImpl) replayBlock(ctx context.Context, blockNum uint64, sta
 		}
 
 		if res.Failed() {
-			log.Debug("[replayBlock] res result for transaction", "transactionHash", txn.Hash(), "failed", res.Failed(), "revert", res.Revert(), "error", res.Err)
-			log.Debug("[replayBlock] discarding txLogs because tx has status=failed", "transactionHash", txn.Hash())
+			log.Info("[replayBlock] res result for transaction", "transactionHash", txn.Hash(), "failed", res.Failed(), "revert", res.Revert(), "error", res.Err)
+			log.Info("[replayBlock] discarding txLogs because tx has status=failed", "transactionHash", txn.Hash())
 		} else {
 			// append logs only if tx has not reverted
 			txLogs := statedb.GetLogs(txn.Hash())
-			log.Debug("[replayBlock]", "len(txLogs)", len(txLogs), "transactionHash", txn.Hash())
+			log.Info("[replayBlock]", "len(txLogs)", len(txLogs), "transactionHash", txn.Hash())
 			blockLogs = append(blockLogs, txLogs...)
 		}
 	}

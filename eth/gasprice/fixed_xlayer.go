@@ -55,7 +55,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 		result = maxGasPrice
 	}
 	var truncateValue *big.Int
-	log.Debug(fmt.Sprintf("Full L2 gas price value: %s. Length: %d. L1 gas price: %s", result.String(), len(result.String()), l1GasPrice.String()))
+	log.Info(fmt.Sprintf("Full L2 gas price value: %s. Length: %d. L1 gas price: %s", result.String(), len(result.String()), l1GasPrice.String()))
 	numLength := len(result.String())
 	if numLength > 3 { //nolint:gomnd
 		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd
@@ -70,7 +70,7 @@ func (f *FixedGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 	}
 
 	// Cache L2 gasPrice calculated
-	log.Debug(fmt.Sprintf("Storing truncated L2 gas price: %s, L2 native coin price: %g.", truncateValue.String(), l2CoinPrice))
+	log.Info(fmt.Sprintf("Storing truncated L2 gas price: %s, L2 native coin price: %g.", truncateValue.String(), l2CoinPrice))
 	if truncateValue != nil {
 		log.Info(fmt.Sprintf("Set l2 raw gas price: %d", truncateValue.Uint64()))
 		f.lastRawGP = truncateValue

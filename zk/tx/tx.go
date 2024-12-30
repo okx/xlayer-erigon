@@ -71,7 +71,7 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 	for pos < txDataLength {
 		num, err := strconv.ParseUint(hex.EncodeToString(txsData[pos:pos+1]), hex.Base, hex.BitSize64)
 		if err != nil {
-			log.Debug("error parsing header length: ", err)
+			log.Info("error parsing header length: ", err)
 			return result, err
 		}
 
@@ -103,23 +103,23 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 
 		// First byte is the length and must be ignored
 		if num < c0 {
-			log.Debug("error num < c0 : %d, %d", num, c0)
+			log.Info("error num < c0 : %d, %d", num, c0)
 			return result, ErrInvalidData
 		}
 		length := num - c0
 		if length > shortRlp { // If rlp is bigger than length 55
 			// n is the length of the rlp data without the header (1 byte) for example "0xf7"
 			if (pos + 1 + num - f7) > txDataLength {
-				log.Debug("error parsing length: ", err)
+				log.Info("error parsing length: ", err)
 				return result, err
 			}
 			n, err := strconv.ParseUint(hex.EncodeToString(txsData[pos+1:pos+1+num-f7]), hex.Base, hex.BitSize64) // +1 is the header. For example 0xf7
 			if err != nil {
-				log.Debug("error parsing length: ", err)
+				log.Info("error parsing length: ", err)
 				return result, err
 			}
 			if n+num < f7 {
-				log.Debug("error n + num < f7: ", err)
+				log.Info("error n + num < f7: ", err)
 				return result, ErrInvalidData
 			}
 			length = n + num - f7 // num - f7 is the header. For example 0xf7
@@ -133,19 +133,19 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 
 		if endPos > txDataLength {
 			err := fmt.Errorf("endPos %d is bigger than txDataLength %d", endPos, txDataLength)
-			log.Debug("error parsing header: ", err)
+			log.Info("error parsing header: ", err)
 			return result, ErrInvalidData
 		}
 
 		if endPos < pos {
 			err := fmt.Errorf("endPos %d is smaller than pos %d", endPos, pos)
-			log.Debug("error parsing header: ", err)
+			log.Info("error parsing header: ", err)
 			return result, ErrInvalidData
 		}
 
 		if endPos < pos {
 			err := fmt.Errorf("endPos %d is smaller than pos %d", endPos, pos)
-			log.Debug("error parsing header: ", err)
+			log.Info("error parsing header: ", err)
 			return result, ErrInvalidData
 		}
 
@@ -173,7 +173,7 @@ func DecodeBatchL2Blocks(txsData []byte, forkID uint64) ([]DecodedBatchL2Data, e
 
 		legacyTx, err := rlpFieldsToLegacyTx(rlpFields, vData, rData, sData)
 		if err != nil {
-			log.Debug("error creating tx from rlp fields: ", err, ". fullDataTx: ", hex.EncodeToString(fullDataTx), "\n tx: ", hex.EncodeToString(txInfo), "\n Transactions received: ", hex.EncodeToString(txsData))
+			log.Info("error creating tx from rlp fields: ", err, ". fullDataTx: ", hex.EncodeToString(fullDataTx), "\n tx: ", hex.EncodeToString(txInfo), "\n Transactions received: ", hex.EncodeToString(txsData))
 			return result, err
 		}
 

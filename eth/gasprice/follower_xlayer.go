@@ -52,7 +52,7 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 
 	// Convert L1 gasPrice in Eth to L2 gasPrice in OKB
 	res = new(big.Float).Mul(big.NewFloat(0).SetFloat64(l1CoinPrice/l2CoinPrice), res)
-	log.Debug(fmt.Sprintf("L2 pre gas price value: %s. L1 coin price: %f. L2 coin price: %f", res.String(), l1CoinPrice, l2CoinPrice))
+	log.Info(fmt.Sprintf("L2 pre gas price value: %s. L1 coin price: %f. L2 coin price: %f", res.String(), l1CoinPrice, l2CoinPrice))
 
 	// Check for min/max L2 gasPrice
 	result := new(big.Int)
@@ -68,7 +68,7 @@ func (f *FollowerGasPrice) UpdateGasPriceAvg(l1GasPrice *big.Int) {
 		result = maxGasPrice
 	}
 	var truncateValue *big.Int
-	log.Debug(fmt.Sprintf("Full L2 gas price value: %s. Length: %d", result.String(), len(result.String())))
+	log.Info(fmt.Sprintf("Full L2 gas price value: %s. Length: %d", result.String(), len(result.String())))
 	numLength := len(result.String())
 	if numLength > 3 { //nolint:gomnd
 		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd

@@ -332,7 +332,7 @@ func (s *NewSlotsStreams) Broadcast(reply *txpool_proto.OnAddReply) {
 	for id, stream := range s.chans {
 		err := stream.Send(reply)
 		if err != nil {
-			log.Debug("failed send to mined block stream", "err", err)
+			log.Info("failed send to mined block stream", "err", err)
 			select {
 			case <-stream.Context().Done():
 				delete(s.chans, id)

@@ -76,7 +76,7 @@ func (b adapterHandler) Handle(r lg.Record) {
 			log.Trace(str, "lvl", lvl.LogString())
 			break
 		}
-		log.Debug(str)
+		log.Info(str)
 	case lg.Info:
 		str := r.String()
 		skip := strings.Contains(str, "EOF")

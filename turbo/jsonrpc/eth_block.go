@@ -391,7 +391,7 @@ func (api *APIImpl) GetBlockTransactionCountByHash(ctx context.Context, blockHas
 	blockNum, _, _, err := rpchelper.GetBlockNumber_zkevm(rpc.BlockNumberOrHash{BlockHash: &blockHash}, tx, nil)
 	if err != nil {
 		// (Compatibility) Every other node just return `null` for when the block does not exist.
-		log.Debug("eth_getBlockTransactionCountByHash GetBlockNumber failed", "err", err)
+		log.Info("eth_getBlockTransactionCountByHash GetBlockNumber failed", "err", err)
 		return nil, nil
 	}
 

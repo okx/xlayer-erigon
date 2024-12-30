@@ -71,7 +71,7 @@ func (api *APIImpl) GasPrice_nonRedirected(ctx context.Context) (*hexutil.Big, e
 	if time.Since(api.L1GasPrice.timestamp) > 3*time.Second || api.L1GasPrice.gasPrice == nil {
 		l1GasPrice, err := api.l1GasPrice()
 		if err != nil {
-			log.Debug("Failed to get L1 gas price: ", err)
+			log.Info("Failed to get L1 gas price: ", err)
 
 		} else {
 			api.L1GasPrice = L1GasPrice{
@@ -98,7 +98,7 @@ func (api *APIImpl) GasPrice_nonRedirected(ctx context.Context) (*hexutil.Big, e
 	}
 
 	var truncateValue *big.Int
-	log.Debug("Full L2 gas price value: ", result, ". Length: ", len(result.String()))
+	log.Info("Full L2 gas price value: ", result, ". Length: ", len(result.String()))
 	numLength := len(result.String())
 	if numLength > 3 { //nolint:gomnd
 		aux := "%0" + strconv.Itoa(numLength-3) + "d" //nolint:gomnd

@@ -2,11 +2,11 @@ package stages
 
 import (
 	"fmt"
-	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"math/rand"
 	"sync/atomic"
 	"time"
 
+	"github.com/ledgerwatch/erigon/zk/datastream/client"
 	"github.com/ledgerwatch/log/v3"
 )
 

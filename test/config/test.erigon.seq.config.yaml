@@ -23,6 +23,7 @@ zkevm.rpc-ratelimit: 0
 zkevm.datastream-version: 2
 
 log.console.verbosity: info
+log.async: true
 
 #zkevm.executor-urls: xlayer-executor:50071
 zkevm.executor-strict: false

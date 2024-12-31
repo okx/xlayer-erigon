@@ -11,28 +11,29 @@ import (
 )
 
 func OkLogV1Format(r *log.Record) []byte {
-	r.KeyNames = log.RecordKeyNames{
-		Time: "t",
-		Msg:  "content",
-		Lvl:  "level",
-	}
+
 	props := make(map[string]interface{})
+	content := make(map[string]interface{})
 
 	callFrame := r.Call.Frame()
 
 	props["time"] = r.Time.UnixMilli()
-	props[r.KeyNames.Time] = r.Time
-	props[r.KeyNames.Lvl] = strings.ToUpper(r.Lvl.String())
-	props[r.KeyNames.Msg] = r.Msg
+	props["level"] = strings.ToUpper(r.Lvl.String())
+	props["content"] = content
 	props["line_num"] = callFrame.Line
 	props["class_name"] = filepath.Base(callFrame.File)
+	props["ok_log_version"] = "1.0"
+	props["method"] = r.Call.Frame().Function
+
+	content["msg"] = r.Msg
+	content["t"] = r.Time
 
 	for i := 0; i < len(r.Ctx); i += 2 {
 		k, ok := r.Ctx[i].(string)
 		if !ok {
-			props[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
+			content[errorKey] = fmt.Sprintf("%+v is not a string key", r.Ctx[i])
 		}
-		props[k] = formatJSONValue(r.Ctx[i+1])
+		content[k] = formatJSONValue(r.Ctx[i+1])
 	}
 
 	b, err := json.Marshal(props)

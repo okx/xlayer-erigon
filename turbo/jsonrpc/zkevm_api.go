@@ -11,8 +11,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/log/v3"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
+	"github.com/ledgerwatch/log/v3"
 
 	"math"
 
@@ -974,6 +974,7 @@ func (api *ZkEvmAPIImpl) GetBlockRangeWitness(ctx context.Context, startBlockNrO
 
 func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum uint64, debug bool, mode WitnessMode) (hexutility.Bytes, error) {
 	// limit in-flight requests by name
+	log.Info("steven,getBatchWitness------------1")
 	semaphore := api.semaphores[getBatchWitness]
 	if semaphore != nil {
 		select {
@@ -983,18 +984,22 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum
 			return nil, fmt.Errorf("busy")
 		}
 	}
+	log.Info("steven,getBatchWitness------------2")
 
 	if api.ethApi.historyV3(tx) {
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
+	log.Info("steven,getBatchWitness------------3")
 	reader := hermez_db.NewHermezDbReader(tx)
 	badBatch, err := reader.GetInvalidBatch(batchNum)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("steven,getBatchWitness------------4")
 
 	if !badBatch {
 		blockNumbers, err := reader.GetL2BlockNosByBatch(batchNum)
+		log.Info("steven,getBatchWitness,not badBatch------------5")
 		if err != nil {
 			return nil, err
 		}
@@ -1016,12 +1021,15 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum
 
 		startBlockRpc := rpc.BlockNumberOrHash{BlockNumber: &startBlockInt}
 		endBlockNrOrHash := rpc.BlockNumberOrHash{BlockNumber: &endBlockInt}
+		log.Info("steven,getBatchWitness,not badBatch------------6")
 		return api.getBlockRangeWitness(ctx, api.db, startBlockRpc, endBlockNrOrHash, debug, mode)
 	} else {
+		log.Info("steven,getBatchWitness,is badBatch------------5")
 		generator, fullWitness, err := api.buildGenerator(ctx, tx, mode)
 		if err != nil {
 			return nil, err
 		}
+		log.Info("steven,getBatchWitness,is badBatch------------6")
 
 		return generator.GetWitnessByBadBatch(tx, ctx, batchNum, debug, fullWitness)
 	}
@@ -1056,6 +1064,7 @@ func (api *ZkEvmAPIImpl) buildGenerator(ctx context.Context, tx kv.Tx, witnessMo
 
 // Get witness for a range of blocks [startBlockNrOrHash, endBlockNrOrHash] (inclusive)
 func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, startBlockNrOrHash rpc.BlockNumberOrHash, endBlockNrOrHash rpc.BlockNumberOrHash, debug bool, witnessMode WitnessMode) (hexutility.Bytes, error) {
+	log.Info("steven,getBlockRangeWitness------------1")
 	tx, err := db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -1064,7 +1073,7 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 	if api.ethApi.historyV3(tx) {
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
-
+	log.Info("steven,getBlockRangeWitness------------2")
 	blockNr, _, _, err := rpchelper.GetCanonicalBlockNumber_zkevm(startBlockNrOrHash, tx, api.ethApi.filters) // DoCall cannot be executed on non-canonical blocks
 	if err != nil {
 		return nil, err
@@ -1080,11 +1089,12 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 	}
 
 	hermezDb := hermez_db.NewHermezDbReader(tx)
-
+	log.Info("steven,getBlockRangeWitness------------3")
 	// we only keep trimmed witnesses in the db
 	if witnessMode == WitnessModeTrimmed {
 		blockWitnesses := make([]*trie.Witness, 0, endBlockNr-blockNr+1)
 		//try to get them from the db, if all are available - do not unwind and generate
+		log.Info("steven,getBlockRangeWitness------------4")
 		for blockNum := blockNr; blockNum <= endBlockNr; blockNum++ {
 			witnessBytes, err := hermezDb.GetWitnessCache(blockNum)
 			if err != nil {
@@ -1102,18 +1112,19 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 
 			blockWitnesses = append(blockWitnesses, blockWitness)
 		}
-
+		log.Info("steven,getBlockRangeWitness------------5")
 		if len(blockWitnesses) == int(endBlockNr-blockNr+1) {
 			// found all, calculate
+			log.Info("steven,getBlockRangeWitness------------6")
 			baseWitness, err := witness.MergeWitnesses(ctx, blockWitnesses)
 			if err != nil {
 				return nil, err
 			}
-
+			log.Info("steven,getBlockRangeWitness------------7")
 			return witness.GetWitnessBytes(baseWitness, debug)
 		}
 	}
-
+	log.Info("steven,getBlockRangeWitness------------8")
 	generator, fullWitness, err := api.buildGenerator(ctx, tx, witnessMode)
 	if err != nil {
 		return nil, err
@@ -1133,23 +1144,26 @@ const (
 )
 
 func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64, mode *WitnessMode) (interface{}, error) {
+	log.Info("steven,GetBatchWitness------------1")
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
 	}
 	defer tx.Rollback()
+	log.Info("steven,GetBatchWitness------------2")
 
 	hermezDb := hermez_db.NewHermezDbReader(tx)
 	badBatch, err := hermezDb.GetInvalidBatch(batchNumber)
 	if err != nil {
 		return nil, err
 	}
-
+	log.Info("steven,GetBatchWitness------------3")
 	if badBatch && !sequencer.IsSequencer() {
 		// we won't have the details in our db if the batch is marked as invalid so we need to check this
 		// here
 		return api.sendGetBatchWitness(api.l2SequencerUrl, batchNumber, mode)
 	}
+	log.Info("steven,GetBatchWitness------------4")
 
 	checkedMode := WitnessModeNone
 	if mode != nil && *mode != WitnessModeFull && *mode != WitnessModeTrimmed {
@@ -1162,6 +1176,8 @@ func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64
 	rpcModeMatchesNodeMode :=
 		checkedMode == WitnessModeFull && api.config.WitnessFull ||
 			checkedMode == WitnessModeTrimmed && !api.config.WitnessFull
+
+	log.Info("steven,GetBatchWitness------------5")
 	// we only want to check the cache if no special run mode has been supplied.
 	// or if requested mode matches the node mode
 	// otherwise regenerate it
@@ -1175,6 +1191,7 @@ func (api *ZkEvmAPIImpl) GetBatchWitness(ctx context.Context, batchNumber uint64
 			return witnessCached, nil
 		}
 	}
+	log.Info("steven,GetBatchWitness------------6")
 
 	return api.getBatchWitness(ctx, tx, batchNumber, false, checkedMode)
 }

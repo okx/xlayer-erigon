@@ -125,6 +125,7 @@ func (g *Generator) GetWitnessByBadBatch(tx kv.Tx, ctx context.Context, batchNum
 }
 
 func (g *Generator) GetWitnessByBlockRange(tx kv.Tx, ctx context.Context, startBlock, endBlock uint64, debug, witnessFull bool) ([]byte, error) {
+	log.Info("steven,GetWitnessByBlockRange------------1")
 	t := zkUtils.StartTimer("witness", "getwitnessbyblockrange")
 	defer t.LogTimer()
 
@@ -136,7 +137,7 @@ func (g *Generator) GetWitnessByBlockRange(tx kv.Tx, ctx context.Context, startB
 		return GetWitnessBytes(witness, debug)
 	}
 	hermezDb := hermez_db.NewHermezDbReader(tx)
-
+	log.Info("steven,GetWitnessByBlockRange------------2")
 	idx := 0
 	blocks := make([]*eritypes.Block, endBlock-startBlock+1)
 	var firstBatch uint64 = 0
@@ -152,11 +153,13 @@ func (g *Generator) GetWitnessByBlockRange(tx kv.Tx, ctx context.Context, startB
 		blocks[idx] = block
 		idx++
 	}
+	log.Info("steven,GetWitnessByBlockRange------------3")
 
 	return g.generateWitness(tx, ctx, firstBatch, blocks, debug, witnessFull)
 }
 
 func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint64, blocks []*eritypes.Block, debug, witnessFull bool) ([]byte, error) {
+	log.Info("steven,generateWitness------------1")
 	now := time.Now()
 	defer func() {
 		diff := time.Since(now)
@@ -165,12 +168,13 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 		}
 		log.Info("Generating witness timing", "batch", batchNum, "blockFrom", blocks[0].NumberU64(), "blockTo", blocks[len(blocks)-1].NumberU64(), "taken", diff)
 	}()
-
+	log.Info("steven,generateWitness------------2")
 	areExecutorUrlsEmpty := len(g.zkConfig.ExecutorUrls) == 0 || g.zkConfig.ExecutorUrls[0] == ""
 	shouldGenerateMockWitness := g.zkConfig.MockWitnessGeneration && areExecutorUrlsEmpty
 	if shouldGenerateMockWitness {
 		return g.generateMockWitness(batchNum, blocks, debug)
 	}
+	log.Info("steven,generateWitness------------3")
 
 	endBlock := blocks[len(blocks)-1].NumberU64()
 	startBlock := blocks[0].NumberU64()
@@ -179,7 +183,7 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 	if err != nil {
 		return nil, err
 	}
-
+	log.Info("steven,generateWitness------------3.1")
 	if latestBlock < endBlock {
 		return nil, fmt.Errorf("block number is in the future latest=%d requested=%d", latestBlock, endBlock)
 	}
@@ -189,6 +193,7 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 	if err = zkUtils.PopulateMemoryMutationTables(rwtx); err != nil {
 		return nil, err
 	}
+	log.Info("steven,generateWitness------------3.2")
 
 	sBlock := blocks[0]
 	if sBlock == nil {
@@ -196,6 +201,7 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 	}
 
 	if startBlock-1 < latestBlock {
+		log.Info("steven,generateWitness------------3.3")
 		if latestBlock-startBlock > maxGetProofRewindBlockCount {
 			return nil, fmt.Errorf("requested block is too old, block must be within %d blocks of the head block number (currently %d)", maxGetProofRewindBlockCount, latestBlock)
 		}
@@ -205,7 +211,9 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 		}
 
 		tx = rwtx
+		log.Info("steven,generateWitness------------3.4")
 	}
+	log.Info("steven,generateWitness------------4")
 
 	prevHeader, err := g.blockReader.HeaderByNumber(ctx, tx, startBlock-1)
 	if err != nil {
@@ -229,8 +237,9 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 
 	reader := state.NewPlainState(tx, blocks[0].NumberU64(), systemcontracts.SystemContractCodeLookup[g.chainCfg.ChainName])
 	defer reader.Close()
-
+	log.Info("steven,generateWitness------------5")
 	for _, block := range blocks {
+
 		blockNum := block.NumberU64()
 		reader.SetBlockNr(blockNum)
 
@@ -259,16 +268,19 @@ func (g *Generator) generateWitness(tx kv.Tx, ctx context.Context, batchNum uint
 
 		prevStateRoot = block.Root()
 	}
+	log.Info("steven,generateWitness------------6")
 
 	witness, err := BuildWitnessFromTrieDbState(ctx, rwtx, tds, reader, g.forcedContracts, witnessFull)
 	if err != nil {
 		return nil, fmt.Errorf("BuildWitnessFromTrieDbState: %w", err)
 	}
+	log.Info("steven,generateWitness------------7")
 
 	return GetWitnessBytes(witness, debug)
 }
 
 func (g *Generator) generateMockWitness(batchNum uint64, blocks []*eritypes.Block, debug bool) ([]byte, error) {
+	log.Info("steven,generateMockWitness------------1")
 	mockWitness := []byte("mockWitness")
 	startBlockNumber := blocks[0].NumberU64()
 	endBlockNumber := blocks[len(blocks)-1].NumberU64()
@@ -282,6 +294,6 @@ func (g *Generator) generateMockWitness(batchNum uint64, blocks []*eritypes.Bloc
 			"endBlockNumber", endBlockNumber,
 		)
 	}
-
+	log.Info("steven,generateMockWitness------------2")
 	return mockWitness, nil
 }

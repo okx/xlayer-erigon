@@ -4,7 +4,7 @@ http: true
 private.api.addr: localhost:9091
 zkevm.l2-chain-id: 195
 zkevm.l2-sequencer-rpc-url: http://xlayer-seq:8545
-zkevm.l2-datastreamer-url: xlayer-seq:6900
+zkevm.l2-datastreamer-url: xlayer-ds:7900
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://xlayer-mock-l1-network:8545
 
@@ -27,7 +27,7 @@ log.console.verbosity: info
 #zkevm.executor-urls: xlayer-executor:50071
 zkevm.executor-urls: ""
 zkevm.executor-strict: false
-zkevm.witness-full: true
+zkevm.witness-full: false
 
 zkevm.sequencer-block-seal-time: "6s"
 zkevm.sequencer-batch-seal-time: "12s"
@@ -49,6 +49,10 @@ http.corsdomain: any
 http.timeouts.read: "10s"
 http.timeouts.write: "10s"
 http.timeouts.idle: "10s"
+http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}"
+# http.apikeys: |
+#   {"project":"Biconomy","key":"45543e0adc5dd3e316044909d32501a5","timeout":"2030-12-31","methods":["eth_syncing"],"count":10000,"bucket":1}
+
 ws: true
 
 zkevm.apollo-enabled: false
@@ -77,5 +81,5 @@ http.methodratelimit: "{\"methods\":[\"eth_syncing\"],\"count\":10,\"bucket\":1}
 
 pprof: true
 pprof.port: 6060
-pprof.addr: 127.0.0.1
+pprof.addr: 0.0.0.0
 

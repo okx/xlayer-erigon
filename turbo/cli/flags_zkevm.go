@@ -131,6 +131,22 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		badBatches = append(badBatches, val)
 	}
 
+	// witness cache flags
+	// if dicabled, set limit to 0 and only check for it to be 0 or not
+	witnessCacheEnabled := ctx.Bool(utils.WitnessCacheEnable.Name)
+	witnessCacheLimit := ctx.Uint64(utils.WitnessCacheLimit.Name)
+	if !witnessCacheEnabled {
+		witnessCacheLimit = 0
+	}
+	var witnessInclusion []libcommon.Address
+	for _, s := range strings.Split(ctx.String(utils.WitnessContractInclusion.Name), ",") {
+		if s == "" {
+			// if there are no entries then we can just ignore it and move on
+			continue
+		}
+		witnessInclusion = append(witnessInclusion, libcommon.HexToAddress(s))
+	}
+
 	cfg.Zk = &ethconfig.Zk{
 		L2ChainId:                              ctx.Uint64(utils.L2ChainIdFlag.Name),
 		L2RpcUrl:                               ctx.String(utils.L2RpcUrlFlag.Name),
@@ -211,6 +227,8 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		InfoTreeUpdateInterval:                 ctx.Duration(utils.InfoTreeUpdateInterval.Name),
 		SealBatchImmediatelyOnOverflow:         ctx.Bool(utils.SealBatchImmediatelyOnOverflow.Name),
 		MockWitnessGeneration:                  ctx.Bool(utils.MockWitnessGeneration.Name),
+		WitnessCacheLimit:                      witnessCacheLimit,
+		WitnessContractInclusion:               witnessInclusion,
 	}
 
 	// For X Layer

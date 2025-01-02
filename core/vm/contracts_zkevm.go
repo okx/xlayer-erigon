@@ -300,33 +300,6 @@ func (c *bigModExp_zkevm) RequiredGas(input []byte) uint64 {
 		input = input[:0]
 	}
 
-	// Retrieve the operands and execute the exponentiation
-	var (
-		base       = new(big.Int).SetBytes(getData(input, 0, baseLen.Uint64()))
-		exp        = new(big.Int).SetBytes(getData(input, baseLen.Uint64(), expLen.Uint64()))
-		mod        = new(big.Int).SetBytes(getData(input, baseLen.Uint64()+expLen.Uint64(), modLen.Uint64()))
-		baseBitLen = base.BitLen()
-		expBitLen  = exp.BitLen()
-		modBitLen  = mod.BitLen()
-	)
-
-	// zk special cases
-	// - if mod = 0 we consume gas as normal
-	// - if base is 0 and mod < 8192 we consume gas as normal
-	// - if neither of the above are true we check for reverts and return 0 gas fee
-
-	if modBitLen == 0 {
-		// consume as normal - will return 0
-	} else if baseBitLen == 0 {
-		if modBitLen > 8192 {
-			return 0
-		} else {
-			// consume as normal - will return 0
-		}
-	} else if baseBitLen > 8192 || expBitLen > 8192 || modBitLen > 8192 {
-		return 0
-	}
-
 	// Retrieve the head 32 bytes of exp for the adjusted exponent length
 	var expHead *big.Int
 	if big.NewInt(int64(len(input))).Cmp(baseLen) <= 0 {
@@ -362,7 +335,16 @@ func (c *bigModExp_zkevm) RequiredGas(input []byte) uint64 {
 		//where is x is max(length_of_MODULUS, length_of_BASE)
 		gas = gas.Add(gas, big7)
 		gas = gas.Div(gas, big8)
+		// word = ceiling(x/8)
+		// if gas(word) > MAX_GAS_WORD_MODEXP --> out of gas
+		if gas.Uint64() > 9487 {
+			return math.MaxUint64
+		}
 		gas.Mul(gas, gas)
+		// if adjExpLen > MAX_GAS_IT_MODEXP --> out of gas
+		if adjExpLen.Uint64() > 90000000 {
+			return math.MaxUint64
+		}
 
 		gas.Mul(gas, math.BigMax(adjExpLen, big1))
 		// 2. Different divisor (`GQUADDIVISOR`) (3)
@@ -374,6 +356,21 @@ func (c *bigModExp_zkevm) RequiredGas(input []byte) uint64 {
 		if gas.Uint64() < 200 {
 			return 200
 		}
+		// zk special cases
+		// - if mod = 0 we consume gas as normal
+		// - if base is 0 and mod < 8192 we consume gas as normal
+		// - if neither of the above are true we check for reverts and return 0 gas fee
+		if modLen.Uint64() == 0 {
+			// consume as normal - will return 0
+		} else if baseLen.Uint64() == 0 {
+			if modLen.Uint64() > 1024 {
+				return 0
+			} else {
+				// consume as normal - will return 0
+			}
+		} else if baseLen.Uint64() > 1024 || expLen.Uint64() > 1024 || modLen.Uint64() > 1024 {
+			return 0
+		}
 		return gas.Uint64()
 	}
 	gas = modexpMultComplexity(gas)
@@ -382,6 +379,21 @@ func (c *bigModExp_zkevm) RequiredGas(input []byte) uint64 {
 
 	if gas.BitLen() > 64 {
 		return math.MaxUint64
+	}
+	// zk special cases
+	// - if mod = 0 we consume gas as normal
+	// - if base is 0 and mod < 8192 we consume gas as normal
+	// - if neither of the above are true we check for reverts and return 0 gas fee
+	if modLen.Uint64() == 0 {
+		// consume as normal - will return 0
+	} else if baseLen.Uint64() == 0 {
+		if modLen.Uint64() > 1024 {
+			return 0
+		} else {
+			// consume as normal - will return 0
+		}
+	} else if baseLen.Uint64() > 1024 || expLen.Uint64() > 1024 || modLen.Uint64() > 1024 {
+		return 0
 	}
 	return gas.Uint64()
 }
@@ -396,38 +408,57 @@ func (c *bigModExp_zkevm) Run(input []byte) ([]byte, error) {
 		expLen  = new(big.Int).SetBytes(getData(input, 32, 32)).Uint64()
 		modLen  = new(big.Int).SetBytes(getData(input, 64, 32)).Uint64()
 	)
-	if len(input) > 96 {
-		input = input[96:]
-	} else {
-		input = input[:0]
+
+	if modLen == 0 {
+		// normal execution
+	} else if baseLen == 0 {
+		if modLen > 1024 {
+			return nil, ErrExecutionReverted
+		} else {
+			// normal execution
+		}
+	} else if baseLen > 1024 || expLen > 1024 || modLen > 1024 {
+		return nil, ErrExecutionReverted
 	}
+
+	var (
+		base = new(big.Int).SetBytes(getData(input, 0, baseLen))
+		exp  = new(big.Int).SetBytes(getData(input, baseLen, expLen))
+		mod  = new(big.Int).SetBytes(getData(input, baseLen+expLen, modLen))
+	)
+
+	// Extract `base`, `exp`, and `mod` with padding as needed
+	baseData := getData(input, 96, uint64(baseLen))
+	if uint64(len(baseData)) < baseLen {
+		baseData = common.RightPadBytes(baseData, int(baseLen))
+	}
+	base.SetBytes(baseData)
+
+	expData := getData(input, 96+uint64(baseLen), uint64(expLen))
+	if uint64(len(expData)) < expLen {
+		expData = common.RightPadBytes(expData, int(expLen))
+	}
+	exp.SetBytes(expData)
+
+	modData := getData(input, 96+uint64(baseLen)+uint64(expLen), uint64(modLen))
+	if uint64(len(modData)) < modLen {
+		modData = common.RightPadBytes(modData, int(modLen))
+	}
+	mod.SetBytes(modData)
 
 	// Retrieve the operands and execute the exponentiation
 	var (
-		base       = new(big.Int).SetBytes(getData(input, 0, baseLen))
-		exp        = new(big.Int).SetBytes(getData(input, baseLen, expLen))
-		mod        = new(big.Int).SetBytes(getData(input, baseLen+expLen, modLen))
 		v          []byte
 		baseBitLen = base.BitLen()
-		expBitLen  = exp.BitLen()
 		modBitLen  = mod.BitLen()
 	)
 
 	if modBitLen == 0 {
-		return []byte{}, nil
+		return common.LeftPadBytes([]byte{}, int(modLen)), nil
 	}
 
 	if baseBitLen == 0 {
-		if modBitLen > 8192 {
-			return nil, ErrExecutionReverted
-		} else {
-			return common.LeftPadBytes([]byte{}, int(modLen)), nil
-		}
-	}
-
-	// limit to 8192 bits for base, exp, and mod in ZK
-	if baseBitLen > 8192 || expBitLen > 8192 || modBitLen > 8192 {
-		return nil, ErrExecutionReverted
+		return common.LeftPadBytes([]byte{}, int(modLen)), nil
 	}
 
 	switch {

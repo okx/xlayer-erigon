@@ -19,14 +19,14 @@ zkevm.l1-rollup-id: 1
 zkevm.l1-first-block: 368
 zkevm.l1-block-range: 10
 zkevm.l1-query-delay: 6000
-zkevm.rpc-ratelimit: 300
+zkevm.rpc-ratelimit: 0
 zkevm.datastream-version: 2
 
 log.console.verbosity: info
 
-zkevm.executor-urls: xlayer-executor:50071
-zkevm.executor-strict: true
-zkevm.witness-full: true
+#zkevm.executor-urls: xlayer-executor:50071
+zkevm.executor-strict: false
+zkevm.witness-full: false
 
 zkevm.sequencer-block-seal-time: "3s"
 zkevm.sequencer-batch-seal-time: "10s"
@@ -92,4 +92,4 @@ networkid: 195
 
 pprof: true
 pprof.port: 6060
-pprof.addr: 127.0.0.1
+pprof.addr: 0.0.0.0

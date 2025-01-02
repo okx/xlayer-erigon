@@ -8,7 +8,7 @@ services:
     image: hermeznetwork/zkevm-prover:v9.0.0-RC1-fork.13
     platform: linux/amd64
     environment:
-       - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
+      - EXPERIMENTAL_DOCKER_DESKTOP_FORCE_QEMU=1
     ports:
       - 0.0.0.0:50061:50061 # MT
       - 0.0.0.0:50071:50071 # Executor
@@ -21,7 +21,7 @@ services:
     container_name: xlayer-seqs
     image: zjg555543/cdk:v0.4.0-beta10
     volumes:
-      - ./sqlite/seqs:/tmp/cdk
+      - ./data/seqs:/tmp/cdk
       - ./keystore/da.permit.keystore:/pk/da.permit.keystore
       - ./keystore/sequencer.keystore:/pk/sequencer.keystore
       - ./config/cdk.config.toml:/app/config.toml
@@ -37,7 +37,7 @@ services:
     ports:
       - 50081:50081
     volumes:
-      - ./sqlite/agg:/tmp/cdk
+      - ./data/agg:/tmp/cdk
       - ./keystore/aggregator.keystore:/pk/aggregator.keystore
       - ./config/cdk.config.toml:/app/config.toml
       - ./config/test.genesis.config.json:/app/genesis.json
@@ -101,11 +101,12 @@ services:
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
+      - 6060:6060
       - 8123:8545
       - 6900:6900
       - 9092:9095
     volumes:
-      - ./data/seq:/home/erigon/data/
+      - ./data/seq/:/home/erigon/data/
       - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -119,10 +120,12 @@ services:
     environment:
       - CDK_ERIGON_SEQUENCER=0
     ports:
+      - 6061:6060
       - 8124:8545
       - 6901:6900
       - 9091:9095
     volumes:
+      - ./data/rpc/:/home/erigon/data/
       - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
       - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
       - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
@@ -354,3 +357,43 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/xlayer-signer http -cfg /app/config.toml"
+
+  xlayer-ds:
+    container_name: xlayer-ds
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image: zjg555543/xlayer-ds:basedev-merge-upstream-v0.2.7
+    ports:
+      - 7900:7900
+    volumes:
+#      - ./data/ds/:/home/dsrelay/
+      - ./config/ds-config.toml:/app/config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/dsrelay --cfg /app/config.toml"
+
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    user: ${DOCKER_UID:-1000}:${DOCKER_GID:-1000} # Uses erigon user from Dockerfile
+    command: --log.level=warn --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/prometheus --storage.tsdb.retention.time=150d --web.console.libraries=/usr/share/prometheus/console_libraries --web.console.templates=/usr/share/prometheus/consoles
+    ports:
+      - 9099:9090
+    volumes:
+      - ../cmd/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ${XDG_DATA_HOME:-~/.local/share}/erigon-prometheus:/prometheus
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    user: "472:0" # required for grafana version >= 7.3
+    ports:
+      - 3000:3000
+    volumes:
+      - ../cmd/prometheus/datasources:/etc/grafana/provisioning/datasources
+      - ../cmd/prometheus/dashboards:/etc/grafana/provisioning/dashboards
+      - ${XDG_DATA_HOME:-~/.local/share}/erigon-grafana:/var/lib/grafana
+    restart: unless-stopped
+

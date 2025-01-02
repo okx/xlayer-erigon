@@ -123,8 +123,9 @@ func BuildWitnessFromTrieDbState(ctx context.Context, tx kv.Tx, tds trieDbState,
 	var rl trie.RetainDecider
 	// if full is true, we will send all the nodes to the witness
 	rl = &trie.AlwaysTrueRetainDecider{}
-
+	log.Info("steven,BuildWitnessFromTrieDbState------------1")
 	if !witnessFull {
+		log.Info("steven,BuildWitnessFromTrieDbState------------2")
 		inclusion := make(map[common.Address][]common.Hash)
 		for _, contract := range forcedContracts {
 			err = reader.ForEachStorage(contract, common.Hash{}, func(key, secKey common.Hash, value uint256.Int) bool {
@@ -135,17 +136,19 @@ func BuildWitnessFromTrieDbState(ctx context.Context, tx kv.Tx, tds trieDbState,
 				return nil, err
 			}
 		}
+		log.Info("steven,BuildWitnessFromTrieDbState------------3")
 
 		rl, err = tds.ResolveSMTRetainList(inclusion)
 		if err != nil {
 			return nil, err
 		}
 	}
-
+	log.Info("steven,BuildWitnessFromTrieDbState------------4")
 	eridb := db2.NewRoEriDb(tx)
 	smtTrie := smt.NewRoSMT(eridb)
-
+	log.Info("steven,BuildWitnessFromTrieDbState------------5")
 	if witness, err = smtTrie.BuildWitness(rl, ctx); err != nil {
+		log.Info("steven,BuildWitnessFromTrieDbState------------6")
 		return nil, fmt.Errorf("BuildWitness: %w", err)
 	}
 
@@ -169,6 +172,7 @@ func ParseWitnessFromBytes(input []byte, trace bool) (*trie.Witness, error) {
 // input witnesses should be ordered by consequent blocks
 // it replaces values from 2,3,4 into the first witness
 func MergeWitnesses(ctx context.Context, witnesses []*trie.Witness) (*trie.Witness, error) {
+	log.Info("steven,MergeWitnesses------------1")
 	if len(witnesses) == 0 {
 		return nil, ErrNoWitnesses
 	}
@@ -181,11 +185,13 @@ func MergeWitnesses(ctx context.Context, witnesses []*trie.Witness) (*trie.Witne
 	if err != nil {
 		return nil, fmt.Errorf("BuildSMTfromWitness: %w", err)
 	}
+	log.Info("steven,MergeWitnesses------------2")
 	for i := 1; i < len(witnesses); i++ {
 		if err := smt.AddWitnessToSMT(baseSmt, witnesses[i]); err != nil {
 			return nil, fmt.Errorf("AddWitnessToSMT: %w", err)
 		}
 	}
+	log.Info("steven,MergeWitnesses------------3")
 
 	// if full is true, we will send all the nodes to the witness
 	rl := &trie.AlwaysTrueRetainDecider{}
@@ -194,6 +200,7 @@ func MergeWitnesses(ctx context.Context, witnesses []*trie.Witness) (*trie.Witne
 	if err != nil {
 		return nil, fmt.Errorf("BuildWitness: %w", err)
 	}
+	log.Info("steven,MergeWitnesses------------4")
 
 	return witness, nil
 }

@@ -82,6 +82,41 @@ services:
       - ./config/test.prover.config.json:/usr/src/app/config.json
     command: >
       zkProver -c /usr/src/app/config.json
+      
+      
+  xlayer-prover-gpu:
+    container_name: xlayer-prover
+    image: xlayer-prover-gpu:v9.0.0-RC3-fork.13
+    mem_limit: 1024g
+    read_only: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: "nvidia"
+              count: "all"
+              #device_ids: ['0','1','2','3']
+              capabilities: [ "gpu" ]
+    volumes:
+      - /data/v9.0.0-rc.3-fork.13/config:/app/config
+      - ./config/test.prover.config.json:/usr/src/app/config.json
+      - ./prover/logs:/app/logs/
+      - ./output:/app/output
+    command: >
+      zkProver -c /usr/src/app/config.json
+
+  xlayer-prover-cpu:
+    container_name: xlayer-prover-cpu
+    image: hermeznetwork/zkevm-prover:v9.0.0-RC3-fork.13
+    mem_limit: 1024g
+    read_only: true
+    volumes:
+      - /data/v9.0.0-rc.3-fork.13/config:/app/config
+      - ./config/test.prover.config.json:/usr/src/app/config.json
+      - ./prover/logs:/app/logs/
+      - ./output:/app/output
+    command: >
+      zkProver -c /usr/src/app/config.json
 
   xlayer-approve:
     container_name: xlayer-approve

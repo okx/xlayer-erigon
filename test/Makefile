@@ -78,18 +78,18 @@ run: ## Runs a full node
 #	$(RUN_DOCKER_GRAFANA)
 
 .PHONY: all
-bridge: ## Runs a full node
-	# base services
-	$(RUN_DOCKER_BRIDGE_DB)
-	$(RUN_DOCKER_BRIDGE_REDIS)
-	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
-	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
-
-	# bridge services
-	sleep 30
-	$(RUN_DOCKER_BRIDGE_SERVICE)
-	sleep 3
-	$(RUN_DOCKER_BRIDGE_UI)
+#bridge: ## Runs a full node
+#	# base services
+#	$(RUN_DOCKER_BRIDGE_DB)
+#	$(RUN_DOCKER_BRIDGE_REDIS)
+#	$(RUN_DOCKER_BRIDGE_ZOOKEEPER)
+#	$(RUN_DOCKER_BRIDGE_COIN_KAFKA)
+#
+#	# bridge services
+#	sleep 30
+#	$(RUN_DOCKER_BRIDGE_SERVICE)
+#	sleep 3
+#	$(RUN_DOCKER_BRIDGE_UI)
 
 .PHONY: stop
 stop: ## Stops all services

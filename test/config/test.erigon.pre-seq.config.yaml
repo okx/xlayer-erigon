@@ -3,8 +3,8 @@ chain: dynamic-mynetwork
 http: true
 private.api.addr: localhost:9091
 zkevm.l2-chain-id: 195
-zkevm.l2-sequencer-rpc-url: http://xlayer-json-rpc:8545
-zkevm.l2-datastreamer-url: xlayer-sequencer:6900
+zkevm.l2-sequencer-rpc-url: http://xlayer-json-rpc:8123
+zkevm.l2-datastreamer-url: xlayer-relayer:7900
 zkevm.l1-chain-id: 1337
 zkevm.l1-rpc-url: http://xlayer-mock-l1-network:8545
 

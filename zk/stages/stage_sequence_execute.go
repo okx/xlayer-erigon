@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -390,9 +391,22 @@ func sequencingBatchStep(
 						return err
 					}
 
-					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+					hashResults := make([]common.Hash, len(newTransactions))
+					var wg sync.WaitGroup
+
 					for idx, tx := range newTransactions {
-						batchState.blockState.transactionHashesToSlots[tx.Hash()] = newIds[idx]
+						wg.Add(1)
+						go func(idx int, tx types.Transaction) {
+							defer wg.Done()
+							hashResults[idx] = tx.Hash()
+						}(idx, tx)
+					}
+
+					wg.Wait()
+
+					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+					for idx, hash := range hashResults {
+						batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
 					}
 
 					if len(batchState.blockState.transactionsForInclusion) == 0 {

@@ -21,35 +21,37 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 	t := utils.StartTimer("rpc", "sendrawtransaction")
 	defer t.LogTimer()
 
+	// Single database transaction for all operations
 	tx, err := api.db.BeginRo(ctx)
 	if err != nil {
 		return common.Hash{}, err
 	}
 	defer tx.Rollback()
+
+	// Get chain config once and reuse
 	cc, err := api.chainConfig(ctx, tx)
 	if err != nil {
 		return common.Hash{}, err
 	}
 	chainId := cc.ChainID
 
-	// [zkevm] - proxy the request if the chainID is ZK and not a sequencer
+	// ZK chain handling
 	if api.isZkNonSequencer(chainId) {
-		// [zkevm] - proxy the request to the pool manager if the pool manager is set
 		if api.isPoolManagerAddressSet() {
 			return api.sendTxZk(api.PoolManagerUrl, encodedTx, chainId.Uint64())
 		}
-
 		return api.sendTxZk(api.l2RpcUrl, encodedTx, chainId.Uint64())
 	}
 
+	// Decode and validate transaction
 	txn, err := types.DecodeWrappedTransaction(encodedTx)
 	if err != nil {
 		return common.Hash{}, err
 	}
 
+	// Non-legacy transaction validation
 	if txn.Type() != types.LegacyTxType {
 		latestBlock, err := api.blockByNumber(ctx, rpc.LatestBlockNumber, tx)
-
 		if err != nil {
 			return common.Hash{}, err
 		}
@@ -63,37 +65,25 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 		}
 	}
 
-	// If the transaction fee cap is already specified, ensure the
-	// fee of the given transaction is _reasonable_.
+	// Fee validation
 	if err := checkTxFee(txn.GetPrice().ToBig(), txn.GetGas(), api.FeeCap); err != nil {
 		return common.Hash{}, err
 	}
+
+	// Protection validation
 	if !api.AllowPreEIP155Transactions && !txn.Protected() && !api.AllowUnprotectedTxs {
 		return common.Hash{}, errors.New("only replay-protected (EIP-155) transactions allowed over RPC")
 	}
 
-	// this has been moved to prior to adding of transactions to capture the
-	// pre state of the db - which is used for logging in the messages below
-	tx, err = api.db.BeginRo(ctx)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
-	defer tx.Rollback()
-
-	cc, err = api.chainConfig(ctx, tx)
-	if err != nil {
-		return common.Hash{}, err
-	}
-
+	// Chain ID validation for protected transactions
 	if txn.Protected() {
 		txnChainId := txn.GetChainID()
-		chainId := cc.ChainID
 		if chainId.Cmp(txnChainId.ToBig()) != 0 {
 			return common.Hash{}, fmt.Errorf("invalid chain id, expected: %d got: %d", chainId, *txnChainId)
 		}
 	}
 
+	// Add transaction to pool
 	hash := txn.Hash()
 	res, err := api.txPool.Add(ctx, &txPoolProto.AddRequest{RlpTxs: [][]byte{encodedTx}})
 	if err != nil {
@@ -104,7 +94,7 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 		return hash, fmt.Errorf("%s: %s", txPoolProto.ImportResult_name[int32(res.Imported[0])], res.Errors[0])
 	}
 
-	return txn.Hash(), nil
+	return hash, nil
 }
 
 // SendTransaction implements eth_sendTransaction. Creates new message call transaction or a contract creation if the data field contains code.

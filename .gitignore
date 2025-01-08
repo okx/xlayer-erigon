@@ -122,3 +122,5 @@ xlayerconfig-testnet.yaml
 
 datadir
 zk/tests/unwinds/datastream/hermez-dynamic-integration8-datastream
+
+.codegpt

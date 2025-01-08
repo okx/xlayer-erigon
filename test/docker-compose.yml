@@ -100,6 +100,8 @@ services:
     image: cdk-erigon
     environment:
       - CDK_ERIGON_SEQUENCER=1
+      # - GOGC=800  # 增大 GOGC 值，减少 GC 频率
+      # - GODEBUG=gctrace=1  # 启用 GC 调试日志
     ports:
       - 6060:6060
       - 8123:8545

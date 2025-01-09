@@ -271,7 +271,7 @@ func (sg Signer) SenderWithContext(context *secp256k1.Context, tx Transaction) (
 	default:
 		return libcommon.Address{}, ErrTxTypeNotSupported
 	}
-	return recoverPlain(context, tx.SigningHash(signChainID), R, S, &V, !sg.malleable)
+	return recoverPlain(tx.SigningHash(signChainID), R, S, &V, !sg.malleable)
 }
 
 // SignatureValues returns the raw R, S, V values corresponding to the
@@ -338,7 +338,7 @@ func decodeSignature(sig []byte) (r, s, v *uint256.Int) {
 	return r, s, v
 }
 
-func recoverPlain(context *secp256k1.Context, sighash libcommon.Hash, R, S, Vb *uint256.Int, homestead bool) (libcommon.Address, error) {
+func recoverPlain(sighash libcommon.Hash, R, S, Vb *uint256.Int, homestead bool) (libcommon.Address, error) {
 	if Vb.BitLen() > 8 {
 		return libcommon.Address{}, ErrInvalidSig
 	}
@@ -353,7 +353,7 @@ func recoverPlain(context *secp256k1.Context, sighash libcommon.Hash, R, S, Vb *
 	copy(sig[64-len(s):64], s)
 	sig[64] = V
 	// recover the public key from the signature
-	pub, err := crypto.EcrecoverWithContext(context, sighash[:], sig)
+	pub, err := crypto.Ecrecover(sighash[:], sig)
 	if err != nil {
 		return libcommon.Address{}, err
 	}

@@ -13,6 +13,7 @@ import (
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	"log"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -82,13 +83,16 @@ func (c *txpoolClient) FindUnknown(ctx context.Context, in *TxHashes, opts ...gr
 	}
 	return out, nil
 }
-
 func (c *txpoolClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error) {
+	log.Println("Starting Add method")
 	out := new(AddReply)
 	err := c.cc.Invoke(ctx, Txpool_Add_FullMethodName, in, out, opts...)
 	if err != nil {
+		log.Printf("Error in Add method: %v", err)
 		return nil, err
 	}
+
+	log.Println("Successfully completed Add method")
 	return out, nil
 }
 

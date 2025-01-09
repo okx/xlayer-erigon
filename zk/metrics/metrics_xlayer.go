@@ -24,6 +24,8 @@ var (
 	SeqTxCountName       = SeqPrefix + "tx_count"
 	SeqFailTxCountName   = SeqPrefix + "fail_tx_count"
 	SeqBlockGasUsedName  = SeqPrefix + "block_gas_used"
+	SeqSenderRecoveryDurationName = SeqPrefix + "sender_recovery_duration"
+	SeqSenderRecoveryCountName = SeqPrefix + "sender_recovery_count"
 
 	RpcPrefix              = "rpc_"
 	RpcDynamicGasPriceName = RpcPrefix + "dynamic_gas_price"
@@ -39,6 +41,8 @@ func Init() {
 	prometheus.MustRegister(SeqBlockGasUsed)
 	prometheus.MustRegister(RpcDynamicGasPrice)
 	prometheus.MustRegister(RpcInnerTxExecuted)
+	prometheus.MustRegister(SeqSenderRecoveryDuration)
+	prometheus.MustRegister(SeqSenderRecoveryCount)
 }
 
 var BatchExecuteTimeGauge = prometheus.NewGaugeVec(
@@ -114,5 +118,25 @@ var SeqBlockGasUsed = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Name: SeqBlockGasUsedName,
 		Help: "[SEQUENCER] gas used per block",
+	},
+)
+
+var SeqSenderRecoveryDuration = prometheus.NewSummary(
+	prometheus.SummaryOpts{
+		Name: SeqSenderRecoveryDurationName,
+		Help: "[SEQUENCER] time spent on recover sender address when adding a transaction to txpool, measured in microsecond (μs)",
+		Objectives: map[float64]float64{
+			0.5:  0.05,  // 50th percentile (median) with 5% error
+			0.9:  0.01,  // 90th percentile with 1% error
+			0.95: 0.005, // 95th percentile with 0.5% error
+			0.99: 0.001, // 99th percentile with 0.1% error
+		},
+	},
+)
+
+var SeqSenderRecoveryCount = prometheus.NewCounter(
+	prometheus.CounterOpts{
+		Name: SeqSenderRecoveryCountName,
+		Help: "[SEQUENCER] total count of sender recovery",
 	},
 )

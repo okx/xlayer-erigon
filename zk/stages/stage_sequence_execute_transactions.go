@@ -106,22 +106,27 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 			continue
 		}
 
-		// now attempt to recover the sender
-		startTime := time.Now()
-		sender, err := signer.Sender(transaction)
-		duration := time.Since(startTime)
-		metrics.SeqSenderRecoveryDuration.Observe(float64(duration.Microseconds()))
-		metrics.SeqSenderRecoveryCount.Inc()
+		// check if the sender is already cached
+		_, ok := transaction.GetSender()
+		if !ok {
+			// if not cached, attempt to recover the sender
+			startTime := time.Now()
+			sender, err := signer.Sender(transaction)
+			duration := time.Since(startTime)
+			metrics.SeqSenderRecoveryDuration.Observe(float64(duration.Microseconds()))
+			metrics.SeqSenderRecoveryCount.Inc()
 
-		if err != nil {
-			log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
-				"error", err,
-				"hash", transaction.Hash())
-			toRemove = append(toRemove, slot.TxIds[idx])
-			continue
+			if err != nil {
+				log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
+					"error", err,
+					"hash", transaction.Hash())
+				toRemove = append(toRemove, slot.TxIds[idx])
+				continue
+			}
+
+			transaction.SetSender(sender)
 		}
-
-		transaction.SetSender(sender)
+		
 		transactions = append(transactions, transaction)
 		ids = append(ids, slot.TxIds[idx])
 	}

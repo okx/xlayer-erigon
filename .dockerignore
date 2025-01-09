@@ -10,3 +10,5 @@ cmd/prometheus
 vendor
 
 cache.db
+test
+.git

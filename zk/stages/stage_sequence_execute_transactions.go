@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/holiman/uint256"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
 
@@ -20,6 +21,12 @@ import (
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 )
+
+var senderCache map[uint256.Int]common.Address
+
+func init() {
+	senderCache = make(map[uint256.Int]common.Address)
+}
 
 func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
 	cfg.txPool.LockFlusher()
@@ -97,8 +104,6 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 			continue
 		}
 		if err != nil {
-			// we have a transaction that cannot be decoded or a similar issue.  We don't want to handle
-			// this tx so just WARN about it and remove it from the pool and continue
 			log.Warn("[extractTransaction] Failed to decode transaction from pool, skipping and removing from pool",
 				"error", err,
 				"id", slot.TxIds[idx])
@@ -106,12 +111,14 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 			continue
 		}
 
-		// check if the sender is already cached
-		_, ok := transaction.GetSender()
-		if !ok {
-			// if not cached, attempt to recover the sender
+		// Check if sender is already cached
+		// transaction signature S must be unique, so we can use it as the cache key
+		_, _, S := transaction.RawSignatureValues()
+		sender, cached := senderCache[*S]
+		if !cached {
+			// now attempt to recover the sender
 			startTime := time.Now()
-			sender, err := signer.Sender(transaction)
+			sender, err = signer.Sender(transaction)
 			duration := time.Since(startTime)
 			metrics.SeqSenderRecoveryDuration.Observe(float64(duration.Microseconds()))
 			metrics.SeqSenderRecoveryCount.Inc()
@@ -124,9 +131,11 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 				continue
 			}
 
-			transaction.SetSender(sender)
+			// Cache the sender
+			senderCache[*S] = sender
 		}
-		
+
+		transaction.SetSender(sender)
 		transactions = append(transactions, transaction)
 		ids = append(ids, slot.TxIds[idx])
 	}

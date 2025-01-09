@@ -175,6 +175,10 @@ func (s *GrpcServer) FindUnknown(ctx context.Context, in *txpool_proto.TxHashes)
 }
 
 func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txpool_proto.AddReply, error) {
+	s.logger.Info("[TxPool] Starting Add", "txCount", len(in.RlpTxs))
+	fmt.Println("Debugging Add method")
+	// Add more logs here to trace execution
+	s.logger.Debug("Debugging Add method")
 	tx, err := s.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err

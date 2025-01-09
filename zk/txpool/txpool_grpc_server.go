@@ -173,6 +173,7 @@ func (s *GrpcServer) FindUnknown(ctx context.Context, in *txpool_proto.TxHashes)
 }
 
 func (s *GrpcServer) Add(ctx context.Context, in *txpool_proto.AddRequest) (*txpool_proto.AddReply, error) {
+	log.Info("[TxPool] Add request received", "txCount", len(in.RlpTxs))
 	tx, err := s.db.BeginRo(ctx)
 	if err != nil {
 		return nil, err

@@ -1168,6 +1168,9 @@ func fillDiscardReasons(reasons []txpoolcfg.DiscardReason, newTxs types.TxSlots,
 }
 
 func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots, tx kv.Tx) ([]txpoolcfg.DiscardReason, error) {
+	p.logger.Info("[TxPool] Starting AddLocalTxsOptimized", "txCount", len(newTransactions.Txs))
+
+	// 1. Read DB and cache outside the pool lock, to reduce lock hold times.
 	coreDb, cache := p.coreDBWithCache()
 	coreTx, err := coreDb.BeginRo(ctx)
 	if err != nil {
@@ -1180,48 +1183,78 @@ func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots,
 		return nil, err
 	}
 
-	p.lock.Lock()
-	defer p.lock.Unlock()
-
+	// 2. Register new senders and validate transactions outside the lock (only read operations).
 	if err = p.senders.registerNewSenders(&newTransactions, p.logger); err != nil {
 		return nil, err
 	}
-
-	reasons, newTxs, err := p.validateTxs(&newTransactions, cacheView)
+	reasons, validTxs, err := p.validateTxs(&newTransactions, cacheView)
 	if err != nil {
 		return nil, err
 	}
 
-	announcements, addReasons, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.pendingBlobFee.Load(), p.blockGasLimit.Load(), true, p.logger)
-	if err == nil {
-		for i, reason := range addReasons {
-			if reason != txpoolcfg.NotSet {
-				reasons[i] = reason
-			}
-		}
-	} else {
+	// We will collect "valid" transactions to be added in the locked section,
+	// plus maintain local references to announcements, etc.
+	var announcements types.Announcements
+	addReasons := make([]txpoolcfg.DiscardReason, len(validTxs.Txs))
+
+	// 3. Lock the pool only when we modify shared structures (byHash, sub-pools, etc.).
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	// 3a. Now we can add the transactions to the TxPool's in-memory structures.
+	announcements, addReasons, err = p.addTxs(
+		p.lastSeenBlock.Load(),
+		cacheView,
+		p.senders,
+		validTxs,
+		p.pendingBaseFee.Load(),
+		p.pendingBlobFee.Load(),
+		p.blockGasLimit.Load(),
+		true,
+		p.logger,
+	)
+	if err != nil {
 		return nil, err
 	}
+
+	// Propagate sub-pool insertion or replacement reasons into the original reasons array.
+	for i, reason := range addReasons {
+		if reason != txpoolcfg.NotSet {
+			reasons[i] = reason
+		}
+	}
+
+	// 3b. Promote transactions if needed and gather them in p.promoted.
 	p.promoted.Reset()
 	p.promoted.AppendOther(announcements)
 
-	reasons = fillDiscardReasons(reasons, newTxs, p.discardReasonsLRU)
-	for i, reason := range reasons {
-		if reason == txpoolcfg.Success {
-			txn := newTxs.Txs[i]
+	// 3c. Fill in discard reasons from LRU if not already set.
+	reasons = fillDiscardReasons(reasons, validTxs, p.discardReasonsLRU)
+
+	// 3d. For "successful" transactions, add them to p.promoted for broadcasting.
+	for i, discReason := range reasons {
+		if discReason == txpoolcfg.Success {
+			txn := validTxs.Txs[i]
 			if txn.Traced {
-				p.logger.Info(fmt.Sprintf("TX TRACING: AddLocalTxs promotes idHash=%x, senderId=%d", txn.IDHash, txn.SenderID))
+				p.logger.Info(fmt.Sprintf(
+					"TX TRACING: AddLocalTxsOptimized promotes idHash=%x, senderId=%d",
+					txn.IDHash,
+					txn.SenderID,
+				))
 			}
 			p.promoted.Append(txn.Type, txn.Size, txn.IDHash[:])
 		}
 	}
+
+	// 3e. If there are promoted transactions, push them into the announcements channel (non-blocking).
 	if p.promoted.Len() > 0 {
 		select {
 		case p.newPendingTxs <- p.promoted.Copy():
 		default:
+			// If channel is full, skip sending to avoid blocking
 		}
 	}
+
 	return reasons, nil
 }
 func (p *TxPool) coreDBWithCache() (kv.RoDB, kvcache.Cache) {

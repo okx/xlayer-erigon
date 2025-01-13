@@ -103,13 +103,6 @@ var SeqTxCount = prometheus.NewCounter(
 	},
 )
 
-var SeqFailTxCount = prometheus.NewCounter(
-	prometheus.CounterOpts{
-		Name: SeqFailTxCountName,
-		Help: "[SEQUENCER] total fail tx count",
-	},
-)
-
 var SeqBlockGasUsed = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Name: SeqBlockGasUsedName,

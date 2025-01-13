@@ -4,14 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/ledgerwatch/erigon-lib/common/metrics"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spf13/cobra"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 const timeFormat = "2006-01-02T15:04:05-0700"

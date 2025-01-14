@@ -1,10 +1,15 @@
 package sha3
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 
 	"github.com/cloudflare/circl/simd/keccakf1600"
+	"github.com/ledgerwatch/erigon/core/types"
+
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
 )
 
 func populateState(data []byte, idx int, state *[]uint64, pstart *int) {
@@ -93,4 +98,42 @@ func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
 	}
 
 	return hashes, nil
+}
+
+func RlpHashAVX2(x []*types.Transaction) []libcommon.Hash {
+	var buf1 bytes.Buffer
+	var buf2 bytes.Buffer
+	var buf3 bytes.Buffer
+	var buf4 bytes.Buffer
+	if x[0] == nil {
+		buf1.Write([]byte{0x0})
+	} else {
+		(*x[0]).EncodeRLP(&buf1)
+	}
+	if x[1] == nil {
+		buf2.Write([]byte{0x0})
+	} else {
+		(*x[1]).EncodeRLP(&buf2)
+	}
+	if x[2] == nil {
+		buf3.Write([]byte{0x0})
+	} else {
+		(*x[2]).EncodeRLP(&buf3)
+	}
+	if x[3] == nil {
+		buf4.Write([]byte{0x0})
+	} else {
+		(*x[3]).EncodeRLP(&buf4)
+	}
+	hashes, err := Hash_Keccak_AVX2([4][]byte{buf1.Bytes(), buf2.Bytes(), buf3.Bytes(), buf4.Bytes()})
+	if err != nil {
+		fmt.Errorf("RlpHashAVX2() Error: %v", err)
+		return nil
+	}
+	h := make([]libcommon.Hash, 4)
+	h[0] = libcommon.BytesToHash(hashes[0][:])
+	h[1] = libcommon.BytesToHash(hashes[1][:])
+	h[2] = libcommon.BytesToHash(hashes[2][:])
+	h[3] = libcommon.BytesToHash(hashes[3][:])
+	return h
 }

@@ -334,7 +334,7 @@ func prepareL1AndInfoTreeRelatedStuff(sdb *stageDb, batchState *BatchState, prop
 		l1BlockHash = l1TreeUpdate.ParentHash
 		ger = l1TreeUpdate.GER
 	}
-
+	log.Info(fmt.Sprintf("zjg, shouldWriteGerToContract:%v,ger:%v", shouldWriteGerToContract, ger.String()))
 	return
 }
 

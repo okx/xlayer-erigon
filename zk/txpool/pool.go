@@ -418,6 +418,8 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 			EnableFreeGasList:    ethCfg.DeprecatedTxPool.EnableFreeGasList},
 		freeGasAddrs: map[string]bool{},
 	}
+	tp.setFreeGasList(ethCfg.DeprecatedTxPool.FreeGasList)
+
 	return tp, nil
 }
 

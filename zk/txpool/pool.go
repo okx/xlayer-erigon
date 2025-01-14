@@ -303,7 +303,7 @@ func SortByNonceLess(a, b *metaTx) bool {
 type TxPool struct {
 	_chainDB               kv.RoDB // remote db - use it wisely
 	_stateCache            kvcache.Cache
-	lock                   *sync.Mutex
+	lock                   *sync.RWMutex
 	recentlyConnectedPeers *recentlyConnectedPeers // all txs will be propagated to this peers eventually, and clear list
 	senders                *sendersBatch
 	// batch processing of remote transactions
@@ -381,7 +381,7 @@ func New(newTxs chan types.Announcements, coreDB kv.RoDB, cfg txpoolcfg.Config, 
 	}
 
 	return &TxPool{
-		lock:                    &sync.Mutex{},
+		lock:                    &sync.RWMutex{},
 		byHash:                  map[string]*metaTx{},
 		isLocalLRU:              localsHistory,
 		discardReasonsLRU:       discardHistory,
@@ -988,69 +988,134 @@ func fillDiscardReasons(reasons []DiscardReason, newTxs types.TxSlots, discardRe
 }
 
 func (p *TxPool) AddLocalTxs(ctx context.Context, newTransactions types.TxSlots, tx kv.Tx) ([]DiscardReason, error) {
+	log.Info("[TxPool] AddLocalTxs called", "txCount", len(newTransactions.Txs))
+	// 1. Quick return if no transactions to process, saving unnecessary resource usage.
+	if len(newTransactions.Txs) == 0 {
+		return nil, nil
+	}
+
+	// 2. Begin a read-only database transaction and create a cache view.
 	coreTx, err := p.coreDB().BeginRo(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("BeginRo failed: %w", err)
 	}
 	defer coreTx.Rollback()
 
 	cacheView, err := p.cache().View(ctx, coreTx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cache view failed: %w", err)
 	}
 
+	// 3. Check if the pool is already started using a read lock.
+	p.lock.RLock()
+	started := p.started.Load()
+	p.lock.RUnlock()
+
+	// 4. If the pool is not started, initialize it.
+	if !started {
+		// Delegate the initialization process to a separate method for clarity and reuse.
+		if err := p.initializePoolIfNotStarted(ctx, tx, coreTx); err != nil {
+			return nil, fmt.Errorf("initialize pool: %w", err)
+		}
+	}
+
+	// 5. Register new senders; this operation doesn't require locking the entire pool.
+	if err := p.senders.registerNewSenders(&newTransactions); err != nil {
+		return nil, fmt.Errorf("registerNewSenders: %w", err)
+	}
+
+	// 6. Validate the transactions without modifying shared data, avoiding lock contention.
+	reasons, validTxs, err := p.validateTxs(&newTransactions, cacheView)
+	if err != nil {
+		return nil, fmt.Errorf("validateTxs: %w", err)
+	}
+
+	// 7. Cache atomic values to avoid redundant Load calls later.
+	lastSeenBlock := p.lastSeenBlock.Load()
+	pendingBaseFee := p.pendingBaseFee.Load()
+	blockGasLimit := p.blockGasLimit.Load()
+
+	// 8. Acquire a lock only for critical sections, such as modifying the transaction pool.
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	if !p.Started() {
-		if err := p.fromDB(ctx, tx, coreTx); err != nil {
-			return nil, fmt.Errorf("loading txs from DB: %w", err)
-		}
-		if p.started.CompareAndSwap(false, true) {
-			log.Info("[txpool] Started")
-		}
-	}
-
-	if err = p.senders.registerNewSenders(&newTransactions); err != nil {
-		return nil, err
-	}
-
-	reasons, newTxs, err := p.validateTxs(&newTransactions, cacheView)
+	// Add validated transactions to the pool.
+	announcements, addReasons, err := p.addTxs(
+		lastSeenBlock,
+		cacheView,
+		p.senders,
+		validTxs,
+		pendingBaseFee,
+		blockGasLimit,
+		p.pending,
+		p.baseFee,
+		p.queued,
+		p.all,
+		p.byHash,
+		p.addLocked,
+		p.discardLocked,
+		true, // localTx
+	)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("addTxs: %w", err)
 	}
 
-	announcements, addReasons, err := p.addTxs(p.lastSeenBlock.Load(), cacheView, p.senders, newTxs,
-		p.pendingBaseFee.Load(), p.blockGasLimit.Load(), p.pending, p.baseFee, p.queued, p.all, p.byHash, p.addLocked, p.discardLocked, true)
-	if err == nil {
-		for i, reason := range addReasons {
-			if reason != NotSet {
-				reasons[i] = reason
-			}
+	// Update the reasons for discarded transactions if applicable.
+	for i, reason := range addReasons {
+		if reason != NotSet {
+			reasons[i] = reason
 		}
-	} else {
-		return nil, err
 	}
+
+	// 9. Update promoted transactions and prepare for notification.
 	p.promoted.Reset()
 	p.promoted.AppendOther(announcements)
 
-	reasons = fillDiscardReasons(reasons, newTxs, p.discardReasonsLRU)
+	// Use the LRU cache to record discard reasons and avoid repeated validations.
+	reasons = fillDiscardReasons(reasons, validTxs, p.discardReasonsLRU)
+
+	// Handle successfully added transactions.
 	for i, reason := range reasons {
 		if reason == Success {
-			txn := newTxs.Txs[i]
+			txn := validTxs.Txs[i]
 			if txn.Traced {
 				log.Info(fmt.Sprintf("TX TRACING: AddLocalTxs promotes idHash=%x, senderId=%d", txn.IDHash, txn.SenderID))
 			}
+			// Collect promoted transactions for notifications.
 			p.promoted.Append(txn.Type, txn.Size, txn.IDHash[:])
 		}
 	}
+
+	// 10. Asynchronously notify about new pending transactions to avoid blocking.
 	if p.promoted.Len() > 0 {
 		select {
 		case p.newPendingTxs <- p.promoted.Copy():
 		default:
+			// If the channel is full, drop notifications to avoid blocking.
 		}
 	}
+
 	return reasons, nil
+}
+
+// initializePoolIfNotStarted initializes the pool if it is not already started.
+// This includes loading transactions from the database and updating the started state.
+func (p *TxPool) initializePoolIfNotStarted(ctx context.Context, tx kv.Tx, coreTx kv.Tx) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	// Double-check the started state to avoid redundant initialization.
+	if p.started.Load() {
+		return nil
+	}
+
+	if err := p.fromDB(ctx, tx, coreTx); err != nil {
+		return fmt.Errorf("fromDB failed: %w", err)
+	}
+	if p.started.CompareAndSwap(false, true) {
+		log.Info("[txpool] Started")
+	}
+	return nil
 }
 
 func (p *TxPool) coreDB() kv.RoDB {

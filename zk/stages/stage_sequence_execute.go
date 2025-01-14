@@ -398,7 +398,7 @@ func sequencingBatchStep(
 				if len(batchState.blockState.transactionsForInclusion) == 0 {
 					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 				} else {
-					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
+					log.Info(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 				}
 
 				badTxHashes := make([]common.Hash, 0)

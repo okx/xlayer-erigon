@@ -64,7 +64,7 @@ func contains(addresses []string, addr common.Address) bool {
 
 func containsMethod(data string, methods []string) bool {
 	for _, m := range methods {
-		if strings.HasPrefix(data, m) {
+		if strings.Contains(data, m) {
 			return true
 		}
 	}
@@ -117,7 +117,8 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (free
 		info := freeGpList[fromToName[addr.String()]]
 		if info != nil &&
 			contains(info.ToList, tx.To) &&
-			containsMethod("0x"+ecommon.Bytes2Hex(tx.Rlp), info.MethodSigs) {
+			containsMethod(ecommon.Bytes2Hex(tx.Rlp), info.MethodSigs) {
+
 			return specialProject, info.GasPriceMultiple
 		}
 	}

@@ -22,7 +22,7 @@ var (
 	PoolTxCountName      = SeqPrefix + "pool_tx_count"
 	SeqTxDurationName    = SeqPrefix + "tx_duration"
 	SeqTxCountName       = SeqPrefix + "tx_count"
-	SeqFailTxCountName   = SeqPrefix + "fail_tx_count"
+	SeqZKOverflowBlockCounterName   = SeqPrefix + "zk_overflow_block_count"
 	SeqBlockGasUsedName  = SeqPrefix + "block_gas_used"
 
 	RpcPrefix              = "rpc_"
@@ -35,7 +35,7 @@ func Init() {
 	prometheus.MustRegister(PoolTxCount)
 	prometheus.MustRegister(SeqTxDuration)
 	prometheus.MustRegister(SeqTxCount)
-	prometheus.MustRegister(SeqFailTxCount)
+	prometheus.MustRegister(SeqZKOverflowBlockCounter)
 	prometheus.MustRegister(SeqBlockGasUsed)
 	prometheus.MustRegister(RpcDynamicGasPrice)
 	prometheus.MustRegister(RpcInnerTxExecuted)
@@ -103,10 +103,10 @@ var SeqTxCount = prometheus.NewCounter(
 	},
 )
 
-var SeqFailTxCount = prometheus.NewCounter(
+var SeqZKOverflowBlockCounter = prometheus.NewCounter(
 	prometheus.CounterOpts{
-		Name: SeqFailTxCountName,
-		Help: "[SEQUENCER] total fail tx count",
+		Name: SeqZKOverflowBlockCounterName,
+		Help: "[SEQUENCER] zkCounter overflow block count",
 	},
 )
 

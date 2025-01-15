@@ -93,3 +93,6 @@ networkid: 195
 pprof: true
 pprof.port: 6060
 pprof.addr: 0.0.0.0
+
+# close a block/batch immediately after the 1st zkCounter overflow TX
+zkevm.seal-batch-immediately-on-overflow: true

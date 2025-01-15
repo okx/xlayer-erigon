@@ -416,6 +416,13 @@ func sequencingBatchStep(
 					default:
 					}
 
+					maxTxPerBatch := 2
+					if i >= maxTxPerBatch {
+						log.Info(fmt.Sprintf("[%s] Pre-check ZKCounter overflow, closing batch", logPrefix))
+						runLoopBlocks = false
+						break OuterLoopTransactions
+					}
+
 					txHash := transaction.Hash()
 					effectiveGas := batchState.blockState.getL1EffectiveGases(cfg, i)
 

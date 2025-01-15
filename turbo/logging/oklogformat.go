@@ -45,13 +45,18 @@ func OkLogV1Format(r *log.Record) []byte {
 	}
 
 	e := stringBufPool.Get().(*bytes.Buffer)
-
+	e.WriteByte('[')
+	i := len(content)
 	for k, v := range content {
 		e.WriteString(k)
 		e.WriteByte('=')
 		e.WriteString(v)
-		e.WriteString(", ")
+		i--
+		if i > 0 {
+			e.WriteString(", ")
+		}
 	}
+	e.WriteByte(']')
 
 	props["content"] = e.String()
 
@@ -106,9 +111,6 @@ func formatLogfmtValue(value interface{}) string {
 	}
 
 	if t, ok := value.(time.Time); ok {
-		// Performance optimization: No need for escaping since the provided
-		// timeFormat doesn't have any escape characters, and escaping is
-		// expensive.
 		return t.Format(timeFormat)
 	}
 	value = formatShared(value)

@@ -97,11 +97,11 @@ var (
 	}
 	TxPoolEnableFreeGasList = cli.BoolFlag{
 		Name:  "txpool.enablefreegaslist",
-		Usage: "Enable or disable free gas for a special project",
+		Usage: "Enable or disable free gas for a specific project",
 	}
 	TxPoolFreeGasList = cli.StringFlag{
 		Name:  "txpool.freegaslist",
-		Usage: "FreeGasList is the special project of XLayer. Use json string",
+		Usage: "FreeGasList Project in JSON Format",
 	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{

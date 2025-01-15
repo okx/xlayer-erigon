@@ -19,6 +19,10 @@ const (
 	specificProject
 )
 
+const (
+	erc20TransferMethod = "0xa9059cbb"
+)
+
 // XLayerConfig contains the X Layer configs for the txpool
 type XLayerConfig struct {
 	// BlockedList is the blocked address list
@@ -39,8 +43,7 @@ type XLayerConfig struct {
 	FreeGasCountPerAddr uint64
 	// FreeGasLimit is the max gas allowed use to do a free gas tx
 	FreeGasLimit uint64
-	// For special project
-	// EnableFreeGasList enable the special project of XLayer for free gas
+	// EnableFreeGasList enable the specific free gas project
 	EnableFreeGasList  bool
 	FreeGasFromNameMap map[string]string                 // map[from]projectName
 	FreeGasList        map[string]*ethconfig.FreeGasInfo // map[projectName]FreeGasInfo
@@ -111,7 +114,7 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (free
 		return claim, p.xlayerCfg.GasPriceMultiple
 	}
 
-	// special project
+	// specific project
 	if p.apolloCfg.GetEnableFreeGasList(p.xlayerCfg.EnableFreeGasList) {
 		fromToName, freeGpList := p.xlayerCfg.FreeGasFromNameMap, p.xlayerCfg.FreeGasList
 		info := freeGpList[fromToName[addr.String()]]
@@ -136,7 +139,7 @@ func (p *TxPool) setFreeGasByNonceCache(senderID uint64, mt *metaTx, isClaim boo
 	if p.xlayerCfg.EnableFreeGasByNonce {
 		if p.checkFreeGasExAddrXLayer(senderID) {
 			inputHex := hex.EncodeToHex(mt.Tx.Rlp)
-			if strings.HasPrefix(inputHex, "0xa9059cbb") && len(inputHex) > 74 {
+			if strings.HasPrefix(inputHex, erc20TransferMethod) && len(inputHex) > 74 {
 				addrHex := "0x" + inputHex[10:74]
 				p.freeGasAddrs[addrHex] = true
 			} else {

@@ -65,7 +65,7 @@ type DeprecatedTxPoolConfig struct {
 	FreeGasLimit uint64
 	// EnableFreeGasList enable the special project of XLayer for free gas
 	EnableFreeGasList bool
-	// FreeGasList is the special project of XLayer
+	// FreeGasList project name to FreeGasInfo
 	FreeGasList []FreeGasInfo
 }
 

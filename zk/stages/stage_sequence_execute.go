@@ -10,11 +10,13 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/log/v3"
+	"golang.org/x/sys/cpu"
 
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/crypto/sha3"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
@@ -382,15 +384,41 @@ func sequencingBatchStep(
 					hashResults := make([]common.Hash, len(newTransactions))
 					var wg sync.WaitGroup
 
-					for idx, tx := range newTransactions {
-						wg.Add(1)
-						go func(idx int, tx types.Transaction) {
-							defer wg.Done()
-							hashResults[idx] = tx.Hash()
-						}(idx, tx)
+					/*
+						if cpu.X86.HasAVX512 {
+							// fmt.Println("CPU has AVX512")
+							chunkSize := 8
+							// TODO: implement AVX512
+						} else {
+					*/
+					if cpu.X86.HasAVX2 {
+						// fmt.Println("CPU has AVX2")
+						chunkSize := 4
+						// first, run 4 hashes per core (AVX) in parallel
+						n1 := (len(newTransactions) / chunkSize) * chunkSize
+						for idx := 0; idx < n1; idx += chunkSize {
+							wg.Add(1)
+							go func(idx int, txs []types.Transaction, hashes []common.Hash) {
+								defer wg.Done()
+								sha3.RlpHashAVX2(txs, hashes)
+							}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
+						}
+						// run the remaining hashes (<4) sequentially
+						for idx := n1; idx < len(newTransactions); idx += 1 {
+							hashResults[idx] = newTransactions[idx].Hash()
+						}
+						wg.Wait()
+					} else {
+						// no AVX or NEON -> run one hash per core/thread
+						for idx, tx := range newTransactions {
+							wg.Add(1)
+							go func(idx int, tx types.Transaction) {
+								defer wg.Done()
+								hashResults[idx] = tx.Hash()
+							}(idx, tx)
+						}
+						wg.Wait()
 					}
-
-					wg.Wait()
 
 					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
 					for idx, hash := range hashResults {

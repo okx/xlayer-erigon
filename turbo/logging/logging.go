@@ -15,9 +15,6 @@ import (
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const timeFormat = "2006-01-02T15:04:05-0700"
-const errorKey = "LOG15_ERROR"
-
 // Determine the log dir path based on the given urfave context
 func LogDirPath(ctx *cli.Context) string {
 	dirPath := ""

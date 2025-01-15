@@ -9,11 +9,11 @@ import (
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	txPoolProto "github.com/ledgerwatch/erigon-lib/gointerfaces/txpool"
-
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/zk/utils"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
@@ -45,6 +45,15 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 	txn, err := types.DecodeWrappedTransaction(encodedTx)
 	if err != nil {
 		return common.Hash{}, err
+	}
+
+	if true {
+		go func() {
+			_, err = api.estimateGas(txn, chainId)
+			if err != nil {
+				log.Error("Estimating gas failed for pay tx", "error", err)
+			}
+		}()
 	}
 
 	if txn.Type() != types.LegacyTxType {

@@ -21,6 +21,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
@@ -29,6 +30,7 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 
 	"github.com/ledgerwatch/erigon-lib/crypto/blake2b"
+	"github.com/ledgerwatch/erigon/cl/phase1/core/state/lru"
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/crypto"
@@ -43,6 +45,12 @@ type PrecompiledContract_zkEvm interface {
 	Run(input []byte) ([]byte, error) // Run runs the precompiled contract
 	SetCounterCollector(cc *CounterCollector)
 	SetOutputLength(outLength int)
+}
+
+var cache *lru.CacheWithTTL[string, []byte]
+
+func init() {
+	cache = lru.NewWithTTL[string, []byte]("evm_precompiled_cache", 1000, 1*time.Hour)
 }
 
 // PrecompiledContractsForkID5Dragonfruit contains the default set of pre-compiled ForkID5 Dragonfruit
@@ -118,6 +126,7 @@ func (c *ecrecover_zkevm) RequiredGas(input []byte) uint64 {
 }
 
 func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
+	//log.Info(fmt.Sprintf("zjg, ecrecover_zkevm Run:%v", hex.EncodeToString(input)))
 	if !c.enabled {
 		return []byte{}, ErrUnsupportedPrecompile
 	}
@@ -151,6 +160,10 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	sig := make([]byte, 65)
 	copy(sig, input[64:128])
 	sig[64] = v
+	value, ok := cache.Get(string(input))
+	if ok {
+		return value, nil
+	}
 	// v needs to be at the end for libsecp256k1
 	pubKey, err := crypto.Ecrecover(input[:32], sig)
 	// make sure the public key is a valid one
@@ -158,8 +171,10 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 		return nil, nil
 	}
 
+	result := common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32)
+	cache.Add(string(input), result)
 	// the first byte of pubkey is bitcoin heritage
-	return common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32), nil
+	return result, nil
 }
 
 // SHA256 implemented as a native contract.
@@ -1229,6 +1244,7 @@ func (c *p256Verify_zkevm) SetOutputLength(outLength int) {
 
 // Run executes the precompiled contract with given 160 bytes of param, returning the output and the used gas
 func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
+	//log.Info(fmt.Sprintf("zjg, p256Verify Run:%v", hex.EncodeToString(input)))
 	if !c.enabled {
 		return nil, ErrUnsupportedPrecompile
 	}
@@ -1249,10 +1265,16 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	if c.cc != nil {
 		c.cc.preP256Verify(r, s, x, y)
 	}
+	value, ok := cache.Get(string(input))
+	if ok {
+		return value, nil
+	}
 	// Verify the secp256r1 signature
 	if secp256r1.Verify(hash, r, s, x, y) {
 		// Signature is valid
-		return common.LeftPadBytes(big1.Bytes(), 32), nil
+		result := common.LeftPadBytes(big1.Bytes(), 32)
+		cache.Add(string(input), result)
+		return result, nil
 	} else {
 		// Signature is invalid
 		return nil, nil

@@ -406,9 +406,6 @@ func sequencingBatchStep(
 
 			InnerLoopTransactions:
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
-					// For X Layer
-					metrics.GetLogStatistics().CumulativeCounting(metrics.TxCounter)
-
 					// quick check if we should stop handling transactions
 					select {
 					case <-blockTicker.C:
@@ -642,7 +639,9 @@ func sequencingBatchStep(
 		}
 
 		// For X Layer
+		// Count successful transactions
 		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
+		metrics.GetLogStatistics().CumulativeValue(metrics.TxCounter, int64(len(batchState.blockState.builtBlockElements.transactions)))
 
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)

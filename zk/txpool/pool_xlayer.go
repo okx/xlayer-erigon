@@ -16,7 +16,7 @@ const (
 	notFree = iota
 	claim
 	freeByNonce
-	specialProject
+	specificProject
 )
 
 // XLayerConfig contains the X Layer configs for the txpool
@@ -119,7 +119,7 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (free
 			contains(info.ToList, tx.To) &&
 			containsMethod(ecommon.Bytes2Hex(tx.Rlp), info.MethodSigs) {
 
-			return specialProject, info.GasPriceMultiple
+			return specificProject, info.GasPriceMultiple
 		}
 	}
 

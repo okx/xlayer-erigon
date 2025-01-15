@@ -2,6 +2,7 @@ package logging
 
 import (
 	"bufio"
+	"context"
 	"github.com/ledgerwatch/log/v3"
 	"io"
 	"sync"
@@ -9,13 +10,14 @@ import (
 )
 
 const (
-	_BufferSize    = 1024 * 1024
+	_BufferSize    = 1 << 20 // 1 MiB
 	_FlushInterval = time.Second * 10
 )
 
 type AsyncBufferedWriter struct {
 	Size          int
 	FlushInterval time.Duration
+	ctx           context.Context
 
 	mu sync.Mutex
 
@@ -28,8 +30,8 @@ type AsyncBufferedWriter struct {
 	stopped     bool
 }
 
-func AsyncHandler(wr io.Writer, format log.Format) log.Handler {
-	asyncBufferedWriter := &AsyncBufferedWriter{}
+func AsyncHandler(wr io.Writer, format log.Format, ctx context.Context) log.Handler {
+	asyncBufferedWriter := &AsyncBufferedWriter{ctx: ctx}
 	asyncBufferedWriter.initialize(wr)
 
 	h := log.FuncHandler(func(r *log.Record) error {
@@ -86,6 +88,8 @@ func (s *AsyncBufferedWriter) flushLoop() {
 			_ = s.flush()
 		case <-s.stop:
 			return
+		case <-s.ctx.Done():
+			s.Stop()
 		}
 	}
 }

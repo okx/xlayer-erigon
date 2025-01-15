@@ -1,20 +1,19 @@
 package logging
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"github.com/ledgerwatch/erigon-lib/common/metrics"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/spf13/cobra"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
-	"path/filepath"
-	"strconv"
 )
-
-const timeFormat = "2006-01-02T15:04:05-0700"
-const errorKey = "LOG15_ERROR"
 
 // Determine the log dir path based on the given urfave context
 func LogDirPath(ctx *cli.Context) string {
@@ -82,7 +81,7 @@ func SetupLoggerCtx(filePrefix string, ctx *cli.Context,
 		logger = log.New()
 	}
 
-	initSeparatedLogging(logger, filePrefix, dirPath, consoleLevel, dirLevel, consoleJson, dirJson, asyncLogging)
+	initSeparatedLogging(logger, filePrefix, dirPath, consoleLevel, dirLevel, consoleJson, dirJson, asyncLogging, ctx.Context)
 	return logger
 }
 
@@ -144,7 +143,7 @@ func SetupLoggerCmd(filePrefix string, cmd *cobra.Command) log.Logger {
 		}
 	}
 
-	initSeparatedLogging(log.Root(), filePrefix, dirPath, consoleLevel, dirLevel, consoleJson, dirJson, false)
+	initSeparatedLogging(log.Root(), filePrefix, dirPath, consoleLevel, dirLevel, consoleJson, dirJson, false, cmd.Context())
 	return log.Root()
 }
 
@@ -182,7 +181,7 @@ func SetupLogger(filePrefix string) log.Logger {
 		filePrefix = *logDirPrefix
 	}
 
-	initSeparatedLogging(log.Root(), filePrefix, *logDirPath, consoleLevel, dirLevel, consoleJson, *dirJson, false)
+	initSeparatedLogging(log.Root(), filePrefix, *logDirPath, consoleLevel, dirLevel, consoleJson, *dirJson, false, context.Background())
 	return log.Root()
 }
 
@@ -197,7 +196,8 @@ func initSeparatedLogging(
 	dirLevel log.Lvl,
 	consoleJson bool,
 	dirJson bool,
-	asyncLogging bool) {
+	asyncLogging bool,
+	ctx context.Context) {
 
 	var consoleHandler log.Handler
 
@@ -211,7 +211,7 @@ func initSeparatedLogging(
 		format = log.TerminalFormatNoColor()
 	}
 	if asyncLogging {
-		consoleHandler = log.LvlFilterHandler(consoleLevel, AsyncHandler(os.Stderr, format))
+		consoleHandler = log.LvlFilterHandler(consoleLevel, AsyncHandler(os.Stderr, format, ctx))
 	} else {
 		consoleHandler = log.LvlFilterHandler(consoleLevel, log.StreamHandler(os.Stderr, format))
 	}
@@ -241,7 +241,7 @@ func initSeparatedLogging(
 	}
 	var userLog log.Handler
 	if asyncLogging {
-		userLog = AsyncHandler(lumberjack, dirFormat)
+		userLog = AsyncHandler(lumberjack, dirFormat, ctx)
 	} else {
 		userLog = log.StreamHandler(lumberjack, dirFormat)
 	}

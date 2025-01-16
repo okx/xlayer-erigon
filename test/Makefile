@@ -49,8 +49,12 @@ RUN_DOCKER_GRAFANA := $(DOCKER_COMPOSE) up -d $(DOCKER_GRAFANA)
 
 STOP := $(DOCKER_COMPOSE) down --remove-orphans; sleep 3; rm -rf data
 
+.PHONY: build-docker
+build-docker: ## Build cdk-erigoin for sequencer and rpc
+	docker build -t cdk-erigon -f ../Dockerfile.local ../
+
 .PHONY: run
-run: ## Runs a full node
+run: build-docker ## Runs a full node
 	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
@@ -78,7 +82,7 @@ run: ## Runs a full node
 	$(RUN_DOCKER_GRAFANA)
 
 .PHONY: all
-all: ## Runs a full node
+all: build-docker ## Runs a full node
 	# base services
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_DATA_AVAILABILITY_DB)
@@ -120,7 +124,7 @@ stop: ## Stops all services
 	$(STOP)
 
 .PHONY: min-run
-min-run: ## Runs a minimal node
+min-run: build-docker ## Runs a minimal node
 	$(RUN_DOCKER_L1_NETWORK)
 	$(RUN_DOCKER_STATELESS_EXECUTOR)
 	sleep 10

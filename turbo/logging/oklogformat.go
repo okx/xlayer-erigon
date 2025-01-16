@@ -27,7 +27,7 @@ func OkLogV1Format(r *log.Record) []byte {
 	callFrame := r.Call.Frame()
 
 	props["time"] = r.Time.UnixMilli()
-	props["level"] = strings.ToUpper(r.Lvl.String())
+	props["level"] = formatLogLevel(r.Lvl)
 	props["line_num"] = callFrame.Line
 	props["class_name"] = filepath.Base(callFrame.File)
 	props["ok_log_version"] = "1.0"
@@ -127,5 +127,14 @@ func formatLogfmtValue(value interface{}) string {
 		return v
 	default:
 		return fmt.Sprintf("%+v", value)
+	}
+}
+
+func formatLogLevel(lvl log.Lvl) string {
+	switch lvl {
+	case log.LvlError:
+		return "ERROR"
+	default:
+		return strings.ToUpper(lvl.String())
 	}
 }

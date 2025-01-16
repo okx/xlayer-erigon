@@ -20,6 +20,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
+	"github.com/ledgerwatch/erigon/zkevm/hex"
 	"math/big"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon-lib/crypto/blake2b"
 	"github.com/ledgerwatch/erigon/cl/phase1/core/state/lru"
@@ -126,7 +128,7 @@ func (c *ecrecover_zkevm) RequiredGas(input []byte) uint64 {
 }
 
 func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
-	//log.Info(fmt.Sprintf("zjg, ecrecover_zkevm Run:%v", hex.EncodeToString(input)))
+	log.Info(fmt.Sprintf("zjg, ecrecover_zkevm Run:%v", hex.EncodeToString(input)))
 	if !c.enabled {
 		return []byte{}, ErrUnsupportedPrecompile
 	}
@@ -1244,7 +1246,7 @@ func (c *p256Verify_zkevm) SetOutputLength(outLength int) {
 
 // Run executes the precompiled contract with given 160 bytes of param, returning the output and the used gas
 func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
-	//log.Info(fmt.Sprintf("zjg, p256Verify Run:%v", hex.EncodeToString(input)))
+	log.Info(fmt.Sprintf("zjg, p256Verify Run:%v", hex.EncodeToString(input)))
 	if !c.enabled {
 		return nil, ErrUnsupportedPrecompile
 	}

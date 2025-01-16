@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutil"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
+	"github.com/ledgerwatch/erigon/accounts/abi"
+	"github.com/ledgerwatch/erigon/accounts/abi/bind"
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
@@ -19,8 +22,77 @@ import (
 	ethapi2 "github.com/ledgerwatch/erigon/turbo/adapter/ethapi"
 	"github.com/ledgerwatch/erigon/turbo/rpchelper"
 	"github.com/ledgerwatch/erigon/turbo/transactions"
-	"github.com/ledgerwatch/log/v3"
 )
+
+type PackedUserOperation struct {
+	Sender             libcommon.Address
+	Nonce              *big.Int
+	InitCode           []byte
+	CallData           []byte
+	AccountGasLimits   [32]byte
+	PreVerificationGas *big.Int
+	GasFees            [32]byte
+	PaymasterAndData   []byte
+	Signature          []byte
+}
+
+var PayABIData = &bind.MetaData{
+	ABI: "[{\"inputs\":[],\"name\":\"entryPoint\",\"outputs\":[{\"internalType\":\"contractIEntryPoint\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"accountGasLimits\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"gasFees\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"structPackedUserOperation\",\"name\":\"userOp\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"missingAccountFunds\",\"type\":\"uint256\"}],\"name\":\"validateUserOp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"validationData\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+}
+
+func (api *APIImpl) parseABI(txn types.Transaction, chainId *big.Int) {
+	txData := txn.GetData()
+	hexData := hexutil.Bytes(txData)
+	hexUtilityData := (*hexutility.Bytes)(&hexData)
+	if len(txData) < 0 {
+		return
+	}
+
+	signer := types.LatestSignerForChainID(chainId)
+	fromAddress, _ := txn.Sender(*signer)
+	log.Info(fmt.Sprintf("hash:%v, sender:%v, to:%v, data:%v", txn.Hash(), fromAddress, txn.GetTo(), hexUtilityData))
+
+	parsedABI, err := abi.JSON(bytes.NewReader([]byte(PayABIData.ABI)))
+	if err != nil {
+		log.Error("Failed to parse ABI", "error", err)
+		return
+	}
+
+	method, err := parsedABI.MethodById(txData[:4])
+	if err != nil {
+		log.Error(fmt.Sprintf("Parse method failed %v", err))
+		return
+	}
+
+	log.Info(fmt.Sprintf("method: %s", method.Name))
+
+	args := make(map[string]interface{})
+	err = method.Inputs.UnpackIntoMap(args, txData[4:])
+	if err != nil {
+		log.Error("Parse method failed %v", err)
+		return
+	}
+
+	userOp := args["userOp"].(map[string]interface{})
+	parsedUserOp := PackedUserOperation{
+		Sender:             userOp["sender"].(libcommon.Address),
+		Nonce:              userOp["nonce"].(*big.Int),
+		InitCode:           userOp["initCode"].([]byte),
+		CallData:           userOp["callData"].([]byte),
+		AccountGasLimits:   userOp["accountGasLimits"].([32]byte),
+		PreVerificationGas: userOp["preVerificationGas"].(*big.Int),
+		GasFees:            userOp["gasFees"].([32]byte),
+		PaymasterAndData:   userOp["paymasterAndData"].([]byte),
+		Signature:          userOp["signature"].([]byte),
+	}
+	log.Info("%v", parsedUserOp)
+
+	userOpHash := args["userOpHash"].([32]byte)
+	log.Info("UserOpHash: %x\n", userOpHash[:])
+
+	missingAccountFunds := args["missingAccountFunds"].(*big.Int)
+	log.Info("MissingAccountFunds: %s\n", missingAccountFunds.String())
+}
 
 // EstimateGas implements eth_estimateGas. Returns an estimate of how much gas is necessary to allow the transaction to complete. The transaction will not be added to the blockchain.
 func (api *APIImpl) estimateGas(txn types.Transaction, chainId *big.Int) (hexutil.Uint64, error) {
@@ -38,7 +110,6 @@ func (api *APIImpl) estimateGas(txn types.Transaction, chainId *big.Int) (hexuti
 	data := txn.GetData()
 	hexData := hexutil.Bytes(data)
 	hexUtilityData := (*hexutility.Bytes)(&hexData)
-
 	argsOrNil := &ethapi2.CallArgs{
 		From:     &fromAddressHex,
 		To:       txn.GetTo(),

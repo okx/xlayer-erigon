@@ -93,3 +93,7 @@ networkid: 195
 pprof: true
 pprof.port: 6060
 pprof.addr: 0.0.0.0
+
+yieldsize: 2
+
+zkevm.seal-batch-immediately-on-overflow: true

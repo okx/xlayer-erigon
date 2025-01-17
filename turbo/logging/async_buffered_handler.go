@@ -3,15 +3,16 @@ package logging
 import (
 	"bufio"
 	"context"
-	"github.com/ledgerwatch/log/v3"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/ledgerwatch/log/v3"
 )
 
 const (
-	_BufferSize    = 1 << 20 // 1 MiB
-	_FlushInterval = time.Second * 10
+	_BufferSize    = 1 << 18 // 256 KiB
+	_FlushInterval = time.Second * 2
 )
 
 type AsyncBufferedWriter struct {

@@ -123,18 +123,18 @@ stop: ## Stops all services
 min-run: ## Runs a minimal node
 	$(RUN_DOCKER_POOL_DB)
 	$(RUN_DOCKER_L1_NETWORK)
-	$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 10
+	#$(RUN_DOCKER_STATELESS_EXECUTOR)
+	sleep 5
 	$(RUN_DOCKER_SEQ)
-	sleep 10
+	sleep 5
 	$(RUN_DOCKER_DS)
-	sleep 10
+	sleep 5
 	$(RUN_DOCKER_POOL_MANAGER)
 	$(RUN_DOCKER_RPC)
 
 	# monitoring services
-	$(RUN_DOCKER_PROMETHEUS)
-	$(RUN_DOCKER_GRAFANA)
+	#$(RUN_DOCKER_PROMETHEUS)
+	#$(RUN_DOCKER_GRAFANA)
 
 
 .PHONY: test

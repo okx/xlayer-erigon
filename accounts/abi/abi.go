@@ -235,6 +235,7 @@ func (abi *ABI) MethodById(sigdata []byte) (*Method, error) {
 		return nil, fmt.Errorf("data too short (%d bytes) for abi method lookup", len(sigdata))
 	}
 	for _, method := range abi.Methods {
+		//log.Info(fmt.Sprintf("zjg, method.ID: %#v, sigdata[:4]: %#v", method.ID, sigdata[:4]))
 		if bytes.Equal(method.ID, sigdata[:4]) {
 			return &method, nil
 		}

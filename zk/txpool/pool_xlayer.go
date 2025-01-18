@@ -117,7 +117,7 @@ func (p *TxPool) checkFreeGasAddrXLayer(senderID uint64, tx *types.TxSlot) (free
 	// specific project
 	if p.apolloCfg.GetEnableFreeGasList(p.xlayerCfg.EnableFreeGasList) {
 		fromToName, freeGpList := p.xlayerCfg.FreeGasFromNameMap, p.xlayerCfg.FreeGasList
-		info := freeGpList[fromToName[addr.String()]]
+		info := freeGpList[fromToName[strings.ToLower(addr.String())]]
 		if info != nil &&
 			contains(info.ToList, tx.To) &&
 			containsMethod(ecommon.Bytes2Hex(tx.Rlp), info.MethodSigs) {

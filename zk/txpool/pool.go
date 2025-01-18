@@ -28,6 +28,7 @@ import (
 	"math/big"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -428,7 +429,7 @@ func (p *TxPool) setFreeGasList(freeGasList []ethconfig.FreeGasInfo) {
 	p.xlayerCfg.FreeGasList = make(map[string]*ethconfig.FreeGasInfo, len(freeGasList))
 	for _, info := range freeGasList {
 		for _, from := range info.FromList {
-			p.xlayerCfg.FreeGasFromNameMap[from] = info.Name
+			p.xlayerCfg.FreeGasFromNameMap[strings.ToLower(from)] = info.Name
 		}
 		infoCopy := info
 		p.xlayerCfg.FreeGasList[info.Name] = &infoCopy

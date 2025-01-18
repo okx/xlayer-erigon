@@ -119,18 +119,25 @@ all: ## Runs a full node
 stop: ## Stops all services
 	$(STOP)
 
-.PHONY: min-run
-min-run: ## Runs a minimal node
-	$(RUN_DOCKER_POOL_DB)
+.PHONY: build-docker
+build-docker: ## Build cdk-erigoin for sequencer and rpc
+	docker build -t cdk-erigon -f ../Dockerfile.local ../
+
+.PHONY: pay
+pay: stop build-docker## Runs a minimal node
+	#$(RUN_DOCKER_POOL_DB)
 	$(RUN_DOCKER_L1_NETWORK)
 	#$(RUN_DOCKER_STATELESS_EXECUTOR)
-	sleep 5
+	sleep 10
 	$(RUN_DOCKER_SEQ)
-	sleep 5
-	$(RUN_DOCKER_DS)
-	sleep 5
-	$(RUN_DOCKER_POOL_MANAGER)
-	$(RUN_DOCKER_RPC)
+#	sleep 10
+#	$(RUN_DOCKER_DS)
+#	sleep 5
+#	$(RUN_DOCKER_POOL_MANAGER)
+#	$(RUN_DOCKER_RPC)
+
+	sleep 10
+	cd /Volumes/workspace/Pay-Contract/; yarn run deploy;yarn run senduop:local;./run.sh;cd -
 
 	# monitoring services
 	#$(RUN_DOCKER_PROMETHEUS)

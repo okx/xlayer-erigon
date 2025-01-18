@@ -26,8 +26,8 @@ import (
 	"math/big"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
-
 	"github.com/ledgerwatch/erigon/crypto"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // The ABI holds information about a contract's context and available
@@ -89,6 +89,7 @@ func (abi ABI) getArguments(name string, data []byte) (Arguments, error) {
 	// we need to decide whether we're calling a method or an event
 	var args Arguments
 	if method, ok := abi.Methods[name]; ok {
+		log.Info(fmt.Sprintf("zjg, getArguments:%v", method.Name))
 		if len(data)%32 != 0 {
 			return nil, fmt.Errorf("abi: improperly formatted output: %s - Bytes: [%+v]", string(data), data)
 		}
@@ -118,10 +119,12 @@ func (abi ABI) Unpack(name string, data []byte) ([]interface{}, error) {
 func (abi ABI) UnpackIntoInterface(v interface{}, name string, data []byte) error {
 	args, err := abi.getArguments(name, data)
 	if err != nil {
+		log.Info(fmt.Sprintf("zjg: UnpackIntoInterface--0-%v", err))
 		return err
 	}
 	unpacked, err := args.Unpack(data)
 	if err != nil {
+		log.Info(fmt.Sprintf("zjg: UnpackIntoInterface--1-%v", err))
 		return err
 	}
 	return args.Copy(v, unpacked)

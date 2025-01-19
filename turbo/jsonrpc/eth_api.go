@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"math/big"
 	"sync"
@@ -419,11 +420,13 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	}
 
 	// For X Layer
-	// Only Sequencer requires to calculate dynamic gas price periodically
-	// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
-	GasPricerOnce.Do(func() {
+	XLayerOnce.Do(func() {
 		if sequencer.IsSequencer() {
+			// Only Sequencer requires to calculate dynamic gas price periodically
+			// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
 			apii.runL2GasPricerForXLayer()
+			// Initialize the precompiled cache
+			vm.InitPrecompiledCache(1000, 1*time.Hour)
 		}
 	})
 

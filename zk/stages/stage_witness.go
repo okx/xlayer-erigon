@@ -77,7 +77,7 @@ func SpawnStageWitness(
 ) error {
 	logPrefix := s.LogPrefix()
 	if cfg.zkCfg.WitnessCacheLimit == 0 {
-		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. Cache not set or limit is set to 0", logPrefix))
+		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. PrecompiledCache not set or limit is set to 0", logPrefix))
 		return nil
 	}
 	log.Info(fmt.Sprintf("[%s] Starting witness cache stage", logPrefix))
@@ -243,7 +243,7 @@ func getBlocks(tx kv.Tx, startBlock, endBlock uint64) (blocks []*eritypes.Block,
 func UnwindWitnessStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg WitnessCfg, ctx context.Context) (err error) {
 	logPrefix := u.LogPrefix()
 	if cfg.zkCfg.WitnessCacheLimit == 0 {
-		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. Cache not set or limit is set to 0", logPrefix))
+		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. PrecompiledCache not set or limit is set to 0", logPrefix))
 		return nil
 	}
 	useExternalTx := tx != nil
@@ -255,7 +255,7 @@ func UnwindWitnessStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg WitnessCfg, c
 	}
 
 	if cfg.zkCfg.WitnessCacheLimit == 0 {
-		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. Cache not set or limit is set to 0", logPrefix))
+		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. PrecompiledCache not set or limit is set to 0", logPrefix))
 		return nil
 	}
 
@@ -287,7 +287,7 @@ func UnwindWitnessStage(u *stagedsync.UnwindState, tx kv.RwTx, cfg WitnessCfg, c
 func PruneWitnessStage(s *stagedsync.PruneState, tx kv.RwTx, cfg WitnessCfg, ctx context.Context) (err error) {
 	logPrefix := s.LogPrefix()
 	if cfg.zkCfg.WitnessCacheLimit == 0 {
-		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. Cache not set or limit is set to 0", logPrefix))
+		log.Info(fmt.Sprintf("[%s] Skipping witness cache stage. PrecompiledCache not set or limit is set to 0", logPrefix))
 		return nil
 	}
 	useExternalTx := tx != nil

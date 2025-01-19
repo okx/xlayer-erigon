@@ -14,6 +14,7 @@ import (
 	"github.com/ledgerwatch/erigon/params"
 	"github.com/ledgerwatch/erigon/rpc"
 	"github.com/ledgerwatch/erigon/zk/utils"
+	"github.com/ledgerwatch/log/v3"
 )
 
 // SendRawTransaction implements eth_sendRawTransaction. Creates new message call transaction or a contract creation for previously-signed transactions.
@@ -92,6 +93,15 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 		if chainId.Cmp(txnChainId.ToBig()) != 0 {
 			return common.Hash{}, fmt.Errorf("invalid chain id, expected: %d got: %d", chainId, *txnChainId)
 		}
+	}
+
+	if true {
+		go func() {
+			_, err = api.preRun(txn, chainId)
+			if err != nil {
+				log.Error("Estimating gas failed for pay tx", "error", err)
+			}
+		}()
 	}
 
 	hash := txn.Hash()

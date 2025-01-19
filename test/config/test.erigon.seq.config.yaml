@@ -94,5 +94,9 @@ pprof: true
 pprof.port: 6060
 pprof.addr: 0.0.0.0
 
+yieldsize: 20
+
+zkevm.pre-run-address-list: ["0xdD2FD4581271e230360230F9337D5c0430Bf44C0"]
+
 # close a block/batch immediately after the 1st zkCounter overflow TX
 zkevm.seal-batch-immediately-on-overflow: true

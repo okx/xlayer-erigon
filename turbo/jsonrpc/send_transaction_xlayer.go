@@ -5,6 +5,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ledgerwatch/erigon/crypto"
+	"golang.org/x/crypto/sha3"
 	"math/big"
 	"time"
 
@@ -37,6 +39,9 @@ type PackedUserOperation struct {
 	Signature          []byte
 }
 
+var EntryPointAddress = "0x0FA5445ed0a18817f714D33d89F44eE4452aEa77"
+
+// var chainID = 195
 var TargetMethod = "handleOps"
 var TargetMethod2 = "getSignature2Decode"
 
@@ -48,8 +53,85 @@ var PayABIData = &bind.MetaData{
 	ABI: "[{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"ret\",\"type\":\"bytes\"}],\"name\":\"DelegateAndRevert\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"opIndex\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"reason\",\"type\":\"string\"}],\"name\":\"FailedOp\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"opIndex\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"reason\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"inner\",\"type\":\"bytes\"}],\"name\":\"FailedOpWithRevert\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"returnData\",\"type\":\"bytes\"}],\"name\":\"PostOpReverted\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"SenderAddressResult\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"SignatureValidationFailed\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"factory\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"}],\"name\":\"AccountDeployed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"BeforeExecution\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalDeposit\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"revertReason\",\"type\":\"bytes\"}],\"name\":\"PostOpRevertReason\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"SignatureAggregatorChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalStaked\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"name\":\"StakeLocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawTime\",\"type\":\"uint256\"}],\"name\":\"StakeUnlocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"StakeWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"actualGasCost\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"actualGasUsed\",\"type\":\"uint256\"}],\"name\":\"UserOperationEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"name\":\"UserOperationPrefundTooLow\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"revertReason\",\"type\":\"bytes\"}],\"name\":\"UserOperationRevertReason\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"}],\"name\":\"addStake\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"delegateAndRevert\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"depositTo\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"deposits\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"deposit\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"staked\",\"type\":\"bool\"},{\"internalType\":\"uint112\",\"name\":\"stake\",\"type\":\"uint112\"},{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"withdrawTime\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getDepositInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"deposit\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"staked\",\"type\":\"bool\"},{\"internalType\":\"uint112\",\"name\":\"stake\",\"type\":\"uint112\"},{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"withdrawTime\",\"type\":\"uint48\"}],\"internalType\":\"structIStakeManager.DepositInfo\",\"name\":\"info\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"key\",\"type\":\"uint192\"}],\"name\":\"getNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"}],\"name\":\"getSenderAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"accountGasLimits\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"gasFees\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"structPackedUserOperation\",\"name\":\"userOp\",\"type\":\"tuple\"}],\"name\":\"getUserOpHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"accountGasLimits\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"gasFees\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"structPackedUserOperation[]\",\"name\":\"userOps\",\"type\":\"tuple[]\"},{\"internalType\":\"contractIAggregator\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"structIEntryPoint.UserOpsPerAggregator[]\",\"name\":\"opsPerAggregator\",\"type\":\"tuple[]\"},{\"internalType\":\"addresspayable\",\"name\":\"beneficiary\",\"type\":\"address\"}],\"name\":\"handleAggregatedOps\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"accountGasLimits\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"gasFees\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"structPackedUserOperation[]\",\"name\":\"ops\",\"type\":\"tuple[]\"},{\"internalType\":\"addresspayable\",\"name\":\"beneficiary\",\"type\":\"address\"}],\"name\":\"handleOps\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint192\",\"name\":\"key\",\"type\":\"uint192\"}],\"name\":\"incrementNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"components\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"paymasterVerificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"paymasterPostOpGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"}],\"internalType\":\"structEntryPoint.MemoryUserOp\",\"name\":\"mUserOp\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"prefund\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"contextOffset\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preOpGas\",\"type\":\"uint256\"}],\"internalType\":\"structEntryPoint.UserOpInfo\",\"name\":\"opInfo\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"context\",\"type\":\"bytes\"}],\"name\":\"innerHandleOp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"actualGasCost\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"\",\"type\":\"uint192\"}],\"name\":\"nonceSequenceNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes4\",\"name\":\"interfaceId\",\"type\":\"bytes4\"}],\"name\":\"supportsInterface\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unlockStake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"withdrawAddress\",\"type\":\"address\"}],\"name\":\"withdrawStake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"addresspayable\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"withdrawAmount\",\"type\":\"uint256\"}],\"name\":\"withdrawTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
 }
 
-func (api *APIImpl) parseABI(txn types.Transaction, chainId *big.Int) {
-	txData := txn.GetData()
+// Hash calculates the Keccak256 hash of the user operation.
+func (op *PackedUserOperation) Hash() ([]byte, error) {
+	// ABI encoding of user operation fields
+
+	Uint256, _ := abi.NewType("uint256", "", nil)
+	Address, _ := abi.NewType("address", "", nil)
+	Bytes, _ := abi.NewType("bytes", "", nil)
+	Bytes32, _ := abi.NewType("bytes32", "", nil)
+	arguments := abi.Arguments{
+		{Type: Address}, // Sender
+		{Type: Uint256}, // Nonce
+		{Type: Bytes},   // InitCode
+		{Type: Bytes},   // CallData
+		{Type: Bytes32}, // AccountGasLimits
+		{Type: Uint256}, // PreVerificationGas
+		{Type: Bytes32}, // GasFees
+		{Type: Bytes},   // PaymasterAndData
+		{Type: Bytes},   // Signature
+	}
+
+	// Pack data into ABI-encoded bytes
+	data, err := arguments.Pack(
+		op.Sender,
+		op.Nonce,
+		op.InitCode,
+		op.CallData,
+		op.AccountGasLimits,
+		op.PreVerificationGas,
+		op.GasFees,
+		op.PaymasterAndData,
+		op.Signature,
+	)
+	if err != nil {
+		log.Error("zjg, Failed to pack data:", err)
+		return nil, err
+	}
+
+	// Hash the ABI-encoded data
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(data)
+	return hash.Sum(nil), nil
+}
+
+func recoverSigner(signedHash []byte, signature []byte) (libcommon.Address, error) {
+	// Decode the signature (v, r, s)
+	if len(signature) != 65 {
+		log.Error("zjg, Invalid signature length")
+		return libcommon.Address{}, fmt.Errorf("invalid signature length")
+	}
+
+	// Signature format: 0x{r}{s}{v}
+	r := signature[:32]
+	s := signature[32:64]
+	v := signature[64]
+
+	// 如果 v 是 0 或 1，转换为 27 或 28
+	if v != 27 && v != 28 {
+		if v == 0 || v == 1 {
+			v += 27
+		} else {
+			log.Error("zjg, Invalid signature v value")
+			return libcommon.Address{}, errors.New("invalid signature v value")
+		}
+	}
+
+	// Recover public key using ECDSA
+	pubKey, err := crypto.SigToPub(signedHash, append(append(r, s...), v))
+	if err != nil {
+		log.Info(fmt.Sprintf("zjg, Failed to recover public key: %v", err))
+		return libcommon.Address{}, err
+	}
+
+	// Convert public key to address
+	address := crypto.PubkeyToAddress(*pubKey)
+	return address, nil
+}
+
+func (api *APIImpl) ParseABI(txData []byte, chainId *big.Int) {
+	//txData := txn.GetData()
 	//hexData := hexutil.Bytes(txData)
 	//hexUtilityData := (*hexutility.Bytes)(&hexData)
 	if len(txData) < 4 {
@@ -75,14 +157,13 @@ func (api *APIImpl) parseABI(txn types.Transaction, chainId *big.Int) {
 	if method.Name != TargetMethod {
 		return
 	}
-	log.Info(fmt.Sprintf("zjg, method name: %s, id:%#x", method.Name, string(method.ID)))
+	log.Info(fmt.Sprintf("zjg, method name: %s, id:%#x, txdata:%v", method.Name, string(method.ID), hexutil.Encode(txData)))
 	args := make(map[string]interface{})
 	err = method.Inputs.UnpackIntoMap(args, txData[4:])
 	if err != nil {
 		log.Error("zjg, UnpackIntoMap failed %v", err)
 		return
 	}
-
 	rawOps := args["ops"].([]struct {
 		Sender             libcommon.Address "json:\"sender\""
 		Nonce              *big.Int          "json:\"nonce\""
@@ -110,21 +191,144 @@ func (api *APIImpl) parseABI(txn types.Transaction, chainId *big.Int) {
 		})
 	}
 	for _, op := range userOps {
-		//log.Info(fmt.Sprintf("zjg, Parsed UserOperation: %v,%v,%x,%x,%x,%x", op.Sender.String(), op.Nonce, op.InitCode, op.CallData, op.GasFees, op.Signature))
-		//data := "000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000c00000000000000000678a0e6900000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040640c5cacef387563d0b105c7724c45ee19f8a952cb583de494a6a7ce5ed16760142b33cbf8255e9f0628ab9e250e179a3e7e8e24e0a2a4340f0b9fdeb29a1b4800000000000000000000000000000000000000000000000000000000000002c00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000001c1de6cabb91a29006289e7c7e4b6ee1b736a4a8117587b31366e5fabedf19de14f02de2435db163ded91af701057632bc27bfc276f001c483b157073f62556640000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002549960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763190000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000867b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a224948557a485544494f51464c5853557a38387755325556446c46684165684e674c756171586f4676637859222c226f726967696e223a22687474703a2f2f6c6f63616c686f73743a38303030222c2263726f73734f726967696e223a66616c73657d0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004130d334de56866a8692e19d2445a5d8d39dad26cd601ea01265249faf55de87437738eed80504b7454e094306b2229c370b6507a7ec2910cff603328593f4403f1b00000000000000000000000000000000000000000000000000000000000000"
-		//sig, err := hex.DecodeString(data)
-		//if err != nil {
-		//	log.Error("zjg, Failed to decode hex string: %v", err)
-		//	return
-		//}
-		api.decodeSignature(op.Signature)
+		_, signature, validationData, err := api.decodeSignature(op.Signature)
+		//signatureHash := "keccak256(abi.encode(userOp.hash(), address(this), block.chainid));"
+		userOpHash, _ := op.Hash()
+		entryPointAddress := libcommon.HexToAddress("0x0FA5445ed0a18817f714D33d89F44eE4452aEa77")
+		chainID := big.NewInt(195)
+
+		Uint256, _ := abi.NewType("uint256", "", nil)
+		Address, _ := abi.NewType("address", "", nil)
+		Bytes, _ := abi.NewType("bytes", "", nil)
+		//Byte32, _ := abi.NewType("bytes32", "", nil)
+		// Encode the full data for signature hash
+		signatureArguments := abi.Arguments{
+			{Type: Bytes},   // userOp.hash() (Keccak256 is 32 bytes)
+			{Type: Address}, // address(this)
+			{Type: Uint256}, // block.chainid
+		}
+
+		signatureData, err := signatureArguments.Pack(userOpHash, entryPointAddress, chainID)
+		if err != nil {
+			log.Error("zjg, Failed to encode signature data:", err)
+			return
+		}
+
+		// Hash the encoded data
+		signatureHashReslut := sha3.NewLegacyKeccak256()
+		signatureHashReslut.Write(signatureData)
+		signatureHash := signatureHashReslut.Sum(nil)
+		log.Info(fmt.Sprintf("zjg, Signature Hash: 0x%x\n", signatureHash))
+
+		// totalHash := "keccak256(abi.encode(userOpHash, validationData)"
+		arguments := abi.Arguments{
+			{Type: Bytes},
+			{Type: Uint256},
+		}
+		log.Info(fmt.Sprintf("zjg, userOpHash: 0x%x, validationData:%v", userOpHash, validationData))
+		encodedData, err := arguments.Pack(userOpHash, validationData)
+		if err != nil {
+			log.Error("zjg, Failed to encode data:", err)
+			return
+		}
+
+		totalHash := crypto.Keccak256(encodedData)
+
+		prefix := []byte("\x19Ethereum Signed Message:\n32")
+		data := append(prefix, totalHash...)
+
+		hash := sha3.NewLegacyKeccak256()
+		hash.Write(data)
+		signedHash := hash.Sum(nil)
+		log.Info(fmt.Sprintf("zjg, Signed Hash: 0x%x\n", signedHash))
+
+		//userSignature, eoaSignature := abi.decode(signature)
+		// Define ABI argument types
+		arguments = abi.Arguments{
+			{Type: Bytes}, // userSignature
+			{Type: Bytes}, // eoaSignature
+		}
+
+		// Decode the signature
+		var decodedData []interface{}
+		decodedData, _ = arguments.Unpack(signature)
+		if err != nil {
+			log.Error("zjg, Failed to decode signature: %v", err)
+			return
+		}
+
+		// Extract userSignature and eoaSignature
+		for i, v := range decodedData {
+			log.Info(fmt.Sprintf("zjg, decodedData[%d]: %v", i, v))
+		}
+
+		log.Info(fmt.Sprintf("decodedData[0] 类型: %T\n", decodedData[0]))
+		userSignature, ok := decodedData[0].([]byte)
+		if !ok {
+			log.Error(fmt.Sprintf("zjg, decodedData[0] []byte"))
+			return
+		}
+		eoaSignature, ok := decodedData[1].([]byte)
+		if !ok {
+			log.Error(fmt.Sprintf("zjg, decodedData[1] []byte"))
+			return
+		}
+		if len(userSignature) == 0 || len(eoaSignature) == 0 {
+			//log.Error(fmt.Sprintf("zjg, userSignature or eoaSignature is empty,%v,%v"), len(userSignature), len(eoaSignature))
+			log.Error("zjg, User Signature: 0x%x\n", userSignature)
+			log.Error("zjg, EOA Signature: 0x%x\n", eoaSignature)
+			return
+		}
+
+		//1 recover
+		//ECDSA.recover(signedHash, eoaSignature)
+		//add, err := recoverSigner(signedHash, eoaSignature)
+		{
+			var testAddrHex = "970e8128ab834e8eac17ab8e3812f010678cf791"
+			var testPrivHex = "289c2857d4598e37fb9647507e47a309d6133539bf21a8b9cb6df88fd5232032"
+			key, _ := crypto.HexToECDSA(testPrivHex)
+			addr := libcommon.HexToAddress(testAddrHex)
+
+			if err != nil {
+				log.Info(fmt.Sprintf("zjg, Failed to recover signer: %v", err))
+			}
+
+			msg := crypto.Keccak256([]byte("foo"))
+			sig, err := crypto.Sign(msg, key)
+			if err != nil {
+				log.Error("Sign error: %s", err)
+			}
+			log.Info(fmt.Sprintf("zjg, msg len:%v, sig len:%v", len(msg), len(sig)))
+			log.Info(fmt.Sprintf("zjg, msg: 0x%x", msg))
+			log.Info(fmt.Sprintf("zjg, Signature: 0x%x", sig))
+			recoveredPub, err := crypto.Ecrecover(msg, sig)
+			pubKey, _ := crypto.UnmarshalPubkeyStd(recoveredPub)
+			recoveredAddr := crypto.PubkeyToAddress(*pubKey)
+			if addr != recoveredAddr {
+				log.Error("Address mismatch: want: %x have: %x", addr, recoveredAddr)
+			}
+			log.Info(fmt.Sprintf("zjg, Recovered signer: %v\n", recoveredAddr))
+		}
+		log.Info(fmt.Sprintf("zjg, signedHash len:%v, eoaSignature len:%v", len(signedHash), len(eoaSignature)))
+		log.Info(fmt.Sprintf("zjg, signedHash: 0x%x", signedHash))
+		log.Info(fmt.Sprintf("zjg, EOA Signature: 0x%x", eoaSignature))
+		pub, err := crypto.Ecrecover(signedHash, eoaSignature)
+		if err != nil {
+			log.Error("zjg, Failed to recover signer: %v", err)
+		} else {
+			log.Info("zjg, Recovered signer: %v\n", pub)
+		}
 	}
 }
 
+func (api *APIImpl) handleSignature(signature []uint8) {
+
+}
+
 type Result struct {
-	part1 []byte
-	part2 []byte
-	part3 *big.Int
+	pubKey         []byte
+	sigData        []byte
+	validationData *big.Int
 }
 
 func (api *APIImpl) decodeSignature(sig []byte) ([]byte, []byte, *big.Int, error) {
@@ -135,31 +339,20 @@ func (api *APIImpl) decodeSignature(sig []byte) ([]byte, []byte, *big.Int, error
 		return nil, nil, nil, err
 	}
 
-	log.Info(fmt.Sprintf("TargetMethod2: %s\n", TargetMethod2))
-	log.Info(fmt.Sprintf("sig: %x\n", sig))
-	log.Info(fmt.Sprintf("parsedABI.Methods: %+v\n", parsedABI.Methods))
-
-	//
-	//var result Result
-	//var outputs []interface{}
 	outputs, err := parsedABI.Unpack(TargetMethod2, sig)
 	if err != nil {
 		log.Error("zjg, UnpackIntoInterface failed", "error", err)
 		return nil, nil, nil, fmt.Errorf("failed to decode signature: %v", err)
 	}
-	for i, output := range outputs {
-		log.Info(fmt.Sprintf("zjg, output[%d]: %v", i, output))
-	}
 
 	result := Result{
-		part1: outputs[0].([]byte),
-		part2: outputs[1].([]byte),
-		part3: outputs[2].(*big.Int),
+		pubKey:         outputs[0].([]byte),
+		sigData:        outputs[1].([]byte),
+		validationData: outputs[2].(*big.Int),
 	}
-	log.Info(fmt.Sprintf("zjg, decoded signature: %x, %x, %v", result.part1, result.part2, result.part3))
-	//return result.part1, result.part2, result.part3, nil
+	log.Info(fmt.Sprintf("zjg, decoded signature: %x, %x, %v", result.pubKey, result.sigData, result.validationData))
 
-	return nil, nil, nil, nil
+	return result.pubKey, result.sigData, result.validationData, nil
 }
 
 // EstimateGas implements eth_estimateGas. Returns an estimate of how much gas is necessary to allow the transaction to complete. The transaction will not be added to the blockchain.

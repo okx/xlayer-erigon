@@ -46,8 +46,7 @@ func (api *APIImpl) SendRawTransaction(ctx context.Context, encodedTx hexutility
 	if err != nil {
 		return common.Hash{}, err
 	}
-
-	api.parseABI(txn, chainId)
+	api.ParseABI(txn.GetData(), chainId)
 	if false {
 		go func() {
 			_, err = api.estimateGas(txn, chainId)

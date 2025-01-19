@@ -20,17 +20,14 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"fmt"
-	"math/big"
-	"time"
-
 	"github.com/consensys/gnark-crypto/ecc"
 	bls12381 "github.com/consensys/gnark-crypto/ecc/bls12-381"
 	"github.com/consensys/gnark-crypto/ecc/bls12-381/fr"
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"math/big"
 
 	"github.com/ledgerwatch/erigon-lib/crypto/blake2b"
-	"github.com/ledgerwatch/erigon/cl/phase1/core/state/lru"
 	"github.com/ledgerwatch/erigon/common"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/crypto"
@@ -47,10 +44,11 @@ type PrecompiledContract_zkEvm interface {
 	SetOutputLength(outLength int)
 }
 
-var cache *lru.CacheWithTTL[string, []byte]
+var TTLCache CacheWithTTLInterface[string, []byte]
 
-func init() {
-	cache = lru.NewWithTTL[string, []byte]("evm_precompiled_cache", 1000, 1*time.Hour)
+type CacheWithTTLInterface[K comparable, V any] interface {
+	Get(k K) (V, bool)
+	Add(key K, value V) bool
 }
 
 // PrecompiledContractsForkID5Dragonfruit contains the default set of pre-compiled ForkID5 Dragonfruit
@@ -160,9 +158,11 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	sig := make([]byte, 65)
 	copy(sig, input[64:128])
 	sig[64] = v
-	value, ok := cache.Get(string(input))
-	if ok {
-		return value, nil
+	if TTLCache != nil {
+		value, ok := TTLCache.Get(string(input))
+		if ok {
+			return value, nil
+		}
 	}
 	// v needs to be at the end for libsecp256k1
 	pubKey, err := crypto.Ecrecover(input[:32], sig)
@@ -172,7 +172,9 @@ func (c *ecrecover_zkevm) Run(input []byte) ([]byte, error) {
 	}
 
 	result := common.LeftPadBytes(crypto.Keccak256(pubKey[1:])[12:], 32)
-	cache.Add(string(input), result)
+	if TTLCache != nil {
+		TTLCache.Add(string(input), result)
+	}
 	// the first byte of pubkey is bitcoin heritage
 	return result, nil
 }
@@ -1265,15 +1267,20 @@ func (c *p256Verify_zkevm) Run(input []byte) ([]byte, error) {
 	if c.cc != nil {
 		c.cc.preP256Verify(r, s, x, y)
 	}
-	value, ok := cache.Get(string(input))
-	if ok {
-		return value, nil
+
+	if TTLCache != nil {
+		value, ok := TTLCache.Get(string(input))
+		if ok {
+			return value, nil
+		}
 	}
 	// Verify the secp256r1 signature
 	if secp256r1.Verify(hash, r, s, x, y) {
 		// Signature is valid
 		result := common.LeftPadBytes(big1.Bytes(), 32)
-		cache.Add(string(input), result)
+		if TTLCache != nil {
+			TTLCache.Add(string(input), result)
+		}
 		return result, nil
 	} else {
 		// Signature is invalid

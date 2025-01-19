@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/zk/sequencer"
 	"math/big"
 	"sync"
@@ -14,8 +15,6 @@ import (
 
 	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/holiman/uint256"
-	"github.com/ledgerwatch/log/v3"
-
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
@@ -25,6 +24,8 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/kvcache"
 	"github.com/ledgerwatch/erigon-lib/kv/kvcfg"
 	libstate "github.com/ledgerwatch/erigon-lib/state"
+	slru "github.com/ledgerwatch/erigon/cl/phase1/core/state/lru"
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -381,6 +382,7 @@ type APIImpl struct {
 	// For X Layer
 	L2GasPricer   gasprice.L2GasPricer
 	EnableInnerTx bool
+	VerifyCache   *slru.CacheWithTTL[string, []byte]
 }
 
 // NewEthAPI returns APIImpl instance
@@ -388,6 +390,10 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 	if gascap == 0 {
 		gascap = uint64(math.MaxUint64 / 2)
 	}
+
+	verifyCache := slru.NewWithTTL[string, []byte]("evm_precompiled_cache", 1000, 1*time.Hour)
+	vm.TTLCache = verifyCache
+	log.Info(fmt.Sprintf("zjg, VerifyCache created with size %d", 10000))
 
 	apii := &APIImpl{
 		BaseAPI:                     base,
@@ -416,8 +422,8 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 		// For X Layer
 		L2GasPricer:   gasprice.NewL2GasPriceSuggester(context.Background(), ethCfg.GPO),
 		EnableInnerTx: ethCfg.XLayer.EnableInnerTx,
+		VerifyCache:   verifyCache,
 	}
-
 	// For X Layer
 	// Only Sequencer requires to calculate dynamic gas price periodically
 	// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)

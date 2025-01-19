@@ -7,6 +7,7 @@ import (
 
 	"github.com/ledgerwatch/erigon/rpc"
 	types "github.com/ledgerwatch/erigon/zk/rpcdaemon"
+	"github.com/ledgerwatch/log/v3"
 )
 
 func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumber rpc.BlockNumber) (types.ArgUint64, error) {
@@ -36,4 +37,29 @@ func (api *ZkEvmAPIImpl) GetBatchSealTime(ctx context.Context, batchNumber rpc.B
 	}
 
 	return lastBlock.Timestamp, nil
+}
+
+func (api *ZkEvmAPIImpl) GetVerifyData(ctx context.Context) ([]string, error) {
+	keys := api.ethApi.VerifyCache.Keys()
+	result := make([]string, 0, len(keys))
+	for _, key := range keys {
+		log.Info(fmt.Sprintf("zjg, GetVerifyData, key: %v", key))
+		result = append(result, key)
+	}
+	return result, nil
+}
+
+func (api *ZkEvmAPIImpl) SetVerifyData(ctx context.Context, keys []string) (bool, error) {
+	if len(keys) == 0 {
+		return false, errors.New("no keys provided")
+	}
+	const p256VerifyInputLength = 160
+	for _, key := range keys {
+		log.Info(fmt.Sprintf("zjg, key: %s, len:%v", key, len(key)))
+		if len(key) == p256VerifyInputLength {
+			log.Info("zjg, p256VerifyInputLength")
+		}
+	}
+
+	return true, nil
 }

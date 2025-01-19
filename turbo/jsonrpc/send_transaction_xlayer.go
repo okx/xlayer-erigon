@@ -233,5 +233,6 @@ func (api *APIImpl) preRun(txn types.Transaction, chainId *big.Int) (hexutil.Uin
 			return 0, fmt.Errorf("gas required exceeds allowance (%d)", gasCap)
 		}
 	}
+	log.Info(fmt.Sprintf("Estimated gas: %d", hi))
 	return hexutil.Uint64(hi), nil
 }

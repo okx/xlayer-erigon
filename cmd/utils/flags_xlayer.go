@@ -2,13 +2,13 @@ package utils
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"math/big"
 	"time"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
+	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -314,14 +314,13 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 }
 
-func setPreRunList(ctx *cli.Context, cfg *ethconfig.Config) {
+func SetPreRunList(ctx *cli.Context, cfg *ethconfig.Config) {
 	if ctx.IsSet(PreRunAddressList.Name) {
-		addrHexes := libcommon.CliString2Array(ctx.String(TxPoolPackBatchSpecialList.Name))
+		addrHexes := libcommon.CliString2Array(ctx.String(PreRunAddressList.Name))
 
-		cfg.XLayer.PreRunList = make([]string, len(addrHexes))
-		for i, senderHex := range addrHexes {
-			sender := libcommon.HexToAddress(senderHex)
-			cfg.XLayer.PreRunList[i] = sender.String()
+		cfg.XLayer.PreRunList = make(map[libcommon.Address]struct{}, len(addrHexes))
+		for _, addr := range addrHexes {
+			cfg.XLayer.PreRunList[libcommon.HexToAddress(addr)] = struct{}{}
 		}
 	}
 }
@@ -334,4 +333,12 @@ func SetApolloGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
 // SetApolloPoolXLayer is a public wrapper function to internally call setTxPool
 func SetApolloPoolXLayer(ctx *cli.Context, fullCfg *ethconfig.Config) {
 	setTxPool(ctx, fullCfg)
+}
+
+func CheckAddressExists(addressMap map[libcommon.Address]struct{}, target *libcommon.Address) bool {
+	if target == nil {
+		return false
+	}
+	_, exists := addressMap[*target]
+	return exists
 }

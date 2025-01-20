@@ -384,45 +384,81 @@ func sequencingBatchStep(
 					hashResults := make([]common.Hash, len(newTransactions))
 					var wg sync.WaitGroup
 
-					/*
-						if cpu.X86.HasAVX512 {
-							// fmt.Println("CPU has AVX512")
-							chunkSize := 8
-							// TODO: implement AVX512
-						} else {
-					*/
-					if cpu.X86.HasAVX2 {
-						// fmt.Println("CPU has AVX2")
-						chunkSize := 4
-						// first, run 4 hashes per core (AVX) in parallel
-						n1 := (len(newTransactions) / chunkSize) * chunkSize
-						for idx := 0; idx < n1; idx += chunkSize {
-							wg.Add(1)
-							go func(idx int, txs []types.Transaction, hashes []common.Hash) {
-								defer wg.Done()
-								sha3.RlpHashAVX2(txs, hashes)
-							}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
-						}
-						// run the remaining hashes (<4) sequentially
-						for idx := n1; idx < len(newTransactions); idx += 1 {
-							hashResults[idx] = newTransactions[idx].Hash()
-						}
-						wg.Wait()
-					} else {
-						// no AVX or NEON -> run one hash per core/thread
-						for idx, tx := range newTransactions {
-							wg.Add(1)
-							go func(idx int, tx types.Transaction) {
-								defer wg.Done()
-								hashResults[idx] = tx.Hash()
-							}(idx, tx)
-						}
-						wg.Wait()
-					}
+					if len(newTransactions) > 0 {
+						// t0 := time.Now()
+						if len(newTransactions) > 1 {
+							/*
+								// Version: Parallel (max routines) -->
+								for idx := range newTransactions {
+									wg.Add(1)
+									go func(idx int) {
+										hashResults[idx] = newTransactions[idx].Hash()
+										wg.Done()
+									}(idx)
+								}
+								wg.Wait()
+								// <-- Version: Parallel (max routines)
+							*/
+							/*
+								// Version: Parallel (2 routines) -->
+								wg.Add(1)
+								go func() {
+									defer wg.Done()
+									for idx := 0; idx < len(newTransactions)/2; idx++ {
+										hashResults[idx] = newTransactions[idx].Hash()
+									}
+								}()
+								wg.Add(1)
+								go func() {
+									defer wg.Done()
+									for idx := len(newTransactions) / 2; idx < len(newTransactions); idx++ {
+										hashResults[idx] = newTransactions[idx].Hash()
+									}
+								}()
+								wg.Wait()
+								// <-- Version: Parallel (2 routines)
+							*/
 
-					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
-					for idx, hash := range hashResults {
-						batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+							// Version: AVX2 (max routines) -->
+							if cpu.X86.HasAVX2 {
+								// fmt.Println("using AVX2 in sequencingBatchStep()")
+								chunkSize := 4
+								// first, run 4 hashes per core (AVX) in parallel
+								n1 := (len(newTransactions) / chunkSize) * chunkSize
+								for idx := 0; idx < n1; idx += chunkSize {
+									wg.Add(1)
+									go func(idx int, txs []types.Transaction, hashes []common.Hash) {
+										defer wg.Done()
+										sha3.RlpHashAVX2(txs, hashes)
+									}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
+								}
+								// run the remaining hashes (<4) sequentially
+								for idx := n1; idx < len(newTransactions); idx += 1 {
+									hashResults[idx] = newTransactions[idx].Hash()
+								}
+								wg.Wait()
+							} else {
+								// run all hashes sequentially
+								for idx := range newTransactions {
+									hashResults[idx] = newTransactions[idx].Hash()
+								}
+							}
+							// <-- Version: AVX2 (max routines)
+						} else {
+							hashResults[0] = newTransactions[0].Hash()
+						}
+
+						batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+						for idx, hash := range hashResults {
+							batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+						}
+
+						/*
+							took := time.Since(t0)
+							totalTime := took.Nanoseconds()
+							totalTx := len(newTransactions)
+							log.Info("calcHash", "totalTime.ns", totalTime, "totalTx", totalTx, "avg", totalTime/int64(totalTx))
+						*/
 					}
 
 					if len(batchState.blockState.transactionsForInclusion) == 0 {

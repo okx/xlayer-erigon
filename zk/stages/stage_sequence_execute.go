@@ -484,9 +484,6 @@ func sequencingBatchStep(
 
 			InnerLoopTransactions:
 				for i, transaction := range batchState.blockState.transactionsForInclusion {
-					// For X Layer
-					metrics.GetLogStatistics().CumulativeCounting(metrics.TxCounter)
-
 					// quick check if we should stop handling transactions
 					select {
 					case <-blockTicker.C:
@@ -504,10 +501,6 @@ func sequencingBatchStep(
 					backupDataSizeChecker := *blockDataSizeChecker
 					receipt, execResult, anyOverflow, err := attemptAddTransaction(cfg, sdb, ibs, batchCounters, &blockContext, header, transaction, effectiveGas, batchState.isL1Recovery(), batchState.forkId, l1TreeUpdateIndex, &backupDataSizeChecker)
 					if err != nil {
-						// For X Layer
-						metrics.GetLogStatistics().CumulativeCounting(metrics.FailTxCounter)
-						metrics.SeqFailTxCount.Inc()
-
 						if batchState.isLimboRecovery() {
 							panic("limbo transaction has already been executed once so they must not fail while re-executing")
 						}
@@ -584,6 +577,9 @@ func sequencingBatchStep(
 								// was not included in this batch because it overflowed: counter x, counter y
 								log.Info(transactionNotAddedText, "Counters context:", ocs, "overflow transactions", batchState.overflowTransactions)
 								if batchState.reachedOverflowTransactionLimit() || cfg.zk.SealBatchImmediatelyOnOverflow {
+									// For X Layer
+									metrics.GetLogStatistics().CumulativeCounting(metrics.ZKOverflowBlockCounter)
+									metrics.SeqZKOverflowBlockCounter.Inc()
 									log.Info(fmt.Sprintf("[%s] closing batch due to counters", logPrefix), "counters: ", batchState.overflowTransactions, "immediate", cfg.zk.SealBatchImmediatelyOnOverflow)
 									runLoopBlocks = false
 									if len(batchState.blockState.builtBlockElements.transactions) == 0 {
@@ -721,7 +717,9 @@ func sequencingBatchStep(
 		}
 
 		// For X Layer
+		// Count successful transactions
 		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
+		metrics.GetLogStatistics().CumulativeValue(metrics.TxCounter, int64(len(batchState.blockState.builtBlockElements.transactions)))
 
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)

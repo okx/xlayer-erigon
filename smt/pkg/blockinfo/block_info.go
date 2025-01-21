@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/hex"
 	"math/big"
+	"sync"
 
 	ethTypes "github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/log/v3"
@@ -20,6 +21,14 @@ type ExecutedTxInfo struct {
 	EffectiveGasPrice uint8
 	Receipt           *ethTypes.Receipt
 	Signer            *common.Address
+}
+
+type TxGenKeyValuesResult struct {
+	keys   []*utils.NodeKey
+	vals   []*utils.NodeValue8
+	logCnt int64
+	err    error
+	index  int
 }
 
 func BuildBlockInfoTree(
@@ -49,43 +58,77 @@ func BuildBlockInfoTree(
 		"ger", ger.String(),
 		"l1BlockHash", l1BlockHash.String(),
 	)
-	var logIndex int64 = 0
+
+	resultChan := make(chan TxGenKeyValuesResult, len(*transactionInfos))
+	var wg sync.WaitGroup
+
+	var currentLogIndex int64
 	for i, txInfo := range *transactionInfos {
-		receipt := txInfo.Receipt
+		wg.Add(1)
 		t := txInfo.Tx
+		go func() {
+			defer wg.Done()
+			l2TxHash, err := zktx.ComputeL2TxHash(
+				t.GetChainID().ToBig(),
+				t.GetValue(),
+				t.GetPrice(),
+				t.GetNonce(),
+				t.GetGas(),
+				t.GetTo(),
+				txInfo.Signer,
+				t.GetData(),
+			)
 
-		l2TxHash, err := zktx.ComputeL2TxHash(
-			t.GetChainID().ToBig(),
-			t.GetValue(),
-			t.GetPrice(),
-			t.GetNonce(),
-			t.GetGas(),
-			t.GetTo(),
-			txInfo.Signer,
-			t.GetData(),
-		)
-		if err != nil {
-			return nil, err
-		}
+			if err != nil {
+				resultChan <- TxGenKeyValuesResult{err: err, index: i}
+			}
 
-		log.Trace("info-tree-tx", "block", blockNumber, "idx", i, "hash", l2TxHash.String())
+			log.Trace("info-tree-tx",
+				"block", blockNumber,
+				"idx", i,
+				"hash", l2TxHash.String(),
+			)
 
-		genKeys, genVals, err := infoTree.GenerateBlockTxKeysVals(&l2TxHash, i, receipt, logIndex, receipt.CumulativeGasUsed, txInfo.EffectiveGasPrice)
-		if err != nil {
-			return nil, err
-		}
-		keys = append(keys, genKeys...)
-		vals = append(vals, genVals...)
+			genKeys, genVals, err := infoTree.GenerateBlockTxKeysVals(
+				&l2TxHash,
+				i,
+				txInfo.Receipt,
+				currentLogIndex,
+				txInfo.Receipt.CumulativeGasUsed,
+				txInfo.EffectiveGasPrice,
+			)
+			if err != nil {
+				resultChan <- TxGenKeyValuesResult{err: err, index: i}
+			}
 
-		logIndex += int64(len(receipt.Logs))
+			resultChan <- TxGenKeyValuesResult{
+				keys:   genKeys,
+				vals:   genVals,
+				logCnt: int64(len(txInfo.Receipt.Logs)),
+				index:  i,
+			}
+		}()
+		currentLogIndex += int64(len(txInfo.Receipt.Logs))
 	}
 
-	key, val, err := generateBlockGasUsed(blockGasUsed)
-	if err != nil {
-		return nil, err
+	results := make([]TxGenKeyValuesResult, len(*transactionInfos))
+
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	for r := range resultChan {
+		if r.err != nil {
+			return nil, r.err
+		}
+		results[r.index] = r
 	}
-	keys = append(keys, key)
-	vals = append(vals, val)
+
+	for _, r := range results {
+		keys = append(keys, r.keys...)
+		vals = append(vals, r.vals...)
+	}
 
 	insertBatchCfg := smt.NewInsertBatchConfig(context.Background(), "block_info_tree", false)
 	root, err := infoTree.smt.InsertBatch(insertBatchCfg, keys, vals, nil, nil)

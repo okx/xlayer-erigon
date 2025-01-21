@@ -10,11 +10,13 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/log/v3"
+	"golang.org/x/sys/cpu"
 
 	"github.com/ledgerwatch/erigon/core"
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/crypto/keccak"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
@@ -382,19 +384,81 @@ func sequencingBatchStep(
 					hashResults := make([]common.Hash, len(newTransactions))
 					var wg sync.WaitGroup
 
-					for idx, tx := range newTransactions {
-						wg.Add(1)
-						go func(idx int, tx types.Transaction) {
-							defer wg.Done()
-							hashResults[idx] = tx.Hash()
-						}(idx, tx)
-					}
+					if len(newTransactions) > 0 {
+						// t0 := time.Now()
+						if len(newTransactions) > 1 {
+							/*
+								// Version: Parallel (max routines) -->
+								for idx := range newTransactions {
+									wg.Add(1)
+									go func(idx int) {
+										hashResults[idx] = newTransactions[idx].Hash()
+										wg.Done()
+									}(idx)
+								}
+								wg.Wait()
+								// <-- Version: Parallel (max routines)
+							*/
+							/*
+								// Version: Parallel (2 routines) -->
+								wg.Add(1)
+								go func() {
+									defer wg.Done()
+									for idx := 0; idx < len(newTransactions)/2; idx++ {
+										hashResults[idx] = newTransactions[idx].Hash()
+									}
+								}()
+								wg.Add(1)
+								go func() {
+									defer wg.Done()
+									for idx := len(newTransactions) / 2; idx < len(newTransactions); idx++ {
+										hashResults[idx] = newTransactions[idx].Hash()
+									}
+								}()
+								wg.Wait()
+								// <-- Version: Parallel (2 routines)
+							*/
 
-					wg.Wait()
+							// Version: AVX2 (max routines) -->
+							if cpu.X86.HasAVX2 {
+								// fmt.Println("using AVX2 in sequencingBatchStep()")
+								chunkSize := 4
+								// first, run 4 hashes per core (AVX) in parallel
+								n1 := (len(newTransactions) / chunkSize) * chunkSize
+								for idx := 0; idx < n1; idx += chunkSize {
+									wg.Add(1)
+									go func(idx int, txs []types.Transaction, hashes []common.Hash) {
+										defer wg.Done()
+										keccak.RlpHashAVX2(txs, hashes)
+									}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
+								}
+								// run the remaining hashes (<4) sequentially
+								for idx := n1; idx < len(newTransactions); idx += 1 {
+									hashResults[idx] = newTransactions[idx].Hash()
+								}
+								wg.Wait()
+							} else {
+								// run all hashes sequentially
+								for idx := range newTransactions {
+									hashResults[idx] = newTransactions[idx].Hash()
+								}
+							}
+							// <-- Version: AVX2 (max routines)
+						} else {
+							hashResults[0] = newTransactions[0].Hash()
+						}
 
-					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
-					for idx, hash := range hashResults {
-						batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+						batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+						for idx, hash := range hashResults {
+							batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+						}
+
+						/*
+							took := time.Since(t0)
+							totalTime := took.Nanoseconds()
+							totalTx := len(newTransactions)
+							log.Info("calcHash", "totalTime.ns", totalTime, "totalTx", totalTx, "avg", totalTime/int64(totalTx))
+						*/
 					}
 
 					if len(batchState.blockState.transactionsForInclusion) == 0 {
@@ -657,7 +721,9 @@ func sequencingBatchStep(
 		}
 
 		// For X Layer
+		// Count successful transactions
 		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
+		metrics.GetLogStatistics().CumulativeValue(metrics.TxCounter, int64(len(batchState.blockState.builtBlockElements.transactions)))
 
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)

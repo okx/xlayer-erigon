@@ -17,8 +17,12 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
+	"time"
+
+	"github.com/ledgerwatch/log/v3"
 
 	"github.com/holiman/uint256"
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -460,7 +464,29 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+		if st.state.GetNonce(sender.Address()) >= 100 {
+			log.Info("Start Benchmark")
+			start := time.Now()
+			size := 1000000
+			ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+			for i := 0; i < size; i++ {
+				if i % 1000 == 0 {
+					log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+				}
+				currentRet, _, vmerr := st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+				if !bytes.Equal(currentRet, ret) {
+					panic("return value is not the same as before")
+				}
+				if vmerr != nil {
+					log.Error("EVM Call Error", "error", vmerr)
+				}
+			}
+			duration := time.Since(start)
+			log.Info("EVM Call Duration", "duration", duration, "size", size)
+			time.Sleep(time.Second)
+		} else {
+			ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+		}
 		// For X Layer
 		innerTx.To = vm.AccountRef(*msg.To()).Address().String()
 	}

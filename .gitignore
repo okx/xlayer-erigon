@@ -115,10 +115,10 @@ vendor
 data/
 test/sqlite
 start.sh
-xlayerconfig-mainnet.yaml
 xlayerconfig-testnet.yaml
 **/cover.out
 **/cover.html
+test/mainnet
 
 datadir
 zk/tests/unwinds/datastream/hermez-dynamic-integration8-datastream

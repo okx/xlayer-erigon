@@ -472,11 +472,11 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 			log.Info("Start Benchmark")
 			for i := 0; i < 100; i++ {
 				if i != 0 {
-					if bytes.Equal(lastCallDataList[curIndex-1], lastCallDataList[curIndex]) {
+					if bytes.Equal(lastCallDataList[i-1], lastCallDataList[i]) {
 						panic("Data is the same")
 					}
 				}
-				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "curIndex", curIndex, "data", hexutil.Encode(lastCallDataList[curIndex]))
+				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "curIndex", i, "data", hexutil.Encode(lastCallDataList[i]))
 			}
 			// log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
 			start := time.Now()

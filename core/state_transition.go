@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"math/rand"
 	"time"
 
 	"github.com/ledgerwatch/log/v3"
@@ -479,25 +480,24 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "curIndex", i, "data", hexutil.Encode(lastCallDataList[i]))
 			}
 			// log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
-			start := time.Now()
-			size := 1000000
-			for i := 0; i < size; i++ {
-				ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallDataList[curIndex], st.gasRemaining, st.value, bailout, intrinsicGas)
-				curIndex = curIndex + 1
-				if curIndex >= 100 {
-					curIndex = 0
-				}
 
+			size := 1000000
+			var totalDuration time.Duration
+			for i := 0; i < size; i++ {
+				rand.Seed(time.Now().UnixNano())
+				random := rand.Intn(100)
+				start := time.Now()
+				ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallDataList[random], st.gasRemaining, st.value, bailout, intrinsicGas)
 				if vmerr != nil {
-					log.Error("EVM Call Error", "error", vmerr, "i", "curIndex", curIndex)
+					log.Error("EVM Call Error", "error", vmerr, "i", "random", random)
 					break
 				}
 				if i%1000 == 0 {
-					log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+					log.Info(fmt.Sprintf("current runs %d/%d/%d", i, size, random), "totalDuration", totalDuration)
 				}
+				totalDuration = totalDuration + time.Since(start)
 			}
-			duration := time.Since(start)
-			log.Info("EVM Call Duration", "duration", duration, "size", size)
+			log.Info("EVM Call Duration", "totalDuration", totalDuration, "size", size)
 			time.Sleep(time.Second)
 			//}
 		} else {

@@ -16,7 +16,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/rawdb"
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
-	"github.com/ledgerwatch/erigon/crypto/sha3"
+	"github.com/ledgerwatch/erigon/crypto/keccak"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/eth/stagedsync/stages"
 	"github.com/ledgerwatch/erigon/zk"
@@ -429,7 +429,7 @@ func sequencingBatchStep(
 									wg.Add(1)
 									go func(idx int, txs []types.Transaction, hashes []common.Hash) {
 										defer wg.Done()
-										sha3.RlpHashAVX2(txs, hashes)
+										keccak.RlpHashAVX2(txs, hashes)
 									}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
 								}
 								// run the remaining hashes (<4) sequentially

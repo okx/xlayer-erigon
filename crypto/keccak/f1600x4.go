@@ -1,7 +1,7 @@
 //go:build amd64 && !purego
 // +build amd64,!purego
 
-package sha3
+package keccak
 
 import (
 	"unsafe"

@@ -489,7 +489,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 				}
 
 				if vmerr != nil {
-					log.Error("EVM Call Error", "error", vmerr)
+					log.Error("EVM Call Error", "error", vmerr, "i", "curIndex", curIndex)
 					break
 				}
 				if i%1000 == 0 {

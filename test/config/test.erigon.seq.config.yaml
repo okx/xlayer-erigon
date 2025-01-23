@@ -96,9 +96,9 @@ pprof.addr: 0.0.0.0
 
 # Small yieldsize for huge OKX Pay Transaction
 # yield # transactions from the transaction pool for processing in each batch
-yieldsize: 1000
+yieldsize: 10
 
 # close a block/batch immediately after the 1st zkCounter overflow TX
 zkevm.seal-batch-immediately-on-overflow: true
 
-zkevm.disable-virtual-counters: true
+zkevm.disable-virtual-counters: false

@@ -469,19 +469,21 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		if st.state.GetNonce(sender.Address()) >= 50 {
 			if !bytes.Equal(lastCallData, st.data) {
 				log.Info("Start Benchmark")
-				log.Info("1st benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", st.data)
-				log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
+				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", hexutil.Encode(st.data))
+				// log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
 				start := time.Now()
 				size := 100000
 				for i := 0; i < size; i++ {
-					if i%2 == 0 {
-						ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
-					} else {
-						ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallData, st.gasRemaining, st.value, bailout, intrinsicGas)
-					}
+					ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+					// if i%2 == 0 {
+					// 	ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+					// } else {
+					// 	ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallData, st.gasRemaining, st.value, bailout, intrinsicGas)
+					// }
 
 					if vmerr != nil {
 						log.Error("EVM Call Error", "error", vmerr)
+						break
 					}
 					if i%1000 == 0 {
 						log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
@@ -495,7 +497,12 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 			ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
 			// Update the global cache with the last st.data
 			lastCallData = st.data
-			log.Info(fmt.Sprintf("tx %d", st.state.GetNonce(sender.Address())), "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", st.data)
+			log.Info("Transaction processing", 
+				"tx_nonce", st.state.GetNonce(sender.Address()),
+				"sender", sender.Address().Hex(), 
+				"to", st.to().Hex(), 
+				"data", st.data,
+				"timestamp", time.Now().Unix())
 		}
 		// For X Layer
 		innerTx.To = vm.AccountRef(*msg.To()).Address().String()

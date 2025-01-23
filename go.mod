@@ -31,7 +31,6 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0
 	github.com/c2h5oh/datasize v0.0.0-20231215233829-aa82cc1e6500
 	github.com/cenkalti/backoff/v4 v4.2.1
-	github.com/cloudflare/circl v1.5.0
 	github.com/consensys/gnark-crypto v0.12.1
 	github.com/crate-crypto/go-ipa v0.0.0-20221111143132-9aa5d42120bc
 	github.com/crate-crypto/go-kzg-4844 v0.7.0

@@ -1,8 +1,9 @@
 package sha3
 
 import (
-	"golang.org/x/sys/cpu"
 	"unsafe"
+
+	"golang.org/x/sys/cpu"
 )
 
 // StateX8 contains state for the eight-way permutation including the eight

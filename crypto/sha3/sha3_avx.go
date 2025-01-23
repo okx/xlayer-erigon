@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/cloudflare/circl/simd/keccakf1600"
 	"github.com/ledgerwatch/erigon/core/types"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
@@ -19,24 +18,24 @@ func populateState(data []byte, idx int, state *[]uint64, pstart *int) {
 	start := *pstart
 	if start+rate <= len(data) {
 		for j := 0; j < rate_64; j++ {
-			(*state)[4*j+idx] = binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
+			(*state)[4*j+idx] ^= binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
 		}
 		*pstart = start + rate
 	} else {
 		rem_64 := (len(data) - start) / 8
 		rem_bytes := (len(data) - start) % 8
 		for j := 0; j < rem_64; j++ {
-			(*state)[4*j+idx] = binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
+			(*state)[4*j+idx] ^= binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
 		}
 		if rem_bytes > 0 {
 			buf := make([]byte, 8)
 			copy(buf[:], data[start+rem_64*8:])
-			(*state)[4*rem_64+idx] = binary.LittleEndian.Uint64(buf) | (uint64(0x1) << (rem_bytes * 8))
+			(*state)[4*rem_64+idx] ^= binary.LittleEndian.Uint64(buf) | (uint64(0x1) << (rem_bytes * 8))
 		} else {
-			(*state)[4*rem_64+idx] = 0x1
+			(*state)[4*rem_64+idx] ^= 0x1
 		}
-		(*state)[(rate_64-1)*4+idx] = 0x80 << 56
-		*pstart = len(data)
+		(*state)[(rate_64-1)*4+idx] ^= 0x80 << 56
+		*pstart = len(data) + 1
 	}
 }
 
@@ -50,7 +49,7 @@ func populateHash(state []uint64, idx int, hashes *[32]byte) {
 }
 
 func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
-	if !keccakf1600.IsEnabledX4() {
+	if !IsEnabledX4() {
 		return [4][32]byte{}, errors.New("AVX2 not available")
 	}
 
@@ -60,7 +59,7 @@ func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
 	// acts on four interleaved states; that is a [100]uint64.  (A separate
 	// type is used to ensure that the encapsulated [100]uint64 is aligned
 	// properly to be used efficiently with vector instructions.)
-	var perm keccakf1600.StateX4
+	var perm StateX4
 	state := perm.Initialize(false)
 
 	// state is initialized with zeroes
@@ -79,19 +78,19 @@ func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
 		populateState(data[2], 2, &state, &start3)
 		populateState(data[3], 3, &state, &start4)
 		perm.Permute()
-		if start1 == len(data[0]) && !done1 {
+		if start1 == len(data[0])+1 && !done1 {
 			done1 = true
 			populateHash(state, 0, &hashes[0])
 		}
-		if start2 == len(data[1]) && !done2 {
+		if start2 == len(data[1])+1 && !done2 {
 			done2 = true
 			populateHash(state, 1, &hashes[1])
 		}
-		if start3 == len(data[2]) && !done3 {
+		if start3 == len(data[2])+1 && !done3 {
 			done3 = true
 			populateHash(state, 2, &hashes[2])
 		}
-		if start4 == len(data[3]) && !done4 {
+		if start4 == len(data[3])+1 && !done4 {
 			done4 = true
 			populateHash(state, 3, &hashes[3])
 		}
@@ -117,32 +116,32 @@ func RlpHashAVX2(x []types.Transaction, h []libcommon.Hash) error {
 }
 
 func populateStateAVX512(data []byte, idx int, state *[]uint64, pstart *int) {
-	rate := 136         //absorption occurs on 136 bytes or 1088 bits known as rate
-	rate_64 := rate / 8 // 17 * 64 bit lanes = 1088 bits
+	rate := 136         // absorption occurs on 136 bytes or 1088 bits known as rate
+	rate_64 := rate / 8 // 17 * 64 bit chunks = 1088 bits
 
 	start := *pstart
-	if start+rate <= len(data) { //more data than rate
-		for j := 0; j < rate_64; j++ { //17 rounds
-			//Each round needs 64 bits to be read into absorption i.e. 8 bytes
-			(*state)[8*j+idx] = binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
+	if start+rate <= len(data) { // more data than rate
+		for j := 0; j < rate_64; j++ { // 17 rounds
+			// Each round needs 64 bits to be read into absorption i.e. 8 bytes
+			(*state)[8*j+idx] ^= binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
 		}
 		*pstart = start + rate
 	} else {
 		//lesser data than rate
-		rem_64 := (len(data) - start) / 8    //num 64 bit lanes of additional data
-		rem_bytes := (len(data) - start) % 8 //remainder bytes after above lanes
+		rem_64 := (len(data) - start) / 8    // chunks of additional data (each chunk is 8 bytes)
+		rem_bytes := (len(data) - start) % 8 // remainder bytes after above chunks
 		for j := 0; j < rem_64; j++ {
-			(*state)[8*j+idx] = binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
+			(*state)[8*j+idx] ^= binary.LittleEndian.Uint64(data[start+j*8 : start+(j+1)*8])
 		}
 		if rem_bytes > 0 {
 			buf := make([]byte, 8)
 			copy(buf[:], data[start+rem_64*8:]) //remaining bytes get copied over to the buffer
-			(*state)[8*rem_64+idx] = binary.LittleEndian.Uint64(buf) | (uint64(0x1) << (rem_bytes * 8))
+			(*state)[8*rem_64+idx] ^= binary.LittleEndian.Uint64(buf) | (uint64(0x1) << (rem_bytes * 8))
 		} else {
-			(*state)[8*rem_64+idx] = 0x1
+			(*state)[8*rem_64+idx] ^= 0x1
 		}
-		(*state)[(rate_64-1)*8+idx] = 0x80 << 56
-		*pstart = len(data)
+		(*state)[(rate_64-1)*8+idx] ^= 0x80 << 56 // according to https://cs.opensource.google/go/x/crypto/+/master:sha3/sha3.go
+		*pstart = len(data) + 1                   // stop condition is start == len(data) + 1
 	}
 }
 
@@ -195,42 +194,42 @@ func Hash_Keccak_AVX512(data [8][]byte) ([8][32]byte, error) {
 		populateStateAVX512(data[6], 6, &state, &start7)
 		populateStateAVX512(data[7], 7, &state, &start8)
 		perm.Permute()
-		if start1 == len(data[0]) && !done1 {
+		if start1 == len(data[0])+1 && !done1 {
 			done1 = true
 			populateHashAVX512(state, 0, &hashes[0])
 		}
 
-		if start2 == len(data[1]) && !done2 {
+		if start2 == len(data[1])+1 && !done2 {
 			done2 = true
 			populateHashAVX512(state, 1, &hashes[1])
 		}
 
-		if start3 == len(data[2]) && !done3 {
+		if start3 == len(data[2])+1 && !done3 {
 			done3 = true
 			populateHashAVX512(state, 2, &hashes[2])
 		}
 
-		if start4 == len(data[3]) && !done4 {
+		if start4 == len(data[3])+1 && !done4 {
 			done4 = true
 			populateHashAVX512(state, 3, &hashes[3])
 		}
 
-		if start5 == len(data[4]) && !done5 {
+		if start5 == len(data[4])+1 && !done5 {
 			done5 = true
 			populateHashAVX512(state, 4, &hashes[4])
 		}
 
-		if start6 == len(data[5]) && !done6 {
+		if start6 == len(data[5])+1 && !done6 {
 			done6 = true
 			populateHashAVX512(state, 5, &hashes[5])
 		}
 
-		if start7 == len(data[6]) && !done7 {
+		if start7 == len(data[6])+1 && !done7 {
 			done7 = true
 			populateHashAVX512(state, 6, &hashes[6])
 		}
 
-		if start8 == len(data[7]) && !done8 {
+		if start8 == len(data[7])+1 && !done8 {
 			done8 = true
 			populateHashAVX512(state, 7, &hashes[7])
 		}

@@ -77,7 +77,7 @@ txpool.enablefreegasbynonce : true
 txpool.freegascountperaddr : 100
 
 gpo.type: "follower"
-gpo.update-period: "3s"
+gpo.update-period: "10000s"
 gpo.factor: 0.01
 gpo.kafka-url: "0.0.0.0"
 gpo.topic: "explorer"

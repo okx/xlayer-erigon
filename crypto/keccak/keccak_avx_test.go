@@ -5,6 +5,9 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/holiman/uint256"
+	libcommon "github.com/ledgerwatch/erigon-lib/common"
+	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/crypto"
 )
 
@@ -18,7 +21,7 @@ func keccak_non_avx(data []byte) [32]byte {
 }
 
 func run_keccak_avx(data [4][]byte) error {
-	hashes, err := Hash_Keccak_AVX2(data)
+	hashes, err := HashKeccakAVX2(data)
 	if err != nil {
 		return err
 	}
@@ -39,7 +42,7 @@ func run_keccak_avx(data [4][]byte) error {
 }
 
 func run_keccak_avx512(data [8][]byte) error {
-	hashes, err := Hash_Keccak_AVX512(data)
+	hashes, err := HashKeccakAVX512(data)
 	if err != nil {
 		return err
 	}
@@ -56,6 +59,66 @@ func run_keccak_avx512(data [8][]byte) error {
 		}
 	}
 	return nil
+}
+
+/**
+ * TestAVXTxHash tests the AVX2 implementation of Keccak hashing on transactions (LeggacyTx).
+ */
+func TestAVXTxHash(t *testing.T) {
+	tx := &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			ChainID: uint256.NewInt(1),
+			Nonce:   1024,
+			Gas:     1000000,
+			To:      &libcommon.Address{0x1},
+			Value:   uint256.NewInt(1000000000),
+			Data:    []byte("Hello, World!"),
+		},
+		GasPrice: uint256.NewInt(1000000000),
+	}
+
+	expected := tx.Hash()
+
+	txs := [4]types.Transaction{tx, tx, tx, tx}
+	var hashes [4]libcommon.Hash
+
+	// test RlpHashAVX2
+	err := RlpHashAVX(txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("RlpHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
+		}
+	}
+
+	// test SigningHashAVX2 for ChainID != nil
+	cid := uint256.NewInt(3)
+	expected = tx.SigningHash(cid.ToBig())
+	err = SigningHashAVX(cid.ToBig(), txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("SigningHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
+		}
+	}
+
+	// test SigningHashAVX2 for ChainID = nil
+	expected = tx.SigningHash(nil)
+	err = SigningHashAVX(nil, txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("SigningHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
+		}
+	}
+	fmt.Println("Done.")
 }
 
 func run_bench_non_avx() {
@@ -82,7 +145,7 @@ func run_bench_avx() {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			Hash_Keccak_AVX2(data)
+			HashKeccakAVX2(data)
 		}(i)
 	}
 	wg.Wait()

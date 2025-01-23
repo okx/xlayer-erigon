@@ -5,13 +5,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/ledgerwatch/erigon/core/types"
+	"github.com/ledgerwatch/erigon/rlp"
 
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 )
 
-func populateState(data []byte, idx int, state *[]uint64, pstart *int) {
+func populateStateAVX2(data []byte, idx int, state *[]uint64, pstart *int) {
 	rate := 136
 	rate_64 := rate / 8
 
@@ -39,7 +41,7 @@ func populateState(data []byte, idx int, state *[]uint64, pstart *int) {
 	}
 }
 
-func populateHash(state []uint64, idx int, hashes *[32]byte) {
+func populateHashAVX2(state []uint64, idx int, hashes *[32]byte) {
 	for j := 0; j < 4; j++ {
 		binary.LittleEndian.PutUint64(
 			(*hashes)[8*j:8*(j+1)],
@@ -48,7 +50,7 @@ func populateHash(state []uint64, idx int, hashes *[32]byte) {
 	}
 }
 
-func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
+func HashKeccakAVX2(data [4][]byte) ([4][32]byte, error) {
 	if !IsEnabledX4() {
 		return [4][32]byte{}, errors.New("AVX2 not available")
 	}
@@ -73,46 +75,29 @@ func Hash_Keccak_AVX2(data [4][]byte) ([4][32]byte, error) {
 	done4 := false
 
 	for !done1 || !done2 || !done3 || !done4 {
-		populateState(data[0], 0, &state, &start1)
-		populateState(data[1], 1, &state, &start2)
-		populateState(data[2], 2, &state, &start3)
-		populateState(data[3], 3, &state, &start4)
+		populateStateAVX2(data[0], 0, &state, &start1)
+		populateStateAVX2(data[1], 1, &state, &start2)
+		populateStateAVX2(data[2], 2, &state, &start3)
+		populateStateAVX2(data[3], 3, &state, &start4)
 		perm.Permute()
 		if start1 == len(data[0])+1 && !done1 {
 			done1 = true
-			populateHash(state, 0, &hashes[0])
+			populateHashAVX2(state, 0, &hashes[0])
 		}
 		if start2 == len(data[1])+1 && !done2 {
 			done2 = true
-			populateHash(state, 1, &hashes[1])
+			populateHashAVX2(state, 1, &hashes[1])
 		}
 		if start3 == len(data[2])+1 && !done3 {
 			done3 = true
-			populateHash(state, 2, &hashes[2])
+			populateHashAVX2(state, 2, &hashes[2])
 		}
 		if start4 == len(data[3])+1 && !done4 {
 			done4 = true
-			populateHash(state, 3, &hashes[3])
+			populateHashAVX2(state, 3, &hashes[3])
 		}
 	}
-
 	return hashes, nil
-}
-
-func RlpHashAVX2(x []types.Transaction, h []libcommon.Hash) error {
-	var buf [4]bytes.Buffer
-	for i := 0; i < 4; i++ {
-		x[i].EncodeRLP(&buf[i])
-	}
-	hashes, err := Hash_Keccak_AVX2([4][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes()})
-	if err != nil {
-		err = fmt.Errorf("RlpHashAVX2() Error: %v", err)
-		return err
-	}
-	for i := 0; i < 4; i++ {
-		h[i] = libcommon.BytesToHash(hashes[i][:])
-	}
-	return nil
 }
 
 func populateStateAVX512(data []byte, idx int, state *[]uint64, pstart *int) {
@@ -154,7 +139,7 @@ func populateHashAVX512(state []uint64, idx int, hashes *[32]byte) {
 	}
 }
 
-func Hash_Keccak_AVX512(data [8][]byte) ([8][32]byte, error) {
+func HashKeccakAVX512(data [8][]byte) ([8][32]byte, error) {
 	if !IsEnabledX8() {
 		return [8][32]byte{}, errors.New("AVX512 not available")
 	}
@@ -238,20 +223,138 @@ func Hash_Keccak_AVX512(data [8][]byte) ([8][32]byte, error) {
 	return hashes, nil
 }
 
-func RlpHashAVX512(x []types.Transaction, h []libcommon.Hash) error {
+func SigningHashAVX(chainID *big.Int, txs []types.Transaction, h []libcommon.Hash, isAVX512 bool) error {
 	var buf [8]bytes.Buffer
-	for i := 0; i < 8; i++ {
-		x[i].EncodeRLP(&buf[i])
+	lanes := 4
+	if isAVX512 {
+		lanes = 8
 	}
-	hashes, err := Hash_Keccak_AVX512([8][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes(), buf[4].Bytes(), buf[5].Bytes(), buf[6].Bytes(), buf[7].Bytes()})
-	if err != nil {
-		err = fmt.Errorf("RlpHashAVX512() Error: %v", err)
-		return err
+	for i := 0; i < lanes; i++ {
+		switch t := txs[i].(type) {
+		case *types.LegacyTx:
+			signChainID := chainID
+			if !t.Protected() {
+				signChainID = nil
+			}
+			if signChainID != nil && signChainID.Sign() != 0 {
+				y := []interface{}{
+					t.Nonce,
+					t.GasPrice,
+					t.Gas,
+					t.To,
+					t.Value,
+					t.Data,
+					signChainID, uint(0), uint(0),
+				}
+				rlp.Encode(&buf[i], y)
+			} else {
+				y := []interface{}{
+					t.Nonce,
+					t.GasPrice,
+					t.Gas,
+					t.To,
+					t.Value,
+					t.Data,
+				}
+				rlp.Encode(&buf[i], y)
+			}
+		case *types.AccessListTx:
+			buf[i].Write([]byte{byte(types.AccessListTxType)})
+			y := []interface{}{
+				chainID,
+				t.Nonce,
+				t.GasPrice,
+				t.Gas,
+				t.To,
+				t.Value,
+				t.Data,
+				t.AccessList,
+			}
+			rlp.Encode(&buf[i], y)
+		case *types.DynamicFeeTransaction:
+			buf[i].Write([]byte{byte(types.DynamicFeeTxType)})
+			y := []interface{}{
+				chainID,
+				t.Nonce,
+				t.Tip,
+				t.FeeCap,
+				t.Gas,
+				t.To,
+				t.Value,
+				t.Data,
+				t.AccessList,
+			}
+			rlp.Encode(&buf[i], y)
+		case *types.BlobTx:
+			buf[i].Write([]byte{byte(types.BlobTxType)})
+			y := []interface{}{
+				chainID,
+				t.Nonce,
+				t.Tip,
+				t.FeeCap,
+				t.Gas,
+				t.To,
+				t.Value,
+				t.Data,
+				t.AccessList,
+				t.MaxFeePerBlobGas,
+				t.BlobVersionedHashes,
+			}
+			rlp.Encode(&buf[i], y)
+		default:
+			err := fmt.Errorf("SigningHashAVX2() transaction type not supported")
+			return err
+		}
 	}
+	if isAVX512 {
+		hashes, err := HashKeccakAVX512([8][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes(), buf[4].Bytes(), buf[5].Bytes(), buf[6].Bytes(), buf[7].Bytes()})
+		if err != nil {
+			err = fmt.Errorf("SigningHashAVX() Error: %v", err)
+			return err
+		}
+		for i := 0; i < lanes; i++ {
+			h[i] = libcommon.BytesToHash(hashes[i][:])
+		}
+	} else {
+		hashes, err := HashKeccakAVX2([4][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes()})
+		if err != nil {
+			err = fmt.Errorf("SigningHashAVX() Error: %v", err)
+			return err
+		}
+		for i := 0; i < lanes; i++ {
+			h[i] = libcommon.BytesToHash(hashes[i][:])
+		}
+	}
+	return nil
+}
 
-	for i := 0; i < 8; i++ {
-		h[i] = libcommon.BytesToHash(hashes[i][:])
+func RlpHashAVX(txs []types.Transaction, h []libcommon.Hash, isAVX512 bool) error {
+	var buf [8]bytes.Buffer
+	lanes := 4
+	if isAVX512 {
+		lanes = 8
 	}
-
+	for i := 0; i < lanes; i++ {
+		txs[i].EncodeRLP(&buf[i])
+	}
+	if isAVX512 {
+		hashes, err := HashKeccakAVX512([8][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes(), buf[4].Bytes(), buf[5].Bytes(), buf[6].Bytes(), buf[7].Bytes()})
+		if err != nil {
+			err = fmt.Errorf("RlpHashAVX512() Error: %v", err)
+			return err
+		}
+		for i := 0; i < lanes; i++ {
+			h[i] = libcommon.BytesToHash(hashes[i][:])
+		}
+	} else {
+		hashes, err := HashKeccakAVX2([4][]byte{buf[0].Bytes(), buf[1].Bytes(), buf[2].Bytes(), buf[3].Bytes()})
+		if err != nil {
+			err = fmt.Errorf("RlpHashAVX() Error: %v", err)
+			return err
+		}
+		for i := 0; i < lanes; i++ {
+			h[i] = libcommon.BytesToHash(hashes[i][:])
+		}
+	}
 	return nil
 }

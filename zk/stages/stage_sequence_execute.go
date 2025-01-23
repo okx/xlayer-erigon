@@ -420,16 +420,19 @@ func sequencingBatchStep(
 							*/
 
 							// Version: AVX2 (max routines) -->
-							if cpu.X86.HasAVX2 {
+							if cpu.X86.HasAVX2 || cpu.X86.HasAVX512 {
 								// fmt.Println("using AVX2 in sequencingBatchStep()")
 								chunkSize := 4
+								if cpu.X86.HasAVX512 {
+									chunkSize = 8
+								}
 								// first, run 4 hashes per core (AVX) in parallel
 								n1 := (len(newTransactions) / chunkSize) * chunkSize
 								for idx := 0; idx < n1; idx += chunkSize {
 									wg.Add(1)
 									go func(idx int, txs []types.Transaction, hashes []common.Hash) {
 										defer wg.Done()
-										keccak.RlpHashAVX2(txs, hashes)
+										keccak.RlpHashAVX(txs, hashes, cpu.X86.HasAVX512)
 									}(idx, newTransactions[idx:idx+chunkSize], hashResults[idx:idx+chunkSize])
 								}
 								// run the remaining hashes (<4) sequentially

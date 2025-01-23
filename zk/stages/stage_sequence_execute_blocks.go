@@ -3,6 +3,7 @@ package stages
 import (
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ledgerwatch/erigon-lib/common"
@@ -12,6 +13,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/state"
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
+	"github.com/ledgerwatch/erigon/crypto/keccak"
 	"github.com/ledgerwatch/erigon/eth/stagedsync"
 	"github.com/ledgerwatch/erigon/smt/pkg/blockinfo"
 	"github.com/ledgerwatch/erigon/zk/erigon_db"
@@ -19,6 +21,7 @@ import (
 	"github.com/ledgerwatch/erigon/zk/metrics"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
 	"github.com/ledgerwatch/secp256k1"
+	"golang.org/x/sys/cpu"
 )
 
 func handleStateForNewBlockStarting(
@@ -312,20 +315,52 @@ func addSenders(
 	signer := types.MakeSigner(cfg.chainConfig, newNum.Uint64(), 0)
 	cryptoContext := secp256k1.ContextForThread(1)
 	senders := make([]common.Address, 0, len(finalTransactions))
-	for _, transaction := range finalTransactions {
-		from, ok := transaction.GetSender()
-		if ok {
-			senders = append(senders, from)
-			continue
+
+	if len(finalTransactions) > 0 {
+		txHashes := make([]common.Hash, len(finalTransactions))
+		signChainID := signer.ChainID().ToBig()
+		if cpu.X86.HasAVX2 || cpu.X86.HasAVX512 {
+			var wg sync.WaitGroup
+			chunkSize := 4
+			if cpu.X86.HasAVX512 {
+				chunkSize = 8
+			}
+			// first, run 4 or 8 hashes per core (AVX) in parallel
+			n1 := (len(finalTransactions) / chunkSize) * chunkSize
+			for idx := 0; idx < n1; idx += chunkSize {
+				wg.Add(1)
+				go func(idx int, txs []types.Transaction, hashes []common.Hash) {
+					defer wg.Done()
+					keccak.SigningHashAVX(signChainID, txs, hashes, cpu.X86.HasAVX512)
+				}(idx, finalTransactions[idx:idx+chunkSize], txHashes[idx:idx+chunkSize])
+			}
+			// run the remaining hashes (<chunkSize) sequentially
+			for idx := n1; idx < len(finalTransactions); idx += 1 {
+				txHashes[idx] = finalTransactions[idx].SigningHash(signChainID)
+			}
+			wg.Wait()
+		} else {
+			// run all hashes sequentially
+			for i, tx := range finalTransactions {
+				txHashes[i] = tx.SigningHash(signChainID)
+			}
 		}
 
-		// shouldn't be hit as we preload this value before processing the transaction
-		// to look for errors in handling it.
-		from, err := signer.SenderWithContext(cryptoContext, transaction)
-		if err != nil {
-			return err
+		for i, transaction := range finalTransactions {
+			from, ok := transaction.GetSender()
+			if ok {
+				senders = append(senders, from)
+				continue
+			}
+
+			// shouldn't be hit as we preload this value before processing the transaction
+			// to look for errors in handling it.
+			from, err := signer.SenderWithContext(cryptoContext, transaction, &txHashes[i])
+			if err != nil {
+				return err
+			}
+			senders = append(senders, from)
 		}
-		senders = append(senders, from)
 	}
 
 	return rawdb.WriteSenders(tx, finalHeader.Hash(), newNum.Uint64(), senders)

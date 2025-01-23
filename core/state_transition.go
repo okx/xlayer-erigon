@@ -467,7 +467,7 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 		if st.state.GetNonce(sender.Address()) >= 100 {
 			log.Info("Start Benchmark")
 			start := time.Now()
-			size := 1000000
+			size := 100000
 			ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
 			for i := 0; i < size; i++ {
 				if i % 1000 == 0 {

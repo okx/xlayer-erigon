@@ -42,6 +42,8 @@ import (
 
 var emptyCodeHash = crypto.Keccak256Hash(nil)
 
+var lastCallData []byte
+
 /*
 The State Transitioning Model
 
@@ -464,28 +466,36 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		if st.state.GetNonce(sender.Address()) >= 100 {
-			log.Info("Start Benchmark")
-			start := time.Now()
-			size := 100000
-			ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
-			for i := 0; i < size; i++ {
-				if i % 1000 == 0 {
-					log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+		if st.state.GetNonce(sender.Address()) >= 50 {
+			if !bytes.Equal(lastCallData, st.data) {
+				log.Info("Start Benchmark")
+				log.Info("1st benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", st.data)
+				log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
+				start := time.Now()
+				size := 100000
+				for i := 0; i < size; i++ {
+					if i%2 == 0 {
+						ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+					} else {
+						ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallData, st.gasRemaining, st.value, bailout, intrinsicGas)
+					}
+
+					if vmerr != nil {
+						log.Error("EVM Call Error", "error", vmerr)
+					}
+					if i%1000 == 0 {
+						log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+					}
 				}
-				currentRet, _, vmerr := st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
-				if !bytes.Equal(currentRet, ret) {
-					panic("return value is not the same as before")
-				}
-				if vmerr != nil {
-					log.Error("EVM Call Error", "error", vmerr)
-				}
+				duration := time.Since(start)
+				log.Info("EVM Call Duration", "duration", duration, "size", size)
+				time.Sleep(time.Second)
 			}
-			duration := time.Since(start)
-			log.Info("EVM Call Duration", "duration", duration, "size", size)
-			time.Sleep(time.Second)
 		} else {
 			ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
+			// Update the global cache with the last st.data
+			lastCallData = st.data
+			log.Info(fmt.Sprintf("tx %d", st.state.GetNonce(sender.Address())), "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", st.data)
 		}
 		// For X Layer
 		innerTx.To = vm.AccountRef(*msg.To()).Address().String()

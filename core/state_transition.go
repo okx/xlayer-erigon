@@ -42,7 +42,8 @@ import (
 
 var emptyCodeHash = crypto.Keccak256Hash(nil)
 
-var lastCallData []byte
+var lastCallDataList [100][]byte
+var curIndex = 0
 
 /*
 The State Transitioning Model
@@ -466,41 +467,51 @@ func (st *StateTransition) TransitionDb(refunds bool, gasBailout bool) (*Executi
 	} else {
 		// Increment the nonce for the next transaction
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
-		if st.state.GetNonce(sender.Address()) >= 50 {
-			if !bytes.Equal(lastCallData, st.data) {
-				log.Info("Start Benchmark")
-				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", hexutil.Encode(st.data))
-				// log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
-				start := time.Now()
-				size := 100000
-				for i := 0; i < size; i++ {
-					ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
-					// if i%2 == 0 {
-					// 	ret, _, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
-					// } else {
-					// 	ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallData, st.gasRemaining, st.value, bailout, intrinsicGas)
-					// }
-
-					if vmerr != nil {
-						log.Error("EVM Call Error", "error", vmerr)
-						break
-					}
-					if i%1000 == 0 {
-						log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+		if st.state.GetNonce(sender.Address()) >= 150 {
+			//if !bytes.Equal(lastCallData, st.data) {
+			log.Info("Start Benchmark")
+			for i := 0; i < 100; i++ {
+				if i != 0 {
+					if bytes.Equal(lastCallDataList[curIndex-1], lastCallDataList[curIndex]) {
+						panic("Data is the same")
 					}
 				}
-				duration := time.Since(start)
-				log.Info("EVM Call Duration", "duration", duration, "size", size)
-				time.Sleep(time.Second)
+				log.Info("Benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "curIndex", curIndex, "data", hexutil.Encode(lastCallDataList[curIndex]))
 			}
+			// log.Info("2nd benchmark tx", "sender", sender.Address().Hex(), "to", st.to().Hex(), "data", lastCallData)
+			start := time.Now()
+			size := 1000000
+			for i := 0; i < size; i++ {
+				ret, _, vmerr = st.evm.Call(sender, st.to(), lastCallDataList[curIndex], st.gasRemaining, st.value, bailout, intrinsicGas)
+				curIndex = curIndex + 1
+				if curIndex >= 100 {
+					curIndex = 0
+				}
+
+				if vmerr != nil {
+					log.Error("EVM Call Error", "error", vmerr)
+					break
+				}
+				if i%1000 == 0 {
+					log.Info(fmt.Sprintf("current runs %d/%d", i, size), "duration", time.Since(start))
+				}
+			}
+			duration := time.Since(start)
+			log.Info("EVM Call Duration", "duration", duration, "size", size)
+			time.Sleep(time.Second)
+			//}
 		} else {
 			ret, st.gasRemaining, vmerr = st.evm.Call(sender, st.to(), st.data, st.gasRemaining, st.value, bailout, intrinsicGas)
 			// Update the global cache with the last st.data
-			lastCallData = st.data
-			log.Info("Transaction processing", 
+			lastCallDataList[curIndex] = st.data
+			curIndex = curIndex + 1
+			if curIndex >= 100 {
+				curIndex = 0
+			}
+			log.Info("Transaction processing",
 				"tx_nonce", st.state.GetNonce(sender.Address()),
-				"sender", sender.Address().Hex(), 
-				"to", st.to().Hex(), 
+				"sender", sender.Address().Hex(),
+				"to", st.to().Hex(),
 				"data", st.data,
 				"timestamp", time.Now().Unix())
 		}

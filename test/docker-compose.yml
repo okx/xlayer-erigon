@@ -116,7 +116,7 @@ services:
 
   xlayer-rpc:
     container_name: xlayer-rpc
-    image: cdk-erigon
+    image: cdk-erigon:dev
     environment:
       - CDK_ERIGON_SEQUENCER=0
     ports:

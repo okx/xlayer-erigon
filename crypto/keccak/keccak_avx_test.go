@@ -12,7 +12,7 @@ import (
 )
 
 // This is similar to func rlpHash(x interface{}) (h libcommon.Hash) from core/types/hashing.go
-func keccak_non_avx(data []byte) [32]byte {
+func keccakNonAVX(data []byte) [32]byte {
 	var h [32]byte
 	sha := crypto.NewKeccakState()
 	sha.Write(data)
@@ -20,7 +20,7 @@ func keccak_non_avx(data []byte) [32]byte {
 	return h
 }
 
-func run_keccak_avx(data [4][]byte) error {
+func runKeccakAVX2(data [4][]byte) error {
 	hashes, err := HashKeccakAVX2(data)
 	if err != nil {
 		return err
@@ -29,7 +29,7 @@ func run_keccak_avx(data [4][]byte) error {
 
 	var expected [4][32]byte
 	for i := 0; i < 4; i++ {
-		expected[i] = keccak_non_avx(data[i])
+		expected[i] = keccakNonAVX(data[i])
 	}
 	fmt.Printf("Non-AVX Hashes:\n%x\n%x\n%x\n%x\n", expected[0], expected[1], expected[2], expected[3])
 
@@ -41,7 +41,7 @@ func run_keccak_avx(data [4][]byte) error {
 	return nil
 }
 
-func run_keccak_avx512(data [8][]byte) error {
+func runKeccakAVX512(data [8][]byte) error {
 	hashes, err := HashKeccakAVX512(data)
 	if err != nil {
 		return err
@@ -50,7 +50,7 @@ func run_keccak_avx512(data [8][]byte) error {
 
 	var expected [8][32]byte
 	for i := 0; i < 8; i++ {
-		expected[i] = keccak_non_avx(data[i])
+		expected[i] = keccakNonAVX(data[i])
 	}
 	fmt.Printf("Non-AVX Hashes:\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n%x\n", expected[0], expected[1], expected[2], expected[3], expected[4], expected[5], expected[6], expected[7])
 	for i := 0; i < 8; i++ {
@@ -61,80 +61,20 @@ func run_keccak_avx512(data [8][]byte) error {
 	return nil
 }
 
-/**
- * TestAVXTxHash tests the AVX2 implementation of Keccak hashing on transactions (LeggacyTx).
- */
-func TestAVXTxHash(t *testing.T) {
-	tx := &types.LegacyTx{
-		CommonTx: types.CommonTx{
-			ChainID: uint256.NewInt(1),
-			Nonce:   1024,
-			Gas:     1000000,
-			To:      &libcommon.Address{0x1},
-			Value:   uint256.NewInt(1000000000),
-			Data:    []byte("Hello, World!"),
-		},
-		GasPrice: uint256.NewInt(1000000000),
-	}
-
-	expected := tx.Hash()
-
-	txs := [4]types.Transaction{tx, tx, tx, tx}
-	var hashes [4]libcommon.Hash
-
-	// test RlpHashAVX2
-	err := RlpHashAVX(txs[:], hashes[:], false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	for i := 0; i < 4; i++ {
-		if expected != hashes[i] {
-			t.Fatalf("RlpHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
-		}
-	}
-
-	// test SigningHashAVX2 for ChainID != nil
-	cid := uint256.NewInt(3)
-	expected = tx.SigningHash(cid.ToBig())
-	err = SigningHashAVX(cid.ToBig(), txs[:], hashes[:], false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 4; i++ {
-		if expected != hashes[i] {
-			t.Fatalf("SigningHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
-		}
-	}
-
-	// test SigningHashAVX2 for ChainID = nil
-	expected = tx.SigningHash(nil)
-	err = SigningHashAVX(nil, txs[:], hashes[:], false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 4; i++ {
-		if expected != hashes[i] {
-			t.Fatalf("SigningHashAVX2 -> Expected: %x, got: %x", expected, hashes[i])
-		}
-	}
-	fmt.Println("Done.")
-}
-
-func run_bench_non_avx() {
+func runBenchNonAVX() {
 	msg := []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 	var wg sync.WaitGroup
 	for i := 0; i < 1024; i++ {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			keccak_non_avx(msg)
+			keccakNonAVX(msg)
 		}(i)
 	}
 	wg.Wait()
 }
 
-func run_bench_avx() {
+func runBenchAVX2() {
 	msg := []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
 	var data [4][]byte
 	for i := 0; i < 4; i++ {
@@ -150,19 +90,43 @@ func run_bench_avx() {
 	}
 	wg.Wait()
 }
-func Benchmark_Keccak_NonAVX(b *testing.B) {
+
+func runBenchAVX512() {
+	msg := []byte("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.")
+	var data [8][]byte
+	for i := 0; i < 8; i++ {
+		data[i] = msg
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < 1024; i += 8 {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			HashKeccakAVX512(data)
+		}(i)
+	}
+	wg.Wait()
+}
+
+func BenchmarkKeccakNonAVX(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		run_bench_non_avx()
+		runBenchNonAVX()
 	}
 }
 
-func Benchmark_Keccak_AVX(b *testing.B) {
+func BenchmarkKeccakAVX2(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		run_bench_avx()
+		runBenchAVX2()
 	}
 }
 
-func Test_Keccak_AVX(t *testing.T) {
+func BenchmarkKeccakAVX512(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		runBenchAVX512()
+	}
+}
+
+func TestKeccakAVX2(t *testing.T) {
 	// Taken from: https://github.com/cloudflare/circl/blob/main/simd/keccakf1600/example_test.go
 
 	msgs1 := [4][]byte{
@@ -189,22 +153,22 @@ func Test_Keccak_AVX(t *testing.T) {
 		[]byte("Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?"),
 	}
 
-	err := run_keccak_avx(msgs1)
+	err := runKeccakAVX2(msgs1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = run_keccak_avx(msgs2)
+	err = runKeccakAVX2(msgs2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = run_keccak_avx(msgs3)
+	err = runKeccakAVX2(msgs3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log("Done.")
 }
 
-func Test_Keccak_AVX512(t *testing.T) {
+func TestKeccakAVX512(t *testing.T) {
 	msgs1 := [8][]byte{
 		[]byte("These are some short"),
 		[]byte("strings of the same "),
@@ -239,18 +203,82 @@ func Test_Keccak_AVX512(t *testing.T) {
 		[]byte(" "),
 	}
 
-	err := run_keccak_avx512(msgs1)
+	err := runKeccakAVX512(msgs1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = run_keccak_avx512(msgs2)
+	err = runKeccakAVX512(msgs2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = run_keccak_avx512(msgs3)
+	err = runKeccakAVX512(msgs3)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log("Done.")
+}
+
+/**
+ * TestAVXTxHash tests the AVX2 implementation of Keccak hashing on transactions (LeggacyTx).
+ */
+func TestTxHashAVX(t *testing.T) {
+	tx := &types.LegacyTx{
+		CommonTx: types.CommonTx{
+			ChainID: uint256.NewInt(1),
+			Nonce:   1024,
+			Gas:     1000000,
+			To:      &libcommon.Address{0x1},
+			Value:   uint256.NewInt(1000000000),
+			Data:    []byte("Hello, World!"),
+			V:       *uint256.NewInt(128), // make it protected
+		},
+		GasPrice: uint256.NewInt(1000000000),
+	}
+
+	expected := tx.Hash()
+
+	txs := [4]types.Transaction{tx, tx, tx, tx}
+	var hashes [4]libcommon.Hash
+
+	// test RlpHashAVX2
+	err := RlpHashAVX(txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("RlpHashAVX2 Hash %d -> Expected: %x, got: %x", i, expected, hashes[i])
+		}
+	}
+
+	// test SigningHashAVX2 for ChainID != nil
+	if !tx.Protected() {
+		t.Fatalf("Transaction is not protected")
+	}
+	cid := uint256.NewInt(3)
+	expected = tx.SigningHash(cid.ToBig())
+	err = SigningHashAVX(cid.ToBig(), txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("SigningHashAVX2 Hash %d -> Expected: %x, got: %x", i, expected, hashes[i])
+		}
+	}
+
+	// test SigningHashAVX2 for ChainID = nil
+	expected = tx.SigningHash(nil)
+	err = SigningHashAVX(nil, txs[:], hashes[:], false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 4; i++ {
+		if expected != hashes[i] {
+			t.Fatalf("SigningHashAVX2 Hash %d -> Expected: %x, got: %x", i, expected, hashes[i])
+		}
+	}
+	fmt.Println("Done.")
 }

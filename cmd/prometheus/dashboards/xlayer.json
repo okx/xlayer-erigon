@@ -24,7 +24,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 7,
+  "id": 9,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -344,167 +344,6 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 4,
-        "x": 0,
-        "y": 17
-      },
-      "id": 198,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "exemplar": false,
-          "expr": "sequencer_tx_count{instance=\"xlayer-seq:9095\"}",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Total Transactions",
-      "type": "stat"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 0
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 3,
-        "w": 3,
-        "x": 4,
-        "y": 17
-      },
-      "id": 199,
-      "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
-      },
-      "pluginVersion": "10.4.2",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sequencer_fail_tx_count{instance=\"xlayer-seq:9095\"}",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": false,
-          "legendFormat": "__auto",
-          "range": true,
-          "refId": "A",
-          "useBackend": false
-        }
-      ],
-      "title": "Failed Transactions",
-      "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "datasource": "${DS_PROMETHEUS}",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 20
-      },
-      "id": 183,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": "${DS_PROMETHEUS}",
-          "refId": "A"
-        }
-      ],
-      "title": "RPC",
-      "type": "row"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
       "fieldConfig": {
@@ -565,8 +404,8 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
-        "y": 21
+        "x": 12,
+        "y": 9
       },
       "id": 185,
       "options": {
@@ -613,6 +452,147 @@
       ],
       "title": "RPS",
       "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 17
+      },
+      "id": 198,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "exemplar": false,
+          "expr": "sequencer_tx_count{instance=\"xlayer-seq:9095\"}",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "Successful Transactions",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 0
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 6,
+        "y": 17
+      },
+      "id": 199,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "10.4.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "disableTextWrap": false,
+          "editorMode": "builder",
+          "expr": "sequencer_zk_overflow_block_count{instance=\"xlayer-seq:9095\"}",
+          "fullMetaSearch": false,
+          "includeNullMetadata": true,
+          "instant": false,
+          "legendFormat": "__auto",
+          "range": true,
+          "refId": "A",
+          "useBackend": false
+        }
+      ],
+      "title": "ZK Counter Overflow Blocks",
+      "type": "stat"
     },
     {
       "datasource": {
@@ -679,7 +659,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 21
+        "y": 17
       },
       "id": 187,
       "options": {
@@ -712,6 +692,26 @@
       ],
       "title": "RPC Latency",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "datasource": "${DS_PROMETHEUS}",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 25
+      },
+      "id": 183,
+      "panels": [],
+      "targets": [
+        {
+          "datasource": "${DS_PROMETHEUS}",
+          "refId": "A"
+        }
+      ],
+      "title": "RPC",
+      "type": "row"
     },
     {
       "datasource": {
@@ -778,7 +778,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 29
+        "y": 26
       },
       "id": 204,
       "options": {
@@ -879,7 +879,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 29
+        "y": 26
       },
       "id": 205,
       "options": {
@@ -924,7 +924,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 34
       },
       "id": 4,
       "panels": [],
@@ -1004,7 +1004,7 @@
         "h": 11,
         "w": 5,
         "x": 0,
-        "y": 38
+        "y": 35
       },
       "id": 110,
       "options": {
@@ -1117,7 +1117,7 @@
         "h": 11,
         "w": 5,
         "x": 5,
-        "y": 38
+        "y": 35
       },
       "id": 116,
       "options": {
@@ -1245,7 +1245,7 @@
         "h": 11,
         "w": 7,
         "x": 10,
-        "y": 38
+        "y": 35
       },
       "id": 106,
       "options": {
@@ -1349,7 +1349,7 @@
         "h": 11,
         "w": 7,
         "x": 17,
-        "y": 38
+        "y": 35
       },
       "id": 154,
       "options": {
@@ -1520,7 +1520,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1536,7 +1537,7 @@
         "h": 19,
         "w": 10,
         "x": 0,
-        "y": 49
+        "y": 46
       },
       "id": 196,
       "options": {
@@ -1617,7 +1618,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1633,7 +1635,7 @@
         "h": 11,
         "w": 7,
         "x": 10,
-        "y": 49
+        "y": 46
       },
       "id": 77,
       "options": {
@@ -1742,7 +1744,8 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green"
+                "color": "green",
+                "value": null
               },
               {
                 "color": "red",
@@ -1758,7 +1761,7 @@
         "h": 11,
         "w": 7,
         "x": 17,
-        "y": 49
+        "y": 46
       },
       "id": 96,
       "options": {
@@ -1872,7 +1875,7 @@
         "h": 8,
         "w": 7,
         "x": 10,
-        "y": 60
+        "y": 57
       },
       "id": 85,
       "options": {
@@ -1985,7 +1988,7 @@
         "h": 8,
         "w": 7,
         "x": 17,
-        "y": 60
+        "y": 57
       },
       "id": 159,
       "options": {
@@ -2217,7 +2220,7 @@
     ]
   },
   "time": {
-    "from": "now-15m",
+    "from": "now-5m",
     "to": "now"
   },
   "timepicker": {
@@ -2247,6 +2250,6 @@
   "timezone": "",
   "title": "XLayer",
   "uid": "xlayer",
-  "version": 4,
+  "version": 11,
   "weekStart": ""
 }

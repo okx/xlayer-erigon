@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/common/hexutility"
 	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/log/v3"
 	zktypes "github.com/ledgerwatch/erigon/zk/types"
+	"github.com/ledgerwatch/log/v3"
 
 	"math"
 
@@ -973,6 +974,8 @@ func (api *ZkEvmAPIImpl) GetBlockRangeWitness(ctx context.Context, startBlockNrO
 }
 
 func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum uint64, debug bool, mode WitnessMode) (hexutility.Bytes, error) {
+	log.Info("GET BATCH WITNESS", "batchNum", batchNum, "mode", mode)
+
 	// limit in-flight requests by name
 	semaphore := api.semaphores[getBatchWitness]
 	if semaphore != nil {
@@ -987,11 +990,14 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum
 	if api.ethApi.historyV3(tx) {
 		return nil, fmt.Errorf("not supported by Erigon3")
 	}
-	reader := hermez_db.NewHermezDbReader(tx)
+	reader := hermez_db.NewHermezDbReader(tx) // NOTE can we access the DB (number of entries)?
+
+	start := time.Now()
 	badBatch, err := reader.GetInvalidBatch(batchNum)
 	if err != nil {
 		return nil, err
 	}
+	log.Info("First GetInvalidBatch timing", "duration (ns)", time.Since(start).Nanoseconds())
 
 	if !badBatch {
 		blockNumbers, err := reader.GetL2BlockNosByBatch(batchNum)
@@ -1016,14 +1022,28 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum
 
 		startBlockRpc := rpc.BlockNumberOrHash{BlockNumber: &startBlockInt}
 		endBlockNrOrHash := rpc.BlockNumberOrHash{BlockNumber: &endBlockInt}
-		return api.getBlockRangeWitness(ctx, api.db, startBlockRpc, endBlockNrOrHash, debug, mode)
+
+		start := time.Now()
+		res, err := api.getBlockRangeWitness(ctx, api.db, startBlockRpc, endBlockNrOrHash, debug, mode)
+		log.Info("GOOD BATCH (getBlockRangeWitness)",
+			"batchNum", batchNum,
+			"startBlockRpc", startBlockRpc,
+			"endBlockNrOrHash", endBlockNrOrHash,
+			"duration (ns)", time.Since(start).Nanoseconds(),
+		)
+		return res, err
 	} else {
 		generator, fullWitness, err := api.buildGenerator(ctx, tx, mode)
 		if err != nil {
 			return nil, err
 		}
-
-		return generator.GetWitnessByBadBatch(tx, ctx, batchNum, debug, fullWitness)
+		start := time.Now()
+		res, err := generator.GetWitnessByBadBatch(tx, ctx, batchNum, debug, fullWitness)
+		log.Info("BAD BATCH (GetWitnessByBadBatch)",
+			"batchNum", batchNum,
+			"duration (ns)", time.Since(start).Nanoseconds(),
+		)
+		return res, err
 	}
 }
 

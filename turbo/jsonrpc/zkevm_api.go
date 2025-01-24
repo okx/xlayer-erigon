@@ -1027,8 +1027,8 @@ func (api *ZkEvmAPIImpl) getBatchWitness(ctx context.Context, tx kv.Tx, batchNum
 		res, err := api.getBlockRangeWitness(ctx, api.db, startBlockRpc, endBlockNrOrHash, debug, mode)
 		log.Info("GOOD BATCH (getBlockRangeWitness)",
 			"batchNum", batchNum,
-			"startBlockRpc", startBlockRpc,
-			"endBlockNrOrHash", endBlockNrOrHash,
+			"startBlock", startBlockRpc.BlockNumber,
+			"endBlock", endBlockNrOrHash.BlockNumber,
 			"duration (ns)", time.Since(start).Nanoseconds(),
 		)
 		return res, err
@@ -1076,6 +1076,8 @@ func (api *ZkEvmAPIImpl) buildGenerator(ctx context.Context, tx kv.Tx, witnessMo
 
 // Get witness for a range of blocks [startBlockNrOrHash, endBlockNrOrHash] (inclusive)
 func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, startBlockNrOrHash rpc.BlockNumberOrHash, endBlockNrOrHash rpc.BlockNumberOrHash, debug bool, witnessMode WitnessMode) (hexutility.Bytes, error) {
+	start := time.Now()
+
 	tx, err := db.BeginRo(ctx)
 	if err != nil {
 		return nil, err
@@ -1139,7 +1141,15 @@ func (api *ZkEvmAPIImpl) getBlockRangeWitness(ctx context.Context, db kv.RoDB, s
 		return nil, err
 	}
 
-	return generator.GetWitnessByBlockRange(tx, ctx, blockNr, endBlockNr, debug, fullWitness)
+	dur := time.Since(start).Nanoseconds()
+	start2 := time.Now()
+	witness, err := generator.GetWitnessByBlockRange(tx, ctx, blockNr, endBlockNr, debug, fullWitness)
+	log.Info("ZkEvmAPIImpl.getBlockRangeWitness",
+		"time taken before return (ns)", dur,
+		"time taken to GetWitnessByBlockRange (ns)", time.Since(start2).Nanoseconds(),
+	)
+
+	return witness, err
 }
 
 type WitnessMode string

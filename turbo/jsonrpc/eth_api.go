@@ -429,7 +429,7 @@ func NewEthAPI(base *BaseAPI, db kv.RoDB, eth rpchelper.ApiBackend, txPool txpoo
 			// eth_gasPrice requests for the RPC nodes are all redirected to the Sequencer node (via zkevm.l2-sequencer-rpc-url)
 			apii.runL2GasPricerForXLayer()
 			// Initialize the precompiled cache
-			vm.InitPrecompiledCache(10000, time.Hour)
+			vm.InitPrecompiledCache(ethCfg.XLayer.PreRunCacheSize, ethCfg.XLayer.PreRunCacheTTL)
 			log.Info(fmt.Sprintf("XLayer pre run list:%v", apii.PreRunList))
 		}
 	})

@@ -97,6 +97,8 @@ pprof.addr: 0.0.0.0
 yieldsize: 20
 
 zkevm.pre-run-address-list: ["0x0FA5445ed0a18817f714D33d89F44eE4452aEa77"]
+zkevm.pre-run-cache-size: 5000 
+zkevm.pre-run-cache-ttl: "30m"
 
 # close a block/batch immediately after the 1st zkCounter overflow TX
 zkevm.seal-batch-immediately-on-overflow: true

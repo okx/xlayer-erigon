@@ -334,4 +334,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.WitnessCacheLimit,
 	&utils.WitnessContractInclusion,
 	&utils.PreRunAddressList,
+	&utils.PreRunCacheSize,
+	&utils.PreRunCacheTTL,
 }

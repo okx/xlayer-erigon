@@ -14,7 +14,9 @@ type XLayerConfig struct {
 	// Sequencer
 	SequencerBatchSleepDuration time.Duration
 
-	PreRunList map[common.Address]struct{}
+	PreRunList      map[common.Address]struct{}
+	PreRunCacheSize int
+	PreRunCacheTTL  time.Duration
 }
 
 var DefaultXLayerConfig = XLayerConfig{}

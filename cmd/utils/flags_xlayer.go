@@ -199,6 +199,16 @@ var (
 		Usage: "Pre run address list while receiving a transaction",
 		Value: "",
 	}
+	PreRunCacheSize = cli.IntFlag{
+		Name:  "zkevm.pre-run-cache-size",
+		Usage: "Size of pre-run cache",
+		Value: 10000,
+	}
+	PreRunCacheTTL = cli.DurationFlag{
+		Name:  "zkevm.pre-run-cache-ttl",
+		Usage: "pre-run cache entry TTL",
+		Value: time.Hour,
+	}
 )
 
 func setGPOXLayer(ctx *cli.Context, cfg *gaspricecfg.Config) {
@@ -322,6 +332,8 @@ func SetPreRunList(ctx *cli.Context, cfg *ethconfig.Config) {
 		for _, addr := range addrHexes {
 			cfg.XLayer.PreRunList[libcommon.HexToAddress(addr)] = struct{}{}
 		}
+		cfg.XLayer.PreRunCacheSize = ctx.Int(PreRunCacheSize.Name)
+		cfg.XLayer.PreRunCacheTTL = ctx.Duration(PreRunCacheTTL.Name)
 	}
 }
 

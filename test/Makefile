@@ -12,7 +12,6 @@ DOCKER_BRIDGE_UI := xlayer-bridge-ui
 DOCKER_PROVER := xlayer-prover
 DOCKER_APPROVE := xlayer-approve
 DOCKER_SEQ := xlayer-seq
-DOCKER_RECOVER := xlayer-recover
 DOCKER_RPC := xlayer-rpc
 DOCKER_L1_NETWORK := xlayer-mock-l1-network
 DOCKER_DATA_AVAILABILITY := xlayer-da
@@ -38,7 +37,6 @@ RUN_DOCKER_BRIDGE_UI := $(DOCKER_COMPOSE) up -d $(DOCKER_BRIDGE_UI)
 RUN_DOCKER_PROVER := $(DOCKER_COMPOSE) up -d $(DOCKER_PROVER)
 RUN_DOCKER_APPROVE := $(DOCKER_COMPOSE) up -d $(DOCKER_APPROVE)
 RUN_DOCKER_SEQ := $(DOCKER_COMPOSE) up -d $(DOCKER_SEQ)
-RUN_DOCKER_RECOVER := $(DOCKER_COMPOSE) up -d $(DOCKER_RECOVER)
 RUN_DOCKER_RPC := $(DOCKER_COMPOSE) up -d $(DOCKER_RPC)
 RUN_DOCKER_MAINNET_SEQ := $(DOCKER_COMPOSE) up -d $(DOCKER_MAINNET_SEQ)
 RUN_DOCKER_L1_NETWORK := $(DOCKER_COMPOSE) up -d $(DOCKER_L1_NETWORK)
@@ -73,7 +71,6 @@ run: build-docker ## Runs a full node
 	sleep 3
 	$(RUN_DOCKER_SEQ)
 	$(RUN_DOCKER_PROVER)
-	$(RUN_DOCKER_RECOVER)
 	sleep 10
 	$(RUN_DOCKER_DS)
 	$(RUN_DOCKER_SIGNER)
@@ -156,3 +153,44 @@ mainnet: build-docker
 	# monitoring services
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
+
+DOCKER_COMPOSE_LRP := docker compose -f docker-compose-lrp.yml
+DOCKER_LRP_UNWIND := xlayer-lrp-unwind
+DOCKER_LRP_RESEQUENCE := xlayer-lrp-resequence
+
+RUN_DOCKER_LRP_STATELESS_EXECUTOR := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_STATELESS_EXECUTOR)
+RUN_DOCKER_LRP_L1_NETWORK := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_L1_NETWORK)
+RUN_DOCKER_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_UNWIND)
+RUN_DOCKER_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_RESEQUENCE)
+
+STOP_LRP := $(DOCKER_COMPOSE_LRP) down --remove-orphans; sleep 3; rm -rf data
+
+.PHONY: lrp-run
+lrp-run: build-docker
+	$(RUN_DOCKER_LRP_L1_NETWORK)
+	$(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	sleep 3
+	@read -p "Enter unwind to batch number: " UNWIND_BATCH_NO; \
+    if [ "$(shell uname)" = "Darwin" ]; then \
+        sed -i '' "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+    else \
+        sed -i "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+    fi
+	$(RUN_DOCKER_LRP_UNWIND)
+	sleep 20
+	$(RUN_DOCKER_LRP_RESEQUENCE)
+
+.PHONY: lrp-stop
+lrp-stop:
+	$(STOP_LRP)
+
+
+TARGET_LOG_FILE := filtered.log
+
+.PHONY: lrp-check
+lrp-check: ## Filter logs for LRP & Compute TPS & Check stateroots (configure debugToolsConfig.yaml)
+	docker logs $(DOCKER_LRP_RESEQUENCE) 2>&1 | grep "\[5/13 Execution\]" > $(TARGET_LOG_FILE)
+	sleep 3
+	python process_log.py $(TARGET_LOG_FILE)
+	sleep 3
+	go run ../zk/debug_tools/rpc-blockhashes-compare/main.go

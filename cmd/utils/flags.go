@@ -1454,7 +1454,7 @@ var (
 	YieldSizeFlag = cli.Uint64Flag{
 		Name:  "yieldsize",
 		Usage: "transaction count fetched from txpool each time",
-		Value: 1000,
+		Value: 30,
 	}
 )
 
@@ -1945,7 +1945,7 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 
 	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
-	
+
 	purgeEvery := ctx.Duration(TxpoolPurgeEveryFlag.Name)
 	purgeDistance := ctx.Duration(TxpoolPurgeDistanceFlag.Name)
 

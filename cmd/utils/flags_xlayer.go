@@ -5,10 +5,12 @@ import (
 	"math/big"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
+	"github.com/urfave/cli/v2"
+
 	libcommon "github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon/eth/ethconfig"
 	"github.com/ledgerwatch/erigon/eth/gasprice/gaspricecfg"
-	"github.com/urfave/cli/v2"
 )
 
 var (
@@ -92,6 +94,14 @@ var (
 	TxPoolFreeGasLimit = cli.Uint64Flag{
 		Name:  "txpool.freegaslimit",
 		Usage: "FreeGasLimit is the max gas allowed use to do a free gas tx",
+	}
+	TxPoolEnableFreeGasList = cli.BoolFlag{
+		Name:  "txpool.enablefreegaslist",
+		Usage: "Enable or disable free gas for a specific project",
+	}
+	TxPoolFreeGasList = cli.StringFlag{
+		Name:  "txpool.freegaslist",
+		Usage: "FreeGasList Project in JSON Format",
 	}
 	// Gas Pricer
 	GpoTypeFlag = cli.StringFlag{
@@ -321,6 +331,17 @@ func setTxPoolXLayer(ctx *cli.Context, cfg *ethconfig.DeprecatedTxPoolConfig) {
 	}
 	if ctx.IsSet(TxPoolFreeGasLimit.Name) {
 		cfg.FreeGasLimit = ctx.Uint64(TxPoolFreeGasLimit.Name)
+	}
+	if ctx.IsSet(TxPoolEnableFreeGasList.Name) {
+		cfg.EnableFreeGasList = ctx.Bool(TxPoolEnableFreeGasList.Name)
+	}
+	if ctx.IsSet(TxPoolFreeGasList.Name) {
+		freeGasListStr := ctx.String(TxPoolFreeGasList.Name)
+		if len(freeGasListStr) > 0 {
+			if err := jsoniter.UnmarshalFromString(freeGasListStr, &cfg.FreeGasList); err != nil {
+				panic("unable to unmarshal freeGasList:" + err.Error())
+			}
+		}
 	}
 }
 

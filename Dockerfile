@@ -54,6 +54,9 @@ USER erigon
 RUN mkdir -p ~/.local/share/erigon
 WORKDIR /home/erigon
 
+# Include test config
+COPY test/config /home/erigon/test/config
+
 ## add pre-defined run configs
 ADD hermezconfig-mainnet.yaml.example mainnet.yaml
 ADD hermezconfig-cardona.yaml.example cardona.yaml

@@ -321,7 +321,7 @@ func addSenders(
 
 		// shouldn't be hit as we preload this value before processing the transaction
 		// to look for errors in handling it.
-		from, err := signer.SenderWithContext(cryptoContext, transaction)
+		from, err := signer.SenderWithContext(cryptoContext, transaction, nil)
 		if err != nil {
 			return err
 		}

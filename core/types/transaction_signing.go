@@ -195,11 +195,11 @@ func (sg Signer) String() string {
 
 // Sender returns the sender address of the transaction.
 func (sg Signer) Sender(tx Transaction) (libcommon.Address, error) {
-	return sg.SenderWithContext(secp256k1.DefaultContext, tx)
+	return sg.SenderWithContext(secp256k1.DefaultContext, tx, nil)
 }
 
 // SenderWithContext returns the sender address of the transaction.
-func (sg Signer) SenderWithContext(context *secp256k1.Context, tx Transaction) (libcommon.Address, error) {
+func (sg Signer) SenderWithContext(context *secp256k1.Context, tx Transaction, h *libcommon.Hash) (libcommon.Address, error) {
 	var V uint256.Int
 	var R, S *uint256.Int
 	signChainID := sg.chainID.ToBig() // This is reset to nil if tx is unprotected
@@ -270,6 +270,9 @@ func (sg Signer) SenderWithContext(context *secp256k1.Context, tx Transaction) (
 		R, S = &t.R, &t.S
 	default:
 		return libcommon.Address{}, ErrTxTypeNotSupported
+	}
+	if h != nil {
+		return recoverPlain(context, *h, R, S, &V, !sg.malleable)
 	}
 	return recoverPlain(context, tx.SigningHash(signChainID), R, S, &V, !sg.malleable)
 }

@@ -2,10 +2,12 @@ package stages
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
+	"golang.org/x/sys/cpu"
 
 	"io"
 
@@ -16,6 +18,7 @@ import (
 	"github.com/ledgerwatch/erigon/core/types"
 	"github.com/ledgerwatch/erigon/core/vm"
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
+	"github.com/ledgerwatch/erigon/crypto/keccak"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
 	"github.com/ledgerwatch/secp256k1"
@@ -104,46 +107,119 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 	results := make([]*result, len(slot.Txs))
 	var wg sync.WaitGroup
 
-	for idx, txBytes := range slot.Txs {
-		wg.Add(1)
-		go func(idx int, txBytes []byte) {
-			defer wg.Done()
-
-			cryptoContext := secp256k1.ContextForThread(1)
-
+	_, use_avx := os.LookupEnv("ERIGON_USE_AVX")
+	if use_avx && (cpu.X86.HasAVX2 || cpu.X86.HasAVX512) {
+		chunkSize := 4
+		if cpu.X86.HasAVX512 {
+			chunkSize = 8
+		}
+		/*
+				log.Info("[extractTransaction] Using AVX512")
+			} else {
+				log.Info("[extractTransaction] Using AVX2")
+			}
+		*/
+		txs := make([]types.Transaction, len(slot.Txs))
+		for idx, txBytes := range slot.Txs {
 			res := &result{index: idx}
-
 			transaction, err := types.DecodeTransaction(txBytes)
 			if err == io.EOF {
 				res.toRemove = true
 				results[idx] = res
-				return
+				continue
 			}
 			if err != nil {
 				res.toRemove = true
 				res.id = slot.TxIds[idx]
 				res.err = err
 				results[idx] = res
-				return
+				continue
 			}
-
-			sender, err := signer.SenderWithContext(cryptoContext, transaction)
-			if err != nil {
-				res.toRemove = true
-				res.id = slot.TxIds[idx]
-				res.err = err
-				results[idx] = res
-				return
-			}
-
-			transaction.SetSender(sender)
 			res.transaction = transaction
 			res.id = slot.TxIds[idx]
 			results[idx] = res
-		}(idx, txBytes)
-	}
+			txs[idx] = transaction
+		}
+		wg.Wait()
 
-	wg.Wait()
+		n := len(txs)
+		signChainID := signer.ChainID().ToBig()
+		txHashes := make([]common.Hash, n)
+
+		// first, run chunkSize hashes per core (AVX/AVX512) in parallel
+		n1 := (n / chunkSize) * chunkSize
+		for idx := 0; idx < n1; idx += chunkSize {
+			wg.Add(1)
+			go func(idx int, atxs []types.Transaction, hashes []common.Hash) {
+				defer wg.Done()
+				keccak.SigningHashAVX(signChainID, atxs, hashes, cpu.X86.HasAVX512)
+			}(idx, txs[idx:idx+chunkSize], txHashes[idx:idx+chunkSize])
+		}
+		// run the remaining hashes (<chunkSize) sequentially
+		for idx := n1; idx < n; idx += 1 {
+			thisChainId := signChainID
+			if !txs[idx].Protected() {
+				thisChainId = nil
+			}
+			txHashes[idx] = txs[idx].SigningHash(thisChainId)
+		}
+		wg.Wait()
+
+		cryptoContext := secp256k1.ContextForThread(1)
+		for idx := range txs {
+			if !results[idx].toRemove {
+				sender, err := signer.SenderWithContext(cryptoContext, txs[idx], &txHashes[idx])
+				if err != nil {
+					results[idx].toRemove = true
+					results[idx].err = err
+				} else {
+					txs[idx].SetSender(sender)
+					results[idx].transaction = txs[idx]
+				}
+			}
+		}
+	} else {
+		for idx, txBytes := range slot.Txs {
+			wg.Add(1)
+			go func(idx int, txBytes []byte) {
+				defer wg.Done()
+
+				cryptoContext := secp256k1.ContextForThread(1)
+
+				res := &result{index: idx}
+
+				transaction, err := types.DecodeTransaction(txBytes)
+				if err == io.EOF {
+					res.toRemove = true
+					results[idx] = res
+					return
+				}
+				if err != nil {
+					res.toRemove = true
+					res.id = slot.TxIds[idx]
+					res.err = err
+					results[idx] = res
+					return
+				}
+
+				sender, err := signer.SenderWithContext(cryptoContext, transaction, nil)
+				if err != nil {
+					res.toRemove = true
+					res.id = slot.TxIds[idx]
+					res.err = err
+					results[idx] = res
+					return
+				}
+
+				transaction.SetSender(sender)
+				res.transaction = transaction
+				res.id = slot.TxIds[idx]
+				results[idx] = res
+			}(idx, txBytes)
+		}
+
+		wg.Wait()
+	}
 
 	for _, res := range results {
 		if res.toRemove {

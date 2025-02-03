@@ -107,12 +107,8 @@ services:
       - 9092:9095
     volumes:
       - ./data/seq/:/home/erigon/data/
-      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
-      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+      --http.vhosts=* --http.corsdomain=* --ws --config=/home/erigon/test/config/test.erigon.seq.config.yaml
 
   xlayer-rpc:
     container_name: xlayer-rpc
@@ -126,12 +122,8 @@ services:
       - 9091:9095
     volumes:
       - ./data/rpc/:/home/erigon/data/
-      - ./config/test.erigon.rpc.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
     command: >
-      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+      --http.vhosts=* --http.corsdomain=* --ws --config=/home/erigon/test/config/test.erigon.rpc.config.yaml
 
   xlayer-mock-l1-network:
     container_name: xlayer-mock-l1-network

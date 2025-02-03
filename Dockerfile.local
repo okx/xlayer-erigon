@@ -44,6 +44,9 @@ RUN apk add --no-cache curl jq bind-tools
 RUN mkdir -p ~/.local/share/erigon
 WORKDIR /home/erigon
 
+# Include test config
+COPY test/config /home/erigon/test/config
+
 ## then give each binary its own layer
 COPY --from=builder /app/build/bin/cdk-erigon /usr/local/bin/cdk-erigon
 
@@ -72,3 +75,4 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       org.label-schema.vendor="Torquem" \
       org.label-schema.version=$VERSION
 
+ENTRYPOINT ["cdk-erigon"]

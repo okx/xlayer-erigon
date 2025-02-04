@@ -238,6 +238,7 @@ func sequencingBatchStep(
 
 	// once the batch ticker has ticked we need a signal to close the batch after the next block is done
 	batchTimedOut := false
+	commitCounter := 0
 
 	for blockNumber := executionAt + 1; runLoopBlocks; blockNumber++ {
 		// For X Layer
@@ -648,13 +649,17 @@ func sequencingBatchStep(
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
+		const batchCommitSize = 10
 		start := time.Now()
 		if !batchState.isL1Recovery() {
-			// commit block data here so it is accessible in other threads
-			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
-				return errCommitAndStart
+			commitCounter++
+			if commitCounter >= batchCommitSize || !runLoopBlocks {
+				if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
+					return errCommitAndStart
+				}
+				commitCounter = 0
+				defer sdb.tx.Rollback()
 			}
-			defer sdb.tx.Rollback()
 		}
 		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
@@ -685,6 +690,12 @@ func sequencingBatchStep(
 		// check the return values of updateStreamAndCheckRollback
 		if err != nil || needsUnwind {
 			return err
+		}
+	}
+
+	if commitCounter > 0 {
+		if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
+			return errCommitAndStart
 		}
 	}
 

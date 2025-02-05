@@ -6,7 +6,24 @@ zkevm.l2-chain-id: 196
 zkevm.l2-sequencer-rpc-url: https://rpc.xlayer.tech
 zkevm.l2-datastreamer-url: stream.xlayer.tech:8800
 zkevm.l1-chain-id: 1
-zkevm.l1-rpc-url: https://rpc.ankr.com/eth/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+zkevm.l1-rpc-url: https://rpc.ankr.com/eth/578c95407e7831f0ac1ef79cacae294dc9bf8307121ca9fffaf1e556a5cca662
+#zkevm.increment-tree-always: true
+
+#debug.limit: 8554110
+
+zkevm.executor-strict: false
+zkevm.witness-full: false
+
+zkevm.sequencer-block-seal-time: "3s"
+zkevm.sequencer-batch-seal-time: "10s"
+zkevm.sequencer-batch-sleep-duration: "0s"
+
+zkevm.data-stream-host: "localhost"
+zkevm.data-stream-port: 6900
+zkevm.default-gas-price: 1000000000
+zkevm.max-gas-price: 0
+zkevm.gas-price-factor: 0.000001
+zkevm.allow-free-transactions: true
 
 zkevm.address-sequencer: "0xAF9d27ffe4d51eD54AC8eEc78f2785D7E11E5ab1"
 zkevm.address-zkevm: "0x2B0ee28D4D51bC9aDde5E58E295873F61F4a0507"
@@ -22,3 +39,15 @@ zkevm.datastream-version: 3
 http.api: [eth, debug, net, trace, web3, erigon, zkevm]
 http.addr: 0.0.0.0
 http.port: 8545
+
+gpo.type: "follower"
+gpo.update-period: "300s"
+gpo.factor: 0.01
+gpo.kafka-url: "0.0.0.0"
+gpo.topic: "explorer"
+gpo.group-id: "web3"
+gpo.blocks: 3
+gpo.default-l1-coin-price: 2000
+gpo.default-l2-coin-price: 50
+gpo.gas-price-usdt: 0.000000476190476
+gpo.congestion-threshold: 0

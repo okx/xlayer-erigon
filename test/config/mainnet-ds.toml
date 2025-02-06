@@ -1,4 +1,0 @@
-Server = "stream.xlayer.tech:8800"
-Port = 7900
-File = "/home/dsrelay/datarelay.bin"
-Log = "info"

@@ -136,12 +136,6 @@ min-run: build-docker ## Runs a minimal node
 	sleep 10
 	$(RUN_DOCKER_RPC)
 
-mainnet-rpc: build-docker ## Runs a mainnet node
-	$(RUN_DOCKER_MAINNET_RPC)
-
-mainnet-seq: build-docker ## Runs a mainnet node
-	$(RUN_DOCKER_MAINNET_SEQ)
-
 .PHONY: test
 test: test-1 ## Runs all e2e tests
 	echo "Tests passed"

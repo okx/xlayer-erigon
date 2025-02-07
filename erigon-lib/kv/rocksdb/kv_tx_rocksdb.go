@@ -2,6 +2,7 @@ package rocksdb
 
 import (
 	"context"
+	"fmt"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
@@ -9,29 +10,48 @@ import (
 	"unsafe"
 )
 
+/*Not actually using RocksDB Tx just implementing interface*/
+
 type RocksTx struct {
-	id  uint64
-	kv  *RocksKV
-	ctx context.Context
-	wo  *grocksdb.WriteOptions
-	ro  *grocksdb.ReadOptions
+	id       uint64
+	kv       *RocksKV
+	ctx      context.Context
+	wo       *grocksdb.WriteOptions
+	ro       *grocksdb.ReadOptions
+	readOnly bool
+	complete bool
 }
 
 func (r RocksTx) Has(table string, key []byte) (bool, error) {
 	if cfHandle, exists := r.kv.cfHandles[table]; exists {
 		psh, err := r.kv.db.GetPinnedCF(r.ro, cfHandle, key)
+		defer psh.Destroy()
+		//sh, err := r.kv.db.GetCF(r.ro, cfHandle, key)
 		if err != nil {
 			return false, err
 		}
 		return psh.Exists(), nil
 	} else {
-		return false, nil
+		return false, fmt.Errorf("table/cf %s not found", table)
 	}
 }
 
 func (r RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
-	//TODO implement me
-	panic("implement me")
+	if cfHandle, exists := r.kv.cfHandles[table]; exists {
+		var psh *grocksdb.Slice
+		psh, err = r.kv.db.GetCF(r.ro, cfHandle, key)
+		if err != nil {
+			return nil, err
+		}
+
+		if !psh.Exists() { //Key doesnt exist
+			return nil, nil
+		}
+
+		return psh.Data(), nil
+	} else {
+		return nil, fmt.Errorf("table %s not found", table)
+	}
 }
 
 func (r RocksTx) ForEach(table string, fromPrefix []byte, walker func(k []byte, v []byte) error) error {
@@ -55,8 +75,21 @@ func (r RocksTx) Commit() error {
 }
 
 func (r RocksTx) Rollback() {
-	//TODO implement me
-	panic("implement me")
+	if r.complete {
+		return
+	}
+
+	r.complete = true
+	r.kv.trackTxEnd()
+	r.ro.Destroy()
+	r.ro = nil
+	if !r.readOnly {
+		r.wo.Destroy()
+		r.wo = nil
+	}
+
+	r.kv.leakDetector.Del(r.id)
+	return
 }
 
 func (r RocksTx) ReadSequence(table string) (uint64, error) {

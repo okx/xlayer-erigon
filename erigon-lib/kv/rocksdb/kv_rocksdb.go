@@ -54,6 +54,7 @@ type RocksKV struct {
 	batchMu sync.Mutex
 
 	cfHandles map[string]*grocksdb.ColumnFamilyHandle
+	cf        kv.TableCfg
 }
 
 func (kv *RocksKV) Close() {
@@ -75,13 +76,43 @@ func (kv *RocksKV) ReadOnly() bool {
 	return kv.opts.readOnly
 }
 
-func (kv *RocksKV) View(ctx context.Context, f func(tx kv.Tx) error) error {
-	//TODO implement me
-	panic("implement me")
+func (kv *RocksKV) View(ctx context.Context, f func(tx kv.Tx) error) (err error) {
+	tx, err := kv.BeginRo(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	return f(tx)
 }
 
-func (kv *RocksKV) BeginRo(ctx context.Context) (kv.Tx, error) {
-	//TODO implement me
+func (kv *RocksKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
+	if !kv.trackTxBegin() {
+		return nil, fmt.Errorf("db is closed")
+	}
+
+	//if semErr := kv.readTxLimiter.Acquire(ctx, 1); semErr != nil {
+	//	return nil, fmt.Errorf("rocksdb.RocksKV.BeginRo: roTxsLimiter error %w", semErr)
+	//}
+
+	defer func() {
+		if txn == nil {
+			//kv.readTxLimiter.Release(1)
+			kv.trackTxEnd()
+		}
+	}()
+	ro := grocksdb.NewDefaultReadOptions()
+	return &RocksTx{
+		ctx:      ctx,
+		kv:       kv,
+		readOnly: true,
+		id:       kv.leakDetector.Add(),
+		ro:       ro,
+		wo:       nil,
+	}, nil
+}
+
+func (kv *RocksKV) BeginRoNosync(ctx context.Context) (kv.Tx, error) {
 	panic("implement me")
 }
 
@@ -122,14 +153,84 @@ func (kv *RocksKV) UpdateNosync(ctx context.Context, f func(tx kv.RwTx) error) e
 	panic("implement me")
 }
 
-func (kv *RocksKV) BeginRw(ctx context.Context) (kv.RwTx, error) {
+func (kv *RocksKV) BeginRwNosync(ctx context.Context) (kv.RwTx, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (kv *RocksKV) BeginRwNosync(ctx context.Context) (kv.RwTx, error) {
-	//TODO implement me
-	panic("implement me")
+func (kv *RocksKV) BeginRw(ctx context.Context) (txn kv.RwTx, err error) {
+	if !kv.trackTxBegin() {
+		return nil, fmt.Errorf("db closed")
+	}
+	return &RocksTx{
+		kv:       kv,
+		ctx:      ctx,
+		id:       kv.leakDetector.Add(),
+		readOnly: false,
+		complete: false,
+		wo:       grocksdb.NewDefaultWriteOptions(),
+		ro:       grocksdb.NewDefaultReadOptions(),
+	}, nil
+}
+
+func (kv *RocksKV) beginRo(ctx context.Context) (txn kv.Tx, err error) {
+	return nil, nil
+}
+
+func (kv *RocksKV) trackTxBegin() bool {
+	kv.txsCountMutex.Lock()
+	defer kv.txsCountMutex.Unlock()
+
+	isOpen := !kv.closed.Load()
+
+	if isOpen {
+		kv.txsCount++
+	}
+
+	return isOpen
+}
+
+func (kv *RocksKV) trackTxEnd() {
+	kv.txsCountMutex.Lock()
+	defer kv.txsCountMutex.Unlock()
+
+	if kv.txsCount > 0 {
+		kv.txsCount--
+	} else {
+		panic("RocksKV: unmatched trackTxEnd")
+	}
+
+	if (kv.txsCount == 0) && kv.closed.Load() {
+		kv.txsAllDoneOnCloseCond.Signal()
+	}
+}
+
+func (kv *RocksKV) OpenDbColumnFamilies(cfNames []string, path string) error {
+
+	cfOpts := make([]*grocksdb.Options, len(cfNames)+1)
+	cfNames = append(cfNames, "default")
+	opts := grocksdb.NewDefaultOptions()
+	opts.SetCreateIfMissing(true)
+	opts.SetCreateIfMissingColumnFamilies(true)
+	for i := range cfOpts {
+		cfOpts[i] = opts
+	}
+	db, cfHandlers, err := grocksdb.OpenDbColumnFamilies(opts, path, cfNames, cfOpts)
+	if err != nil {
+		return err
+	}
+
+	if len(cfHandlers) != len(cfNames) {
+		return fmt.Errorf("failed to open db column families: expected %d, got %d", len(cfNames), len(cfHandlers))
+	}
+
+	kv.cfHandles = make(map[string]*grocksdb.ColumnFamilyHandle)
+	for i, cfName := range cfNames {
+		kv.cfHandles[cfName] = cfHandlers[i]
+	}
+	kv.db = db
+	kv.path = path
+	return nil
 }
 
 func removeFromPathDbMap(path string) {
@@ -142,20 +243,4 @@ func addToPathDbMap(path string, db kv.RoDB) {
 	pathDbMapLock.Lock()
 	defer pathDbMapLock.Unlock()
 	pathDbMap[path] = db
-}
-
-func (kv *RocksKV) beginRw(ctx context.Context, flags uint) (txn kv.RwTx, err error) {
-	if kv.closed.Load() {
-		return nil, fmt.Errorf("db is closed")
-	}
-
-	return &RocksTx{
-		kv:  kv,
-		ctx: ctx,
-		id:  kv.leakDetector.Add(),
-	}, nil
-}
-
-func (kv *RocksKV) beginRo(ctx context.Context) (txn kv.Tx, err error) {
-	return nil, nil
 }

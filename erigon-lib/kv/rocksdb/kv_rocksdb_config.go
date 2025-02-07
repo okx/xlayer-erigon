@@ -8,8 +8,16 @@ import (
 	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
 	"runtime"
+	"sort"
+	"strings"
 	"sync"
 )
+
+type TableCfgFunc func(defaultCF kv.TableCfg) kv.TableCfg
+
+func WithChaindataTables(defaultBuckets kv.TableCfg) kv.TableCfg {
+	return defaultBuckets
+}
 
 type RocksDBOpts struct {
 	log            log.Logger
@@ -21,12 +29,70 @@ type RocksDBOpts struct {
 	readOnly       bool
 	exclusive      bool
 	path           string
+	cfConfig       TableCfgFunc
 }
 
 func NewRocksDBOpts(log log.Logger) *RocksDBOpts {
 	return &RocksDBOpts{
-		log: log,
+		log:      log,
+		cfConfig: WithChaindataTables,
+		label:    kv.InMem,
 	}
+}
+
+func (opts RocksDBOpts) Open(ctx context.Context) (kv.RwDB, error) {
+	rocksDBOptions := grocksdb.NewDefaultOptions()
+	rocksDBOptions.SetCreateIfMissing(true)
+	rocksDBOptions.SetCreateIfMissingColumnFamilies(true)
+	rocksDBOptions.SetInfoLogLevel(grocksdb.InfoLogLevel(opts.verbosity))
+
+	if opts.readTxLimiter == nil {
+		targetSemCount := int64(runtime.GOMAXPROCS(-1) * 16)
+		opts.readTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
+	}
+
+	if opts.writeTxLimiter == nil {
+		targetSemCount := int64(runtime.GOMAXPROCS(-1)) - 1
+		opts.writeTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
+	}
+	txsCountMutex := &sync.Mutex{}
+
+	kvStore := &RocksKV{
+		opts:                  opts,
+		log:                   opts.log,
+		readTxLimiter:         opts.readTxLimiter,
+		writeTxLimiter:        opts.writeTxLimiter,
+		txsCountMutex:         txsCountMutex,
+		txsAllDoneOnCloseCond: sync.NewCond(txsCountMutex),
+		leakDetector:          dbg.NewLeakDetector("db."+opts.label.String(), dbg.SlowTx()),
+		cf:                    kv.TableCfg{},
+	}
+
+	customCf := opts.cfConfig(kv.ChaindataTablesCfg)
+	opts.log.Info("Configuration")
+	for name, cfg := range customCf {
+		kvStore.cf[name] = cfg
+	}
+	cf := cfSlice(kvStore.cf)
+
+	if err := kvStore.OpenDbColumnFamilies(cf, opts.path); err != nil {
+		return nil, err
+	}
+
+	addToPathDbMap(opts.path, kvStore)
+
+	return kvStore, nil
+}
+
+func cfSlice(b kv.TableCfg) []string {
+	buckets := make([]string, 0, len(b))
+	for name := range b {
+		buckets = append(buckets, name)
+	}
+	sort.Slice(buckets, func(i, j int) bool {
+		return strings.Compare(buckets[i], buckets[j]) < 0
+	})
+	return buckets
 }
 
 func (opts RocksDBOpts) GetLabel() kv.Label { return opts.label }
@@ -42,13 +108,6 @@ func (opts RocksDBOpts) DBVerbosity(v kv.DBVerbosityLvl) RocksDBOpts {
 
 func (opts RocksDBOpts) InMem() RocksDBOpts {
 	opts.inMem = true
-	return opts
-}
-func NewRocksDB(log log.Logger) RocksDBOpts {
-	opts := RocksDBOpts{
-		log:   log,
-		label: kv.InMem,
-	}
 	return opts
 }
 func (opts RocksDBOpts) Readonly() RocksDBOpts {
@@ -69,41 +128,4 @@ func (opts RocksDBOpts) Label(label kv.Label) RocksDBOpts {
 func (opts RocksDBOpts) Path(path string) RocksDBOpts {
 	opts.path = path
 	return opts
-}
-func (opts RocksDBOpts) Open(ctx context.Context) (kv.RwDB, error) {
-	rocksDBOptions := grocksdb.NewDefaultOptions()
-	rocksDBOptions.SetCreateIfMissing(true)
-	rocksDBOptions.SetCreateIfMissingColumnFamilies(true)
-	rocksDBOptions.SetInfoLogLevel(grocksdb.InfoLogLevel(opts.verbosity))
-
-	rocksDB, err := grocksdb.OpenDb(rocksDBOptions, opts.path)
-	if err != nil {
-		return nil, err
-	}
-
-	if opts.readTxLimiter == nil {
-		targetSemCount := int64(runtime.GOMAXPROCS(-1) * 16)
-		opts.readTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
-	}
-
-	if opts.writeTxLimiter == nil {
-		targetSemCount := int64(runtime.GOMAXPROCS(-1)) - 1
-		opts.writeTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
-	}
-	txsCountMutex := &sync.Mutex{}
-
-	kv := &RocksKV{
-		opts:                  opts,
-		log:                   opts.log,
-		readTxLimiter:         opts.readTxLimiter,
-		writeTxLimiter:        opts.writeTxLimiter,
-		txsCountMutex:         txsCountMutex,
-		txsAllDoneOnCloseCond: sync.NewCond(txsCountMutex),
-		leakDetector:          dbg.NewLeakDetector("db."+opts.label.String(), dbg.SlowTx()),
-		db:                    rocksDB,
-	}
-
-	addToPathDbMap(opts.path, kv)
-
-	return kv, nil
 }

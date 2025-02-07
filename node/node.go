@@ -329,8 +329,7 @@ func OpenDatabase(ctx context.Context, config *nodecfg.Config, label kv.Label, n
 		//	GrowthStep(16 * datasize.MB).
 		//	DBVerbosity(config.DatabaseVerbosity).RoTxsLimiter(roTxsLimiter)
 
-		opts := rocksdb.NewRocksDB(logger).Label(label).Path(dbPath).DBVerbosity(config.DatabaseVerbosity).RoTxsLimiter(roTxsLimiter)
-
+		opts := rocksdb.NewRocksDBOpts(logger).Label(label).Path(dbPath).DBVerbosity(config.DatabaseVerbosity).RoTxsLimiter(roTxsLimiter)
 		if readonly {
 			opts = opts.Readonly()
 		}

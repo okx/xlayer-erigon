@@ -150,3 +150,6 @@ test-1: stop all ## Runs group 1 e2e tests checking race conditions
 mainnet: build-docker
 	# base services
 	$(RUN_DOCKER_MAINNET_SEQ)
+	# monitoring services
+	$(RUN_DOCKER_PROMETHEUS)
+	$(RUN_DOCKER_GRAFANA)

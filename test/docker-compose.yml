@@ -385,10 +385,10 @@ services:
     environment:
       - CDK_ERIGON_SEQUENCER=1
     ports:
-      - 16061:6060
+      - 6060:6060
       - 8123:8545
-      - 16901:6900
-      - 19091:9095
+      - 6900:6900
+      - 9092:9095
     volumes:
       - ./mainnet/seq:/home/erigon/data/
       - ./config/xlayerconfig-mainnet.yaml:/usr/src/app/config.yaml

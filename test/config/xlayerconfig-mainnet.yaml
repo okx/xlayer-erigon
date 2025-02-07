@@ -20,7 +20,7 @@ zkevm.sequencer-batch-sleep-duration: "0s"
 
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900
-zkevm.default-gas-price: 1000000000
+zkevm.default-gas-price: 1
 zkevm.max-gas-price: 0
 zkevm.gas-price-factor: 0.000001
 zkevm.allow-free-transactions: true
@@ -53,3 +53,7 @@ gpo.default-l1-coin-price: 2000
 gpo.default-l2-coin-price: 50
 gpo.gas-price-usdt: 0.000000476190476
 gpo.congestion-threshold: 0
+
+pprof: true
+pprof.port: 6060
+pprof.addr: 0.0.0.0

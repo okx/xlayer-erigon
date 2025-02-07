@@ -1,0 +1,6 @@
+zkevm.data-stream-port: 6900
+zkevm.datastream-version: 2
+zkevm.l2-chain-id: 195
+
+zkevm.datastream-file: "/Users/oker/Documents/xlayer-erigon/test/data/lrp/data-stream"
+zkevm.batch-db-path: "/Users/oker/Documents/xlayer-erigon/test/data/lrp/batches.mdbx"

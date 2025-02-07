@@ -1,0 +1,24 @@
+syntax = "proto3";
+package main;
+
+option go_package = "./;main";
+
+message BatchData {
+    message FullL2Block {
+        uint64 batch_number = 1;
+        uint64 l2_block_number = 2;
+        int64 timestamp = 3;
+        uint32 delta_timestamp = 4;
+        uint32 l1_info_tree_index = 5;
+        bytes global_exit_root = 6;
+        bytes coinbase = 7;
+        uint64 fork_id = 8;
+        bytes l1_block_hash = 9;
+        bytes l2_block_hash = 10;
+        bytes parent_hash = 11;
+        bytes state_root = 12;
+        uint64 block_gas_limit = 13;
+        bytes block_info_root = 14;
+    }
+    repeated FullL2Block blocks = 1;
+}

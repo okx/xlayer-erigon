@@ -576,6 +576,11 @@ var (
 		Usage: "When enabled, the sequencer will automatically resequence unseen batches stored in data stream",
 		Value: false,
 	}
+	SequencerResequenceHaltOnBatchNumber = cli.Uint64Flag{
+		Name:  "zkevm.sequencer-resequence-halt-on-batch-number",
+		Usage: "Halt the sequencer on this batch number when resequencing",
+		Value: 0,
+	}
 	SequencerResequenceStrict = cli.BoolFlag{
 		Name:  "zkevm.sequencer-resequence-strict",
 		Usage: "Strictly resequence the rolledback batches",
@@ -1454,7 +1459,7 @@ var (
 	YieldSizeFlag = cli.Uint64Flag{
 		Name:  "yieldsize",
 		Usage: "transaction count fetched from txpool each time",
-		Value: 1000,
+		Value: 30,
 	}
 )
 
@@ -1945,7 +1950,7 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 
 	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
-	
+
 	purgeEvery := ctx.Duration(TxpoolPurgeEveryFlag.Name)
 	purgeDistance := ctx.Duration(TxpoolPurgeDistanceFlag.Name)
 

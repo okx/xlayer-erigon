@@ -145,3 +145,46 @@ test-1: stop all ## Runs group 1 e2e tests checking race conditions
 	sleep 3
 	docker ps -a
 	trap '$(STOP)' EXIT; MallocNanoZone=0 go test -count=1 -failfast -race -v -p 1 -timeout 600s ../ci/e2e-1/...
+
+DOCKER_COMPOSE_LRP := docker compose -f docker-compose-lrp.yml
+DOCKER_LRP_UNWIND := xlayer-lrp-unwind
+DOCKER_LRP_RESEQUENCE := xlayer-lrp-resequence
+
+RUN_DOCKER_LRP_STATELESS_EXECUTOR := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_STATELESS_EXECUTOR)
+RUN_DOCKER_LRP_L1_NETWORK := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_L1_NETWORK)
+RUN_DOCKER_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_UNWIND)
+RUN_DOCKER_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_RESEQUENCE)
+
+STOP_LRP := $(DOCKER_COMPOSE_LRP) down --remove-orphans; sleep 3; rm -rf data
+
+.PHONY: lrp-run
+lrp-run: build-docker
+	$(RUN_DOCKER_LRP_L1_NETWORK)
+	$(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	sleep 3
+	@read -p "Enter unwind batch number: " UNWIND_BATCH_NO; \
+	read -p "Enter halt on batch number: " HALT_BATCH_NO; \
+	if [ "$(shell uname)" = "Darwin" ]; then \
+		sed -i '' "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i '' "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+	else \
+		sed -i "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+	fi
+	$(RUN_DOCKER_LRP_UNWIND)
+	sleep 20
+	$(RUN_DOCKER_LRP_RESEQUENCE)
+
+.PHONY: lrp-stop
+lrp-stop:
+	$(STOP_LRP)
+
+TARGET_LOG_FILE := filtered.log
+
+.PHONY: lrp-check
+lrp-check: ## Filter logs for LRP & Compute TPS & Check stateroots (configure debugToolsConfig.yaml)
+	docker logs $(DOCKER_LRP_RESEQUENCE) 2>&1 | grep "\[5/13 Execution\]" > $(TARGET_LOG_FILE)
+	sleep 3
+	python process_log.py $(TARGET_LOG_FILE)
+	sleep 3
+	go run ../zk/debug_tools/rpc-blockhashes-compare/main.go

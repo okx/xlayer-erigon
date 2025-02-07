@@ -380,7 +380,7 @@ services:
     restart: unless-stopped
 
   xlayer-mainnet-seq:
-    container_name: xlayer-mainnet-seq
+    container_name: xlayer-seq
     image: cdk-erigon
     environment:
       - CDK_ERIGON_SEQUENCER=1

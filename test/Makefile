@@ -157,11 +157,15 @@ mainnet: build-docker
 DOCKER_COMPOSE_LRP := docker compose -f docker-compose-lrp.yml
 DOCKER_LRP_UNWIND := xlayer-lrp-unwind
 DOCKER_LRP_RESEQUENCE := xlayer-lrp-resequence
+DOCKER_MAINNET_LRP_UNWIND := xlayer-mainnet-lrp-unwind
+DOCKER_MAINNET_LRP_RESEQUENCE := xlayer-mainnet-lrp-resequence
 
 RUN_DOCKER_LRP_STATELESS_EXECUTOR := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_STATELESS_EXECUTOR)
 RUN_DOCKER_LRP_L1_NETWORK := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_L1_NETWORK)
 RUN_DOCKER_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_UNWIND)
 RUN_DOCKER_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_RESEQUENCE)
+RUN_DOCKER_MAINNET_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_MAINNET_LRP_UNWIND)
+RUN_DOCKER_MAINNET_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_MAINNET_LRP_RESEQUENCE)
 
 STOP_LRP := $(DOCKER_COMPOSE_LRP) down --remove-orphans; sleep 3; rm -rf data
 
@@ -182,6 +186,21 @@ lrp-run: build-docker
 	$(RUN_DOCKER_LRP_UNWIND)
 	sleep 20
 	$(RUN_DOCKER_LRP_RESEQUENCE)
+
+.PHONY: lrp-mainnet
+lrp-mainnet: build-docker
+	@read -p "Enter unwind batch number: " UNWIND_BATCH_NO; \
+	read -p "Enter halt on batch number: " HALT_BATCH_NO; \
+	if [ "$(shell uname)" = "Darwin" ]; then \
+		sed -i '' "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i '' "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+	else \
+		sed -i "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+	fi
+	$(RUN_DOCKER_MAINNET_LRP_UNWIND)
+	sleep 30
+	$(RUN_DOCKER_MAINNET_LRP_RESEQUENCE)
 
 .PHONY: lrp-stop
 lrp-stop:

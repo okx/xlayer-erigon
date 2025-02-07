@@ -90,7 +90,7 @@ type Zk struct {
 
 	// For X Layer
 	XLayer XLayerConfig
-	
+
 	InitialBatchCfgFile            string
 	ACLPrintHistory                int
 	InfoTreeUpdateInterval         time.Duration
@@ -100,6 +100,8 @@ type Zk struct {
 	WitnessCacheEnabled            bool
 	WitnessCacheLimit              uint64
 	WitnessContractInclusion       []common.Address
+
+	LogTest bool
 }
 
 var DefaultZkConfig = Zk{

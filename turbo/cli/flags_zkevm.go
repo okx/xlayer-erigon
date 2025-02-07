@@ -229,6 +229,7 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		MockWitnessGeneration:                  ctx.Bool(utils.MockWitnessGeneration.Name),
 		WitnessCacheLimit:                      witnessCacheLimit,
 		WitnessContractInclusion:               witnessInclusion,
+		LogTest:                                ctx.Bool(utils.LogTestFlag.Name),
 	}
 
 	// For X Layer

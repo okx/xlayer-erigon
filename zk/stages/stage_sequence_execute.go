@@ -69,6 +69,10 @@ func sequencingBatchStep(
 	historyCfg stagedsync.HistoryCfg,
 	resequenceBatchJob *ResequenceBatchJob,
 ) (err error) {
+	if cfg.zk.LogTest {
+		log.Info("LogTest is true")
+	}
+
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))

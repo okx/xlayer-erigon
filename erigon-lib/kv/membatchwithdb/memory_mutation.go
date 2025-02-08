@@ -466,6 +466,11 @@ func (m *MemoryMutation) Commit() error {
 	return nil
 }
 
+func (m *MemoryMutation) CommitDB() error {
+	m.statelessCursors = nil
+	return nil
+}
+
 func (m *MemoryMutation) Rollback() {
 	m.memTx.Rollback()
 	m.memDb.Close()

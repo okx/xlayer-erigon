@@ -22,6 +22,7 @@ type SmtDbTx interface {
 	ForEach(bucket string, start []byte, fn func(k, v []byte) error) error
 	ForPrefix(bucket string, prefix []byte, fn func(k, v []byte) error) error
 	Commit() error
+	CommitDB() error
 	Rollback()
 }
 
@@ -113,8 +114,8 @@ func (m *EriDb) CommitBatch() error {
 	return nil
 }
 
-func (m *EriDb) Commit() error {
-	return m.tx.Commit()
+func (m *EriDb) CommitDB() error {
+	return m.tx.CommitDB()
 }
 
 func (m *EriDb) RollbackBatch() {

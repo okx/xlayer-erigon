@@ -30,7 +30,7 @@ type DB interface {
 	SetLastRoot(lr *big.Int) error
 	SetDepth(uint8) error
 	CommitBatch() error
-	Commit() error
+	CommitDB() error
 	OpenBatch(quitCh <-chan struct{})
 	RollbackBatch()
 	RoDB

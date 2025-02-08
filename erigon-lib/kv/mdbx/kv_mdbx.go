@@ -1074,14 +1074,15 @@ func (tx *MdbxTx) ExistsBucket(bucket string) (bool, error) {
 	return false, nil
 }
 
-func (tx *MdbxTx) Commit() error {
+func (tx *MdbxTx) CommitDB() error {
 	return tx.cachedTx.Commit()
 }
 
-func (tx *MdbxTx) RealCommit() error {
+func (tx *MdbxTx) Commit() error {
 	if tx.tx == nil {
 		return nil
 	}
+	tx.cachedTx.Commit()
 	defer func() {
 		tx.tx = nil
 		tx.db.trackTxEnd()

@@ -116,8 +116,7 @@ func (ctx *CachedTx) Commit() error {
 			}
 		}
 	}
-	// 最后提交底层事务，将所有修改落盘
-	return ctx.db.RealCommit()
+	return nil
 }
 
 // Rollback 用于取消当前缓存中的所有操作

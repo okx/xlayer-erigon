@@ -44,7 +44,7 @@ func (m *MemDb) CommitBatch() error {
 	return nil
 }
 
-func (m *MemDb) Commit() error {
+func (m *MemDb) CommitDB() error {
 	return nil
 }
 

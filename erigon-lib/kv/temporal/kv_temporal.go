@@ -169,6 +169,11 @@ func (tx *Tx) Commit() error {
 	return tx.MdbxTx.Commit()
 }
 
+func (tx *Tx) CommitDB() error {
+	tx.autoClose()
+	return tx.MdbxTx.Commit()
+}
+
 func (tx *Tx) DomainRange(name kv.Domain, fromKey, toKey []byte, asOfTs uint64, asc order.By, limit int) (it iter.KV, err error) {
 	if asc == order.Desc {
 		panic("not supported yet")

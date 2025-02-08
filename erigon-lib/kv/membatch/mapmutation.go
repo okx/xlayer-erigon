@@ -315,8 +315,9 @@ func (m *Mapmutation) Close() {
 	m.clean = nil
 
 }
-func (m *Mapmutation) Commit() error { panic("not db txn, use .Flush method") }
-func (m *Mapmutation) Rollback()     { panic("not db txn, use .Close method") }
+func (m *Mapmutation) Commit() error   { panic("not db txn, use .Flush method") }
+func (m *Mapmutation) CommitDB() error { panic("not db txn, use .Flush method") }
+func (m *Mapmutation) Rollback()       { panic("not db txn, use .Close method") }
 
 func (m *Mapmutation) panicOnEmptyDB() {
 	if m.db == nil {

@@ -110,6 +110,12 @@ func (opts MdbxOpts) DirtySpace(s uint64) MdbxOpts {
 }
 
 func (opts MdbxOpts) RoTxsLimiter(l *semaphore.Weighted) MdbxOpts {
+	log.Info("RoTxsLimiter called")
+	if l.TryAcquire(1) {
+		log.Info("TryAcquire succeed")
+	} else {
+		log.Info("TryAcquire failed")
+	}
 	opts.readTxLimiter = l
 	return opts
 }
@@ -389,6 +395,7 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 
 	if opts.readTxLimiter == nil {
 		targetSemCount := int64(runtime.GOMAXPROCS(-1) * 16)
+		log.Info("semaphore.NewWeighted(targetSemCount)")
 		opts.readTxLimiter = semaphore.NewWeighted(targetSemCount) // 1 less than max to allow unlocking to happen
 	}
 
@@ -398,6 +405,7 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 	}
 
 	txsCountMutex := &sync.Mutex{}
+	log.Info("Initializing new MdbxKV")
 
 	db := &MdbxKV{
 		opts:           opts,
@@ -755,11 +763,13 @@ func (db *MdbxKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
 		return nil, fmt.Errorf("db closed")
 	}
 
+	log.Info("Acquire readTxLimiter")
 	// will return nil err if context is cancelled (may appear to acquire the semaphore)
 	if semErr := db.readTxLimiter.Acquire(ctx, 1); semErr != nil {
 		db.trackTxEnd()
 		return nil, fmt.Errorf("mdbx.MdbxKV.BeginRo: roTxsLimiter error %w", semErr)
 	}
+	log.Info("Acquire readTxLimiter succeed")
 
 	defer func() {
 		if txn == nil {
@@ -1087,8 +1097,15 @@ func (tx *MdbxTx) Commit() error {
 		tx.tx = nil
 		tx.db.trackTxEnd()
 		if tx.readOnly {
+			if tx.db.readTxLimiter.TryAcquire(1) {
+				log.Info("readTxLimiter TryAcquire succeed")
+			} else {
+				log.Info("readTxLimiter TryAcquire failed")
+			}
+			log.Info("tx.db.readTxLimiter.Release(1)")
 			tx.db.readTxLimiter.Release(1)
 		} else {
+			log.Info("tx.db.writeTxLimiter.Release(1)")
 			tx.db.writeTxLimiter.Release(1)
 			runtime.UnlockOSThread()
 		}
@@ -1135,6 +1152,7 @@ func (tx *MdbxTx) Rollback() {
 	if tx.tx == nil {
 		return
 	}
+	tx.cachedTx.Rollback()
 	defer func() {
 		tx.tx = nil
 		tx.db.trackTxEnd()

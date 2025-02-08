@@ -1,5 +1,7 @@
 package mdbx
 
+import "github.com/ledgerwatch/log/v3"
+
 // CachedTx 实现了一个内存事务，所有读写操作都先在内存中进行。
 type CachedTx struct {
 
@@ -32,6 +34,7 @@ func (ctx *CachedTx) SetDb(db *MdbxTx) {
 
 // Get 查询操作：先检查内存缓存，再查询底层数据
 func (ctx *CachedTx) Get(bucket string, key []byte) ([]byte, error) {
+	log.Info("cached Get called +" + bucket + "\n")
 	k := getCacheKey(key)
 	// 如果该 key 在删除缓存中，则视为不存在
 	if delMap, ok := ctx.deletes[bucket]; ok {
@@ -61,6 +64,7 @@ func (ctx *CachedTx) Get(bucket string, key []byte) ([]byte, error) {
 
 // Put 操作：仅在内存缓存中保存写入操作
 func (ctx *CachedTx) Put(bucket string, key, value []byte) error {
+	log.Info("cached put called +" + bucket + "\n")
 	if ctx.writes[bucket] == nil {
 		ctx.writes[bucket] = make(map[string][]byte)
 	}
@@ -76,6 +80,7 @@ func (ctx *CachedTx) Put(bucket string, key, value []byte) error {
 
 // Delete 操作：仅在内存缓存中标记删除，同时从写缓存中移除
 func (ctx *CachedTx) Delete(bucket string, key []byte) error {
+	log.Info("cached Delete called +" + bucket + "\n")
 	k := getCacheKey(key)
 	if ctx.deletes[bucket] == nil {
 		ctx.deletes[bucket] = make(map[string]bool)
@@ -124,7 +129,4 @@ func (ctx *CachedTx) Rollback() {
 	// 清空内存缓存
 	ctx.writes = make(map[string]map[string][]byte)
 	ctx.deletes = make(map[string]map[string]bool)
-	if ctx.db != nil {
-		ctx.db.Rollback()
-	}
 }

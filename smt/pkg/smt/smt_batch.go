@@ -205,7 +205,10 @@ func (s *SMT) InsertBatch(cfg InsertBatchConfig, nodeKeys []*utils.NodeKey, node
 		}
 		sdh.wg.Wait()
 	}
-	if err := s.setLastRoot(*rootNodeHash); err != nil {
+	if err := s.Db.Commit(); err != nil {
+		return nil, err
+	}
+	if err = s.setLastRoot(*rootNodeHash); err != nil {
 		return nil, err
 	}
 

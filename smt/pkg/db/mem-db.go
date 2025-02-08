@@ -44,6 +44,10 @@ func (m *MemDb) CommitBatch() error {
 	return nil
 }
 
+func (m *MemDb) Commit() error {
+	return nil
+}
+
 func (m *MemDb) RollbackBatch() {
 }
 

@@ -91,6 +91,7 @@ func NewMDBX(log log.Logger) MdbxOpts {
 		mergeThreshold:  3 * 8192,
 		shrinkThreshold: -1, // default
 		label:           kv.InMem,
+		syncPeriod:      5 * time.Minute,
 	}
 	return opts
 }
@@ -121,6 +122,7 @@ func (opts MdbxOpts) PageSize(v uint64) MdbxOpts {
 
 func (opts MdbxOpts) GrowthStep(v datasize.ByteSize) MdbxOpts {
 	opts.growthStep = v
+	opts.growthStep = 1024 * datasize.MB
 	return opts
 }
 
@@ -176,6 +178,7 @@ func (opts MdbxOpts) Accede() MdbxOpts {
 
 func (opts MdbxOpts) SyncPeriod(period time.Duration) MdbxOpts {
 	opts.syncPeriod = period
+	opts.syncPeriod = 5 * time.Minute
 	return opts
 }
 
@@ -232,6 +235,9 @@ func PathDbMap() map[string]kv.RoDB {
 var ErrDBDoesNotExists = fmt.Errorf("can't create database - because opening in `Accede` mode. probably another (main) process can create it")
 
 func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
+	opts.GrowthStep(1024 * datasize.MB)
+	opts.SyncPeriod(5 * time.Minute)
+
 	if dbg.WriteMap() {
 		opts = opts.WriteMap() //nolint
 	}
@@ -463,6 +469,7 @@ func (opts MdbxOpts) Open(ctx context.Context) (kv.RwDB, error) {
 	}
 	db.path = opts.path
 	addToPathDbMap(opts.path, db)
+	opts.Print()
 	return db, nil
 }
 

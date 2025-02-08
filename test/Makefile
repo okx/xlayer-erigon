@@ -167,14 +167,15 @@ RESEQUENCE_FILTERED_LOG_FILE := resequence_filtered.log
 
 .PHONY: configure-lrp
 configure-lrp:
-	@read -p "Enter unwind batch number: " UNWIND_BATCH_NO; \
-	read -p "Enter halt on batch number: " HALT_BATCH_NO; \
+	@read -p "Enter fromBatchNumber: " FROM_BATCH_NO; \
+	read -p "Enter toBatchNumber: " TO_BATCH_NO; \
+	UNWIND_BATCH_NO=$$((FROM_BATCH_NO - 1)); \
 	if [ "$(shell uname)" = "Darwin" ]; then \
 		sed -i '' "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
-		sed -i '' "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i '' "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$TO_BATCH_NO/" docker-compose-lrp.yml; \
 	else \
 		sed -i "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
-		sed -i "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$HALT_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$TO_BATCH_NO/" docker-compose-lrp.yml; \
 	fi
 
 .PHONY: lrp-run

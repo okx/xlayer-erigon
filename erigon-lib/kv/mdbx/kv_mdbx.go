@@ -775,13 +775,16 @@ func (db *MdbxKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
 		return nil, fmt.Errorf("%w, label: %s, trace: %s", err, db.opts.label.String(), stack2.Trace().String())
 	}
 
-	return &MdbxTx{
+	ret := &MdbxTx{
 		ctx:      ctx,
 		db:       db,
 		tx:       tx,
 		readOnly: true,
 		id:       db.leakDetector.Add(),
-	}, nil
+		cachedTx: NewCachedTx(nil),
+	}
+	ret.cachedTx.SetDb(ret)
+	return ret, nil
 }
 
 func (db *MdbxKV) BeginRw(ctx context.Context) (kv.RwTx, error) {
@@ -827,12 +830,16 @@ func (db *MdbxKV) beginRw(ctx context.Context, flags uint) (txn kv.RwTx, err err
 		return nil, fmt.Errorf("%w, lable: %s, trace: %s", err, db.opts.label.String(), stack2.Trace().String())
 	}
 
-	return &MdbxTx{
-		db:  db,
-		tx:  tx,
-		ctx: ctx,
-		id:  db.leakDetector.Add(),
-	}, nil
+	ret := &MdbxTx{
+		ctx:      ctx,
+		db:       db,
+		tx:       tx,
+		readOnly: true,
+		id:       db.leakDetector.Add(),
+		cachedTx: NewCachedTx(nil),
+	}
+	ret.cachedTx.SetDb(ret)
+	return ret, nil
 }
 
 type MdbxTx struct {
@@ -848,6 +855,8 @@ type MdbxTx struct {
 
 	streams  map[int]kv.Closer
 	streamID int
+
+	cachedTx *CachedTx
 }
 
 type MdbxCursor struct {
@@ -1066,6 +1075,10 @@ func (tx *MdbxTx) ExistsBucket(bucket string) (bool, error) {
 }
 
 func (tx *MdbxTx) Commit() error {
+	return tx.cachedTx.Commit()
+}
+
+func (tx *MdbxTx) RealCommit() error {
 	if tx.tx == nil {
 		return nil
 	}
@@ -1203,11 +1216,11 @@ func (tx *MdbxTx) statelessCursor(bucket string) (kv.RwCursor, error) {
 }
 
 func (tx *MdbxTx) Put(table string, k, v []byte) error {
-	c, err := tx.statelessCursor(table)
-	if err != nil {
-		return err
-	}
-	return c.Put(k, v)
+	return tx.cachedTx.Put(table, k, v)
+}
+
+func (tx *MdbxTx) RealPut(table string, k, v []byte) error {
+	return tx.cachedTx.Put(table, k, v)
 }
 
 func (tx *MdbxTx) Delete(table string, k []byte) error {
@@ -1218,7 +1231,19 @@ func (tx *MdbxTx) Delete(table string, k []byte) error {
 	return c.Delete(k)
 }
 
+func (tx *MdbxTx) RealDelete(table string, k []byte) error {
+	c, err := tx.statelessCursor(table)
+	if err != nil {
+		return err
+	}
+	return c.Delete(k)
+}
+
 func (tx *MdbxTx) GetOne(bucket string, k []byte) ([]byte, error) {
+	return tx.cachedTx.Get(bucket, k)
+}
+
+func (tx *MdbxTx) RealGetOne(bucket string, k []byte) ([]byte, error) {
 	c, err := tx.statelessCursor(bucket)
 	if err != nil {
 		return nil, err

@@ -189,7 +189,6 @@ configure-lrp:
 .PHONY: lrp-run
 lrp-run: build-docker configure-lrp
 	$(RUN_DOCKER_LRP_L1_NETWORK)
-	$(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
 	sleep 3
 	$(RUN_DOCKER_LRP_UNWIND)
 	docker wait $(DOCKER_LRP_UNWIND)

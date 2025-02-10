@@ -8,7 +8,6 @@ import (
 	"github.com/ledgerwatch/log/v3"
 	"github.com/linxGnu/grocksdb"
 	"golang.org/x/sync/semaphore"
-	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,12 +62,6 @@ func (kv *RocksKV) Close() {
 	}
 	kv.db.Close()
 
-	if kv.opts.inMem {
-		if err := os.RemoveAll(kv.opts.path); err != nil {
-			kv.log.Warn("failed to remove in-mem db file", "err", err)
-		}
-	}
-
 	removeFromPathDbMap(kv.path)
 }
 
@@ -102,6 +95,7 @@ func (kv *RocksKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
 		}
 	}()
 	ro := grocksdb.NewDefaultReadOptions()
+	fo := grocksdb.NewDefaultFlushOptions()
 	return &RocksTx{
 		ctx:      ctx,
 		kv:       kv,
@@ -109,6 +103,8 @@ func (kv *RocksKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
 		id:       kv.leakDetector.Add(),
 		ro:       ro,
 		wo:       nil,
+		complete: false,
+		fo:       fo,
 	}, nil
 }
 
@@ -170,11 +166,8 @@ func (kv *RocksKV) BeginRw(ctx context.Context) (txn kv.RwTx, err error) {
 		complete: false,
 		wo:       grocksdb.NewDefaultWriteOptions(),
 		ro:       grocksdb.NewDefaultReadOptions(),
+		fo:       grocksdb.NewDefaultFlushOptions(),
 	}, nil
-}
-
-func (kv *RocksKV) beginRo(ctx context.Context) (txn kv.Tx, err error) {
-	return nil, nil
 }
 
 func (kv *RocksKV) trackTxBegin() bool {

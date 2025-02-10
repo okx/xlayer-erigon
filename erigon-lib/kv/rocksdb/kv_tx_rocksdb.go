@@ -2,6 +2,7 @@ package rocksdb
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
@@ -18,13 +19,14 @@ type RocksTx struct {
 	ctx      context.Context
 	wo       *grocksdb.WriteOptions
 	ro       *grocksdb.ReadOptions
+	fo       *grocksdb.FlushOptions
 	readOnly bool
 	complete bool
 }
 
-func (r RocksTx) Has(table string, key []byte) (bool, error) {
-	if cfHandle, exists := r.kv.cfHandles[table]; exists {
-		psh, err := r.kv.db.GetPinnedCF(r.ro, cfHandle, key)
+func (rtx *RocksTx) Has(table string, key []byte) (bool, error) {
+	if cfHandle, exists := rtx.kv.cfHandles[table]; exists {
+		psh, err := rtx.kv.db.GetPinnedCF(rtx.ro, cfHandle, key)
 		defer psh.Destroy()
 		//sh, err := r.kv.db.GetCF(r.ro, cfHandle, key)
 		if err != nil {
@@ -36,15 +38,15 @@ func (r RocksTx) Has(table string, key []byte) (bool, error) {
 	}
 }
 
-func (r RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
-	if cfHandle, exists := r.kv.cfHandles[table]; exists {
+func (rtx *RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
+	if cfHandle, exists := rtx.kv.cfHandles[table]; exists {
 		var psh *grocksdb.Slice
-		psh, err = r.kv.db.GetCF(r.ro, cfHandle, key)
+		psh, err = rtx.kv.db.GetCF(rtx.ro, cfHandle, key)
 		if err != nil {
 			return nil, err
 		}
 
-		if !psh.Exists() { //Key doesnt exist
+		if !psh.Exists() {
 			return nil, nil
 		}
 
@@ -54,165 +56,247 @@ func (r RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
 	}
 }
 
-func (r RocksTx) ForEach(table string, fromPrefix []byte, walker func(k []byte, v []byte) error) error {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) ForEach(table string, fromPrefix []byte, walker func(k []byte, v []byte) error) error {
+	cfHandle, exists := rtx.kv.cfHandles[table]
+	if !exists {
+		return fmt.Errorf("cfHandle not found for table: %s", table)
+	}
+	it := rtx.kv.db.NewIteratorCF(rtx.ro, cfHandle)
+	defer it.Close()
+
+	for it.Seek(fromPrefix); it.Valid(); it.Next() {
+		if err := walker(it.Key().Data(), it.Value().Data()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (r RocksTx) ForPrefix(table string, prefix []byte, walker func(k []byte, v []byte) error) error {
+func (rtx *RocksTx) ForPrefix(table string, prefix []byte, walker func(k []byte, v []byte) error) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - ForPrefix")
 }
 
-func (r RocksTx) ForAmount(table string, prefix []byte, amount uint32, walker func(k []byte, v []byte) error) error {
+func (rtx *RocksTx) ForAmount(table string, prefix []byte, amount uint32, walker func(k []byte, v []byte) error) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - ForAmount")
 }
 
-func (r RocksTx) Commit() error {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) Commit() error {
+	if rtx.complete {
+		return nil
+	}
+	rtx.complete = true
+	rtx.kv.trackTxEnd()
+	rtx.kv.leakDetector.Del(rtx.id)
+	rtx.ro.Destroy()
+	if !rtx.readOnly {
+		rtx.wo.Destroy()
+	}
+
+	err := rtx.kv.db.Flush(rtx.fo)
+	rtx.fo.Destroy()
+	return err
 }
 
-func (r RocksTx) Rollback() {
-	if r.complete {
+func (rtx *RocksTx) Rollback() {
+	if rtx.complete {
 		return
 	}
 
-	r.complete = true
-	r.kv.trackTxEnd()
-	r.ro.Destroy()
-	r.ro = nil
-	if !r.readOnly {
-		r.wo.Destroy()
-		r.wo = nil
+	rtx.complete = true
+	rtx.kv.trackTxEnd()
+	rtx.ro.Destroy()
+	if !rtx.readOnly {
+		rtx.wo.Destroy()
 	}
 
-	r.kv.leakDetector.Del(r.id)
+	rtx.kv.leakDetector.Del(rtx.id)
 	return
 }
 
-func (r RocksTx) ReadSequence(table string) (uint64, error) {
+func (rtx *RocksTx) ListBuckets() ([]string, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me- ListBuckets")
 }
 
-func (r RocksTx) ListBuckets() ([]string, error) {
+func (rtx *RocksTx) ViewID() uint64 {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - ViewID")
 }
 
-func (r RocksTx) ViewID() uint64 {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) Cursor(table string) (kv.Cursor, error) {
+	return rtx.RwCursor(table)
 }
 
-func (r RocksTx) Cursor(table string) (kv.Cursor, error) {
+func (rtx *RocksTx) CursorDupSort(table string) (kv.CursorDupSort, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - CursorDupSort")
 }
 
-func (r RocksTx) CursorDupSort(table string) (kv.CursorDupSort, error) {
+func (rtx *RocksTx) DBSize() (uint64, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - DBSize")
 }
 
-func (r RocksTx) DBSize() (uint64, error) {
+func (rtx *RocksTx) Range(table string, fromPrefix, toPrefix []byte) (iter.KV, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - Range")
 }
 
-func (r RocksTx) Range(table string, fromPrefix, toPrefix []byte) (iter.KV, error) {
+func (rtx *RocksTx) RangeAscend(table string, fromPrefix, toPrefix []byte, limit int) (iter.KV, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - RangeAscend")
 }
 
-func (r RocksTx) RangeAscend(table string, fromPrefix, toPrefix []byte, limit int) (iter.KV, error) {
+func (rtx *RocksTx) RangeDescend(table string, fromPrefix, toPrefix []byte, limit int) (iter.KV, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - RangeDescend")
 }
 
-func (r RocksTx) RangeDescend(table string, fromPrefix, toPrefix []byte, limit int) (iter.KV, error) {
+func (rtx *RocksTx) Prefix(table string, prefix []byte) (iter.KV, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - Prefix")
 }
 
-func (r RocksTx) Prefix(table string, prefix []byte) (iter.KV, error) {
+func (rtx *RocksTx) RangeDupSort(table string, key []byte, fromPrefix, toPrefix []byte, asc order.By, limit int) (iter.KV, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - RangeDupSort")
 }
 
-func (r RocksTx) RangeDupSort(table string, key []byte, fromPrefix, toPrefix []byte, asc order.By, limit int) (iter.KV, error) {
+func (rtx *RocksTx) CHandle() unsafe.Pointer {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - CHandle")
 }
 
-func (r RocksTx) CHandle() unsafe.Pointer {
+func (rtx *RocksTx) BucketSize(table string) (uint64, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - BucketSize")
 }
 
-func (r RocksTx) BucketSize(table string) (uint64, error) {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) Put(table string, k, v []byte) error {
+	if rtx.readOnly {
+		return fmt.Errorf("put in read-only transaction")
+	}
+	var cfHandle *grocksdb.ColumnFamilyHandle
+	var exists bool
+	if cfHandle, exists = rtx.kv.cfHandles[table]; !exists {
+		return fmt.Errorf("cfHandle not found for table: %s", table)
+	}
+
+	err := rtx.kv.db.PutCF(rtx.wo, cfHandle, k, v)
+	return err
 }
 
-func (r RocksTx) Put(table string, k, v []byte) error {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) Delete(table string, k []byte) error {
+	if rtx.readOnly {
+		return fmt.Errorf("delete in read-only transaction")
+	}
+	var cfHandle *grocksdb.ColumnFamilyHandle
+	var exists bool
+	if cfHandle, exists = rtx.kv.cfHandles[table]; !exists {
+		return fmt.Errorf("cfHandle not found for table: %s", table)
+	}
+	err := rtx.kv.db.DeleteCF(rtx.wo, cfHandle, k)
+	return err
 }
 
-func (r RocksTx) Delete(table string, k []byte) error {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) ReadSequence(table string) (uint64, error) {
+	val, err := rtx.GetOne(kv.Sequence, []byte(table))
+	if err != nil {
+		return 0, err
+	}
+
+	var currentV uint64
+	if len(val) > 0 {
+		currentV = binary.BigEndian.Uint64(val)
+	}
+	return currentV, nil
 }
 
-func (r RocksTx) IncrementSequence(table string, amount uint64) (uint64, error) {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) IncrementSequence(table string, amount uint64) (uint64, error) {
+	val, err := rtx.GetOne(kv.Sequence, []byte(table))
+	if err != nil {
+		return 0, err
+	}
+
+	var currentV uint64 = 0
+	if len(val) > 0 {
+		currentV = binary.BigEndian.Uint64(val)
+	}
+	newVBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(newVBytes, currentV+amount)
+
+	err = rtx.Put(kv.Sequence, []byte(table), newVBytes)
+	if err != nil {
+		return 0, err
+	}
+	return currentV, nil
 }
 
-func (r RocksTx) Append(table string, k, v []byte) error {
+func (rtx *RocksTx) Append(table string, k, v []byte) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - Append")
 }
 
-func (r RocksTx) AppendDup(table string, k, v []byte) error {
+func (rtx *RocksTx) AppendDup(table string, k, v []byte) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - AppendDup")
 }
 
-func (r RocksTx) DropBucket(s string) error {
+func (rtx *RocksTx) DropBucket(s string) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - DropBucket")
 }
 
-func (r RocksTx) CreateBucket(s string) error {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) CreateBucket(name string) error {
+	if _, exists := rtx.kv.cfHandles[name]; exists {
+		return nil
+	}
+	cfHandle, err := rtx.kv.db.CreateColumnFamily(grocksdb.NewDefaultOptions(), name)
+	if err != nil {
+		return err
+	}
+	rtx.kv.cfHandles[name] = cfHandle
+	return nil
 }
 
-func (r RocksTx) ExistsBucket(s string) (bool, error) {
+func (rtx *RocksTx) ExistsBucket(s string) (bool, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - ExistsBucket")
 }
 
-func (r RocksTx) ClearBucket(s string) error {
+func (rtx *RocksTx) ClearBucket(s string) error {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - ClearBucket")
 }
 
-func (r RocksTx) RwCursor(table string) (kv.RwCursor, error) {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) RwCursor(table string) (kv.RwCursor, error) {
+	return rtx.stdCursor(table)
 }
 
-func (r RocksTx) RwCursorDupSort(table string) (kv.RwCursorDupSort, error) {
-	//TODO implement me
-	panic("implement me")
+func (rtx *RocksTx) stdCursor(table string) (kv.RwCursor, error) {
+	cfHandle, exists := rtx.kv.cfHandles[table]
+	if !exists {
+		return nil, fmt.Errorf("cfHandle not found for table: %s", table)
+	}
+	it := rtx.kv.db.NewIteratorCF(rtx.ro, cfHandle)
+
+	c := &RocksCursor{
+		tx: rtx,
+		id: rtx.id,
+		it: it,
+	}
+
+	return c, nil
 }
 
-func (r RocksTx) CollectMetrics() {
+func (rtx *RocksTx) RwCursorDupSort(table string) (kv.RwCursorDupSort, error) {
 	//TODO implement me
-	panic("implement me")
+	panic("implement me - RwCursorDupSort")
+}
+
+func (rtx *RocksTx) CollectMetrics() {
+	//TODO implement me
+	panic("implement me - CollectMetrics")
 }

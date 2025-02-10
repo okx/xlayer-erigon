@@ -25,7 +25,6 @@ type RocksDBOpts struct {
 	verbosity      kv.DBVerbosityLvl
 	readTxLimiter  *semaphore.Weighted
 	writeTxLimiter *semaphore.Weighted
-	inMem          bool
 	readOnly       bool
 	exclusive      bool
 	path           string
@@ -101,15 +100,12 @@ func (opts RocksDBOpts) RoTxsLimiter(l *semaphore.Weighted) RocksDBOpts {
 	opts.readTxLimiter = l
 	return opts
 }
+
 func (opts RocksDBOpts) DBVerbosity(v kv.DBVerbosityLvl) RocksDBOpts {
 	opts.verbosity = v
 	return opts
 }
 
-func (opts RocksDBOpts) InMem() RocksDBOpts {
-	opts.inMem = true
-	return opts
-}
 func (opts RocksDBOpts) Readonly() RocksDBOpts {
 	opts.readOnly = true
 	return opts

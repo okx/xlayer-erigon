@@ -186,11 +186,19 @@ func (m *Migrator) Apply(db kv.RwDB, dataDir string, logger log.Logger) error {
 		uniqueNameCheck[m.Migrations[i].Name] = true
 	}
 
+	logger.Info("Apply migrations",
+		"applied", len(applied),
+		"total", len(m.Migrations),
+		"pending", len(m.Migrations)-len(applied),
+		"migration_names", m.Migrations,
+	)
+
 	for i := range m.Migrations {
 		v := m.Migrations[i]
 		if _, ok := applied[v.Name]; ok {
 			continue
 		}
+		logger.Info("Apply migration", "Up", v.Up, "name", v.Name)
 
 		callbackCalled := false // commit function must be called if no error, protection against people's mistake
 
@@ -202,7 +210,7 @@ func (m *Migrator) Apply(db kv.RwDB, dataDir string, logger log.Logger) error {
 		}); err != nil {
 			return fmt.Errorf("migrator.Apply: %w", err)
 		}
-
+		logger.Info("filepath - nauman")
 		dirs.Tmp = filepath.Join(dirs.DataDir, "migrations", v.Name)
 		if err := v.Up(db, dirs, progress, func(tx kv.RwTx, key []byte, isDone bool) error {
 			if !isDone {
@@ -214,7 +222,7 @@ func (m *Migrator) Apply(db kv.RwDB, dataDir string, logger log.Logger) error {
 				return nil
 			}
 			callbackCalled = true
-
+			logger.Info("MarshalMigrationPayload - nauman")
 			stagesProgress, err := MarshalMigrationPayload(tx)
 			if err != nil {
 				return err
@@ -239,6 +247,8 @@ func (m *Migrator) Apply(db kv.RwDB, dataDir string, logger log.Logger) error {
 		}
 		logger.Info("Applied migration", "name", v.Name)
 	}
+	logger.Info("done nauman")
+	logger.Info("Update DB schema version - start")
 	if err := db.Update(context.Background(), func(tx kv.RwTx) error {
 		return rawdb.WriteDBSchemaVersion(tx)
 	}); err != nil {

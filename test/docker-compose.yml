@@ -107,12 +107,9 @@ services:
       - 9092:9095
     volumes:
       - ./data/seq/:/home/erigon/data/
-      - ./config/test.erigon.seq.config.yaml:/usr/src/app/config.yaml
-      - ./config/dynamic-mynetwork-allocs.json:/usr/src/app/dynamic-mynetwork-allocs.json
-      - ./config/dynamic-mynetwork-chainspec.json:/usr/src/app/dynamic-mynetwork-chainspec.json
-      - ./config/dynamic-mynetwork-conf.json:/usr/src/app/dynamic-mynetwork-conf.json
+      - ./config/:/home/erigon/config/
     command: >
-      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/home/erigon/config/test.erigon.seq.config.yaml
 
   xlayer-rpc:
     container_name: xlayer-rpc
@@ -378,4 +375,3 @@ services:
       - ../cmd/prometheus/dashboards:/etc/grafana/provisioning/dashboards
       - ${XDG_DATA_HOME:-~/.local/share}/erigon-grafana:/var/lib/grafana
     restart: unless-stopped
-

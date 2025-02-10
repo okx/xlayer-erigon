@@ -245,8 +245,22 @@ func (rtx *RocksTx) AppendDup(table string, k, v []byte) error {
 }
 
 func (rtx *RocksTx) DropBucket(s string) error {
-	//TODO implement me
-	panic("implement me - DropBucket")
+	if rtx.readOnly {
+		return fmt.Errorf("drop in read-only transaction")
+	}
+	var cfHandle *grocksdb.ColumnFamilyHandle
+	var exists bool
+	if cfHandle, exists = rtx.kv.cfHandles[s]; !exists {
+		return nil
+	}
+
+	err := rtx.kv.db.DropColumnFamily(cfHandle)
+	if err != nil {
+		return err
+	}
+	cfHandle.Destroy()
+	delete(rtx.kv.cfHandles, s)
+	return nil
 }
 
 func (rtx *RocksTx) CreateBucket(name string) error {
@@ -267,8 +281,9 @@ func (rtx *RocksTx) ExistsBucket(s string) (bool, error) {
 }
 
 func (rtx *RocksTx) ClearBucket(s string) error {
-	//TODO implement me
-	panic("implement me - ClearBucket")
+	//TODO fix to clear instead of drop
+	return rtx.DropBucket(s)
+
 }
 
 func (rtx *RocksTx) RwCursor(table string) (kv.RwCursor, error) {

@@ -38,8 +38,8 @@ func (r RocksCursor) Prev() ([]byte, []byte, error) {
 
 func (r RocksCursor) Last() ([]byte, []byte, error) {
 	r.it.SeekToLast()
-	if it := r.it; it.Valid() {
-		return bytes.Clone(it.Key().Data()), bytes.Clone(it.Value().Data()), nil
+	if r.it.Valid() {
+		return bytes.Clone(r.it.Key().Data()), bytes.Clone(r.it.Value().Data()), nil
 	}
 	return nil, nil, nil
 }
@@ -55,8 +55,9 @@ func (r RocksCursor) Count() (uint64, error) {
 }
 
 func (r RocksCursor) Close() {
-	//TODO implement me
-	panic("implement me - Close")
+	if r.it != nil {
+		r.it.Close()
+	}
 }
 
 func (r RocksCursor) Put(k, v []byte) error {

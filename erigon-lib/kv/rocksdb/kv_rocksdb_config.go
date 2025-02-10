@@ -68,7 +68,6 @@ func (opts RocksDBOpts) Open(ctx context.Context) (kv.RwDB, error) {
 	}
 
 	customCf := opts.cfConfig(kv.ChaindataTablesCfg)
-	opts.log.Info("Configuration")
 	for name, cfg := range customCf {
 		kvStore.cf[name] = cfg
 	}

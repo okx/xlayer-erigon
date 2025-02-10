@@ -1,0 +1,216 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: defi-xlayer-egseq
+  namespace: forked-test2-xgon
+  uid: e66e14aa-fd1a-4b26-9199-51937da9fae6
+  resourceVersion: '614013994'
+  generation: 10
+  creationTimestamp: '2025-01-24T09:41:57Z'
+  labels:
+    app.okg.com/owner: efficiency-platform
+    k8slens-edit-resource-version: v1
+  annotations:
+    app.okg.com/app-category: UNKNOWN
+    deployment.kubernetes.io/revision: '8'
+  selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-egseq
+status:
+  observedGeneration: 10
+  replicas: 2
+  updatedReplicas: 1
+  unavailableReplicas: 2
+  conditions:
+    - type: Available
+      status: 'False'
+      lastUpdateTime: '2025-02-10T03:48:50Z'
+      lastTransitionTime: '2025-02-10T03:48:50Z'
+      reason: MinimumReplicasUnavailable
+      message: Deployment does not have minimum availability.
+    - type: Progressing
+      status: 'False'
+      lastUpdateTime: '2025-02-10T04:05:04Z'
+      lastTransitionTime: '2025-02-10T04:05:04Z'
+      reason: ProgressDeadlineExceeded
+      message: ReplicaSet "defi-xlayer-egseq-7fb98b94f8" has timed out progressing.
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.okcoin.com/name: defi-xlayer-egseq
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.okcoin.com/name: defi-xlayer-egseq
+      annotations:
+        kubectl.kubernetes.io/restartedAt: '2025-01-27T09:14:42Z'
+    spec:
+      volumes:
+        - name: shared-memory
+          emptyDir:
+            medium: Memory
+            sizeLimit: 8Gi
+        - name: java-gc
+          persistentVolumeClaim:
+            claimName: java-gc
+        - name: tools
+          persistentVolumeClaim:
+            claimName: tools
+        - name: prestop
+          persistentVolumeClaim:
+            claimName: prestop
+        - name: shared-tools
+          emptyDir: {}
+      containers:
+        - name: defi-xlayer-egseq
+          image: >-
+            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon:dev-3cd1091b-20250124142057
+          command:
+            - /bin/sh
+            - '-c'
+            - >-
+                mkdir -p /home/erigon/config &&
+                curl -s http://dev-xlayer:8080/erigon/erigon_seq.toml -o /home/erigon/config/config.yaml &&
+                curl -s http://dev-xlayer:8080/erigon/alloc.json -o /home/erigon/config/dynamic-mynetwork-allocs.json &&
+                curl -s http://dev-xlayer:8080/erigon/chainspec.json -o /home/erigon/config/dynamic-mynetwork-chainspec.json &&
+                curl -s http://dev-xlayer:8080/erigon/conf.json -o /home/erigon/config/dynamic-mynetwork-conf.json &&
+                cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/home/erigon/config/config.yaml
+          ports:
+            - name: 7001tcp
+              containerPort: 7001
+              protocol: TCP
+            - name: 6060tcp
+              containerPort: 6060
+              protocol: TCP
+            - name: 8545tcp
+              containerPort: 8545
+              protocol: TCP
+            - name: 6900tcp
+              containerPort: 6900
+              protocol: TCP
+            - name: 7006tcp
+              containerPort: 7006
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: apollo-config
+            - configMapRef:
+                name: nacos-config
+          env:
+            - name: CDK_ERIGON_SEQUENCER
+              value: '1'
+            - name: MY_APPLICATION_NAME
+              value: defi-xlayer-egseq
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: MY_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: APOLLO_CLUSTER
+              value: ${MY_POD_NAMESPACE}
+            - name: OKTS_LANE_ENABLE
+              value: 'true'
+            - name: OKTS_LANE_ID
+              value: $(MY_POD_NAMESPACE)
+            - name: OKTS_POD_NAME
+              value: $(MY_POD_NAME)
+            - name: OKTS_APP_NAME
+              value: $(MY_APPLICATION_NAME)
+            - name: MONITOR_OPTIONS
+              value: >-
+                -javaagent:/app/skywalking/agent/skywalking-agent.jar
+                -Dskywalking.agent.service_name=$(MY_APPLICATION_NAME)
+                -Dskywalking.agent.instance_name=$(MY_POD_IP)
+                -Dskywalking.agent.namespace=$(MY_POD_NAMESPACE)
+                -Dskywalking.collector.backend_service=test-apmswapi.okg.com:10000
+                -Dskywalking.collector.backend_http_service=test-apmswapi.okg.com:12800
+            - name: DEBUG_OPTIONS
+              value: >-
+                -agentlib:jdwp=transport=dt_socket,address=*:7006,server=y,suspend=n
+            - name: JAVA_OPTIONS
+              value: >-
+                --add-reads java.base=ALL-UNNAMED
+                -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/dumps
+                -XX:MaxRAMFraction=1 -Dfile.encoding=UTF8
+                -DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector
+                -Dspring.devtools.restart.enabled=false -Xdebug -Xnoagent
+                -Djava.compiler=NONE $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)
+            - name: JDK17_OPTIONS
+              value: >-
+                --add-reads java.base=ALL-UNNAMED
+                -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/dumps
+                -XX:MaxRAMFraction=1 -Dfile.encoding=UTF8
+                -DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector
+                -Dspring.devtools.restart.enabled=false -Xdebug -Xnoagent
+                -Djava.compiler=NONE $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq
+              value: plugin
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq_ttl
+              value: '1'
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq_detail
+              value: >-
+                {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-egseq":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
+          resources:
+            limits:
+              cpu: '4'
+              memory: 8Gi
+            requests:
+              cpu: '2'
+              memory: 4Gi
+          volumeMounts:
+            - name: shared-memory
+              mountPath: /dev/shm
+            - name: prestop
+              mountPath: /prestop
+            - name: java-gc
+              mountPath: /app/gc
+              subPathExpr: >-
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-egseq/$(MY_POD_NAME)/gc
+            - name: tools
+              mountPath: /tools
+            - name: java-gc
+              mountPath: /app/dumps
+              subPathExpr: >-
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-egseq/$(MY_POD_NAME)/dumps
+            - name: shared-tools
+              mountPath: /app/skywalking
+          lifecycle:
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          imagePullPolicy: Always
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - 'true'
+      schedulerName: default-scheduler
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 300

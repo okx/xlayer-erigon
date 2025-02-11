@@ -1456,10 +1456,11 @@ var (
 		Usage: "transaction count fetched from txpool each time",
 		Value: 1000,
 	}
-	LogTestFlag = cli.BoolFlag{
-		Name:  "log.test",
-		Usage: "Enable test logging",
-		Value: false,
+
+	OptimizationModeFlag = cli.StringFlag{
+		Name:  "optmode",
+		Usage: "Optimization mode of erigon",
+		Value: "default",
 	}
 )
 

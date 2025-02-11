@@ -101,7 +101,8 @@ type Zk struct {
 	WitnessCacheLimit              uint64
 	WitnessContractInclusion       []common.Address
 
-	LogTest bool
+	OptimizationMode string
+	Optimizations    OptimizationConfig
 }
 
 var DefaultZkConfig = Zk{

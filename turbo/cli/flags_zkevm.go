@@ -229,8 +229,9 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		MockWitnessGeneration:                  ctx.Bool(utils.MockWitnessGeneration.Name),
 		WitnessCacheLimit:                      witnessCacheLimit,
 		WitnessContractInclusion:               witnessInclusion,
-		LogTest:                                ctx.Bool(utils.LogTestFlag.Name),
 	}
+
+	ethconfig.ApplyOptimizationModeConfig(cfg.Zk, ctx.String(utils.OptimizationModeFlag.Name))
 
 	// For X Layer
 	ApplyFlagsForEthXLayerConfig(ctx, cfg)

@@ -2,13 +2,14 @@ package rocksdb
 
 import (
 	"bytes"
+
 	"github.com/linxGnu/grocksdb"
 )
 
 type RocksCursor struct {
 	tx *RocksTx
-	id uint64
-	it *grocksdb.Iterator
+
+	itr *grocksdb.Iterator
 }
 
 func (r RocksCursor) First() ([]byte, []byte, error) {
@@ -37,9 +38,9 @@ func (r RocksCursor) Prev() ([]byte, []byte, error) {
 }
 
 func (r RocksCursor) Last() ([]byte, []byte, error) {
-	r.it.SeekToLast()
-	if r.it.Valid() {
-		return bytes.Clone(r.it.Key().Data()), bytes.Clone(r.it.Value().Data()), nil
+	r.itr.SeekToLast()
+	if r.itr.Valid() {
+		return bytes.Clone(r.itr.Key().Data()), bytes.Clone(r.itr.Value().Data()), nil
 	}
 	return nil, nil, nil
 }
@@ -55,8 +56,8 @@ func (r RocksCursor) Count() (uint64, error) {
 }
 
 func (r RocksCursor) Close() {
-	if r.it != nil {
-		r.it.Close()
+	if r.itr != nil {
+		r.itr.Close()
 	}
 }
 

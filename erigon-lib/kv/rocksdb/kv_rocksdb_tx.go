@@ -14,18 +14,9 @@ import (
 /*Not actually using RocksDB Tx just implementing interface*/
 
 type RocksTx struct {
-	db    *RocksKV
-	batch *grocksdb.WriteBatch
+	db *RocksKV
 
-	//id  uint64
-	//kv  *RocksKV
-	//ctx context.Context
-	//
-	//wo       *grocksdb.WriteOptions
-	//ro       *grocksdb.ReadOptions
-	//fo       *grocksdb.FlushOptions
-	//readOnly bool
-	//complete bool
+	batch *grocksdb.WriteBatch
 }
 
 func NewRocksDBBatch(db *RocksKV) *RocksTx {
@@ -71,18 +62,7 @@ func (rtx *RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
 }
 
 func (rtx *RocksTx) ForEach(table string, fromPrefix []byte, walker func(k []byte, v []byte) error) error {
-	cfHandle, exists := rtx.kv.cfHandles[table]
-	if !exists {
-		return fmt.Errorf("cfHandle not found for table: %s", table)
-	}
-	it := rtx.kv.db.NewIteratorCF(rtx.ro, cfHandle)
-	defer it.Close()
-
-	for it.Seek(fromPrefix); it.Valid(); it.Next() {
-		if err := walker(it.Key().Data(), it.Value().Data()); err != nil {
-			return err
-		}
-	}
+	panic("implement me - ForEach")
 	return nil
 }
 
@@ -97,35 +77,27 @@ func (rtx *RocksTx) ForAmount(table string, prefix []byte, amount uint32, walker
 }
 
 func (rtx *RocksTx) Commit() error {
-	if rtx.complete {
-		return nil
+	rtx.assertOpen()
+	err := rtx.db.db.Write(rtx.db.wo, rtx.batch)
+	if err != nil {
+		return err
 	}
-	rtx.complete = true
-	rtx.kv.trackTxEnd()
-	rtx.kv.leakDetector.Del(rtx.id)
-	rtx.ro.Destroy()
-	if !rtx.readOnly {
-		rtx.wo.Destroy()
-	}
+	rtx.Close()
+	return nil
+}
 
-	err := rtx.kv.db.Flush(rtx.fo)
-	rtx.fo.Destroy()
-	return err
+// Close implements Batch.
+func (rtx *RocksTx) Close() {
+	if rtx.batch != nil {
+		rtx.batch.Destroy()
+		rtx.batch = nil
+	}
 }
 
 func (rtx *RocksTx) Rollback() {
-	if rtx.complete {
-		return
+	if rtx.batch != nil {
+		rtx.batch.Clear()
 	}
-
-	rtx.complete = true
-	rtx.kv.trackTxEnd()
-	rtx.ro.Destroy()
-	if !rtx.readOnly {
-		rtx.wo.Destroy()
-	}
-
-	rtx.kv.leakDetector.Del(rtx.id)
 	return
 }
 
@@ -189,30 +161,15 @@ func (rtx *RocksTx) BucketSize(table string) (uint64, error) {
 }
 
 func (rtx *RocksTx) Put(table string, k, v []byte) error {
-	if rtx.readOnly {
-		return fmt.Errorf("put in read-only transaction")
-	}
-	var cfHandle *grocksdb.ColumnFamilyHandle
-	var exists bool
-	if cfHandle, exists = rtx.kv.cfHandles[table]; !exists {
-		return fmt.Errorf("cfHandle not found for table: %s", table)
-	}
-
-	err := rtx.kv.db.PutCF(rtx.wo, cfHandle, k, v)
-	return err
+	rtx.assertOpen()
+	rtx.batch.Put(k, v)
+	return nil
 }
 
 func (rtx *RocksTx) Delete(table string, k []byte) error {
-	if rtx.readOnly {
-		return fmt.Errorf("delete in read-only transaction")
-	}
-	var cfHandle *grocksdb.ColumnFamilyHandle
-	var exists bool
-	if cfHandle, exists = rtx.kv.cfHandles[table]; !exists {
-		return fmt.Errorf("cfHandle not found for table: %s", table)
-	}
-	err := rtx.kv.db.DeleteCF(rtx.wo, cfHandle, k)
-	return err
+	rtx.assertOpen()
+	rtx.batch.Delete(k)
+	return nil
 }
 
 func (rtx *RocksTx) ReadSequence(table string) (uint64, error) {
@@ -259,33 +216,12 @@ func (rtx *RocksTx) AppendDup(table string, k, v []byte) error {
 }
 
 func (rtx *RocksTx) DropBucket(s string) error {
-	if rtx.readOnly {
-		return fmt.Errorf("drop in read-only transaction")
-	}
-	var cfHandle *grocksdb.ColumnFamilyHandle
-	var exists bool
-	if cfHandle, exists = rtx.kv.cfHandles[s]; !exists {
-		return nil
-	}
-
-	err := rtx.kv.db.DropColumnFamily(cfHandle)
-	if err != nil {
-		return err
-	}
-	cfHandle.Destroy()
-	delete(rtx.kv.cfHandles, s)
+	panic("implement me - DropBucket")
 	return nil
 }
 
 func (rtx *RocksTx) CreateBucket(name string) error {
-	if _, exists := rtx.kv.cfHandles[name]; exists {
-		return nil
-	}
-	cfHandle, err := rtx.kv.db.CreateColumnFamily(grocksdb.NewDefaultOptions(), name)
-	if err != nil {
-		return err
-	}
-	rtx.kv.cfHandles[name] = cfHandle
+	panic("implement me - CreateBucket")
 	return nil
 }
 
@@ -305,18 +241,11 @@ func (rtx *RocksTx) RwCursor(table string) (kv.RwCursor, error) {
 }
 
 func (rtx *RocksTx) stdCursor(table string) (kv.RwCursor, error) {
-	cfHandle, exists := rtx.kv.cfHandles[table]
-	if !exists {
-		return nil, fmt.Errorf("cfHandle not found for table: %s", table)
-	}
-	it := rtx.kv.db.NewIteratorCF(rtx.ro, cfHandle)
-
+	itr := rtx.db.db.NewIterator(rtx.db.ro)
 	c := &RocksCursor{
-		tx: rtx,
-		id: rtx.id,
-		it: it,
+		tx:  rtx,
+		itr: itr,
 	}
-
 	return c, nil
 }
 

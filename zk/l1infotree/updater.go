@@ -137,10 +137,15 @@ LOOP:
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	processed := 0
-
-	tree, err := InitialiseL1InfoTree(hermezDb)
-	if err != nil {
-		return nil, fmt.Errorf("InitialiseL1InfoTree: %w", err)
+	var tree *L1InfoTree
+	if len(allLogs) > 0 {
+		log.Info(fmt.Sprintf("[%s] Processing %d logs", logPrefix, len(allLogs)))
+		tree, err = InitialiseL1InfoTree(hermezDb)
+		if err != nil {
+			return nil, fmt.Errorf("InitialiseL1InfoTree: %w", err)
+		}
+	} else {
+		log.Info(fmt.Sprintf("[%s] No logs to process", logPrefix))
 	}
 
 	// process the logs in chunks

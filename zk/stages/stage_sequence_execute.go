@@ -69,9 +69,6 @@ func sequencingBatchStep(
 	historyCfg stagedsync.HistoryCfg,
 	resequenceBatchJob *ResequenceBatchJob,
 ) (err error) {
-	if cfg.zk.Optimizations.NewOptimization {
-		log.Info("NewOptimization is true")
-	}
 
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))

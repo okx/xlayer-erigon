@@ -3,70 +3,51 @@ package rocksdb
 import (
 	"context"
 	"fmt"
-	"github.com/ledgerwatch/erigon-lib/common/dbg"
-	"github.com/ledgerwatch/erigon-lib/kv"
-	"github.com/ledgerwatch/log/v3"
-	"github.com/linxGnu/grocksdb"
-	"golang.org/x/sync/semaphore"
 	"sync"
-	"sync/atomic"
-	"time"
 	"unsafe"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
+	"github.com/linxGnu/grocksdb"
 )
 
 var pathDbMap = map[string]kv.RoDB{}
 var pathDbMapLock sync.Mutex
 
 type RocksKV struct {
-	db  *grocksdb.DB
-	log log.Logger
+	db     *grocksdb.DB
+	ro     *grocksdb.ReadOptions
+	wo     *grocksdb.WriteOptions
+	woSync *grocksdb.WriteOptions
 
-	readTxLimiter  *semaphore.Weighted // does limit amount of concurrent Ro transactions - in most casess runtime.NumCPU() is good value for this channel capacity - this channel can be shared with other components (like Decompressor)
-	writeTxLimiter *semaphore.Weighted
-	opts           RocksDBOpts
-	txSize         uint64
-	closed         atomic.Bool
-	path           string
-
-	txsCount              uint
-	txsCountMutex         *sync.Mutex
-	txsAllDoneOnCloseCond *sync.Cond
-
-	leakDetector *dbg.LeakDetector
-
-	// MaxBatchSize is the maximum size of a batch. Default value is
-	// copied from DefaultMaxBatchSize in Open.
+	//db  *grocksdb.DB
+	//log log.Logger
 	//
-	// If <=0, disables batching.
+	//opts   RocksDBOpts
+	//txSize uint64
+	//closed atomic.Bool
+	//path   string
 	//
-	// Do not change concurrently with calls to Batch.
-	MaxBatchSize int
-
-	// MaxBatchDelay is the maximum delay before a batch starts.
-	// Default value is copied from DefaultMaxBatchDelay in Open.
+	//txsCount              uint
+	//txsCountMutex         *sync.Mutex
+	//txsAllDoneOnCloseCond *sync.Cond
 	//
-	// If <=0, effectively disables batching.
+	//leakDetector *dbg.LeakDetector
 	//
-	// Do not change concurrently with calls to Batch.
-	MaxBatchDelay time.Duration
-
-	batchMu sync.Mutex
-
-	cfHandles map[string]*grocksdb.ColumnFamilyHandle
-	cf        kv.TableCfg
+	//batchMu sync.Mutex
+	//
+	//cf kv.TableCfg
 }
 
 func (kv *RocksKV) Close() {
-	if ok := kv.closed.CompareAndSwap(false, true); !ok {
-		return
-	}
+	kv.ro.Destroy()
+	kv.wo.Destroy()
+	kv.woSync.Destroy()
 	kv.db.Close()
-
-	removeFromPathDbMap(kv.path)
+	return
 }
 
 func (kv *RocksKV) ReadOnly() bool {
-	return kv.opts.readOnly
+	return false
 }
 
 func (kv *RocksKV) View(ctx context.Context, f func(tx kv.Tx) error) (err error) {
@@ -80,32 +61,7 @@ func (kv *RocksKV) View(ctx context.Context, f func(tx kv.Tx) error) (err error)
 }
 
 func (kv *RocksKV) BeginRo(ctx context.Context) (txn kv.Tx, err error) {
-	if !kv.trackTxBegin() {
-		return nil, fmt.Errorf("db is closed")
-	}
-
-	//if semErr := kv.readTxLimiter.Acquire(ctx, 1); semErr != nil {
-	//	return nil, fmt.Errorf("rocksdb.RocksKV.BeginRo: roTxsLimiter error %w", semErr)
-	//}
-
-	defer func() {
-		if txn == nil {
-			//kv.readTxLimiter.Release(1)
-			kv.trackTxEnd()
-		}
-	}()
-	ro := grocksdb.NewDefaultReadOptions()
-	fo := grocksdb.NewDefaultFlushOptions()
-	return &RocksTx{
-		ctx:      ctx,
-		kv:       kv,
-		readOnly: true,
-		id:       kv.leakDetector.Add(),
-		ro:       ro,
-		wo:       nil,
-		complete: false,
-		fo:       fo,
-	}, nil
+	return NewRocksDBBatch(kv), nil
 }
 
 func (kv *RocksKV) BeginRoNosync(ctx context.Context) (kv.Tx, error) {

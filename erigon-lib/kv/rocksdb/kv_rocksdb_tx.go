@@ -1,7 +1,7 @@
 package rocksdb
 
 import (
-	"context"
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -14,46 +14,60 @@ import (
 /*Not actually using RocksDB Tx just implementing interface*/
 
 type RocksTx struct {
-	id       uint64
-	kv       *RocksKV
-	ctx      context.Context
-	wo       *grocksdb.WriteOptions
-	ro       *grocksdb.ReadOptions
-	fo       *grocksdb.FlushOptions
-	readOnly bool
-	complete bool
+	db    *RocksKV
+	batch *grocksdb.WriteBatch
+
+	//id  uint64
+	//kv  *RocksKV
+	//ctx context.Context
+	//
+	//wo       *grocksdb.WriteOptions
+	//ro       *grocksdb.ReadOptions
+	//fo       *grocksdb.FlushOptions
+	//readOnly bool
+	//complete bool
+}
+
+func NewRocksDBBatch(db *RocksKV) *RocksTx {
+	return &RocksTx{
+		db:    db,
+		batch: grocksdb.NewWriteBatch(),
+	}
+}
+
+func (b *RocksTx) assertOpen() {
+	if b.batch == nil {
+		panic("batch has been written or closed")
+	}
 }
 
 func (rtx *RocksTx) Has(table string, key []byte) (bool, error) {
-	if cfHandle, exists := rtx.kv.cfHandles[table]; exists {
-		psh, err := rtx.kv.db.GetPinnedCF(rtx.ro, cfHandle, key)
-		defer psh.Destroy()
-		//sh, err := r.kv.db.GetCF(r.ro, cfHandle, key)
-		if err != nil {
-			return false, err
-		}
-		return psh.Exists(), nil
-	} else {
-		return false, fmt.Errorf("table/cf %s not found", table)
+	iterator := rtx.batch.NewIterator()
+	if err := iterator.Record(); err != nil {
+		return false, fmt.Errorf("iterate batch: %w", err)
 	}
+	for iterator.Next() {
+		if bytes.Compare(iterator.Record().Key, key) == 0 {
+			return true, nil
+		}
+	}
+
+	return true, nil
+
 }
 
 func (rtx *RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
-	if cfHandle, exists := rtx.kv.cfHandles[table]; exists {
-		var psh *grocksdb.Slice
-		psh, err = rtx.kv.db.GetCF(rtx.ro, cfHandle, key)
-		if err != nil {
-			return nil, err
-		}
-
-		if !psh.Exists() {
-			return nil, nil
-		}
-
-		return psh.Data(), nil
-	} else {
-		return nil, fmt.Errorf("table %s not found", table)
+	iterator := rtx.batch.NewIterator()
+	if err := iterator.Record(); err != nil {
+		return nil, fmt.Errorf("iterate batch: %w", err)
 	}
+	for iterator.Next() {
+		if bytes.Compare(iterator.Record().Key, key) == 0 {
+			return iterator.Record().Value, nil
+		}
+	}
+
+	return nil, nil
 }
 
 func (rtx *RocksTx) ForEach(table string, fromPrefix []byte, walker func(k []byte, v []byte) error) error {

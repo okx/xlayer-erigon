@@ -27,8 +27,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/semaphore"
-
 	"github.com/ledgerwatch/erigon-lib/common/datadir"
 
 	"github.com/ledgerwatch/erigon/cmd/utils"
@@ -319,23 +317,17 @@ func OpenDatabase(ctx context.Context, config *nodecfg.Config, label kv.Label, n
 
 	logger.Info("Opening Database", "label", name, "path", dbPath)
 	openFunc := func(exclusive bool) (kv.RwDB, error) {
-		roTxLimit := int64(32)
-		if config.Http.DBReadConcurrency > 0 {
-			roTxLimit = int64(config.Http.DBReadConcurrency)
-		}
-		roTxsLimiter := semaphore.NewWeighted(roTxLimit) // 1 less than max to allow unlocking to happen
+		//roTxLimit := int64(32)
+		//if config.Http.DBReadConcurrency > 0 {
+		//	roTxLimit = int64(config.Http.DBReadConcurrency)
+		//}
+		//roTxsLimiter := semaphore.NewWeighted(roTxLimit) // 1 less than max to allow unlocking to happen
 		//opts2 := mdbx.NewMDBX(logger).
 		//	Path(dbPath).Label(label).
 		//	GrowthStep(16 * datasize.MB).
 		//	DBVerbosity(config.DatabaseVerbosity).RoTxsLimiter(roTxsLimiter)
 
-		opts := rocksdb.NewRocksDBOpts(logger).Label(label).Path(dbPath).DBVerbosity(config.DatabaseVerbosity).RoTxsLimiter(roTxsLimiter)
-		if readonly {
-			opts = opts.Readonly()
-		}
-		if exclusive {
-			opts = opts.Exclusive()
-		}
+		opts := rocksdb.NewRocksDBOpts(logger).Label(label).Path(dbPath).DBVerbosity(config.DatabaseVerbosity)
 
 		switch label {
 		case kv.ChainDB:

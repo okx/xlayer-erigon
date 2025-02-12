@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: defi-xlayer-egseq
+  name: defi-xlayer-rpc
   namespace: forked-test2-xgon
-  uid: e66e14aa-fd1a-4b26-9199-51937da9fae6
-  resourceVersion: '618412921'
-  generation: 23
-  creationTimestamp: '2025-01-24T09:41:57Z'
+  uid: 8be99a0c-af8c-419e-9bb0-374b08b70d41
+  resourceVersion: '618409379'
+  generation: 5
+  creationTimestamp: '2025-02-11T08:14:11Z'
   labels:
     app.okg.com/owner: efficiency-platform
     k8slens-edit-resource-version: v1
   annotations:
     app.okg.com/app-category: UNKNOWN
-    deployment.kubernetes.io/revision: '21'
-  selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-egseq
+    deployment.kubernetes.io/revision: '5'
+  selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-rpc
 status:
-  observedGeneration: 23
+  observedGeneration: 5
   replicas: 1
   updatedReplicas: 1
   readyReplicas: 1
@@ -23,33 +23,31 @@ status:
   conditions:
     - type: Available
       status: 'True'
-      lastUpdateTime: '2025-02-11T08:36:27Z'
-      lastTransitionTime: '2025-02-11T08:36:27Z'
+      lastUpdateTime: '2025-02-12T03:52:20Z'
+      lastTransitionTime: '2025-02-12T03:52:20Z'
       reason: MinimumReplicasAvailable
       message: Deployment has minimum availability.
     - type: Progressing
       status: 'True'
-      lastUpdateTime: '2025-02-12T03:54:46Z'
-      lastTransitionTime: '2025-02-11T06:58:41Z'
+      lastUpdateTime: '2025-02-12T03:52:20Z'
+      lastTransitionTime: '2025-02-11T08:14:11Z'
       reason: NewReplicaSetAvailable
-      message: ReplicaSet "defi-xlayer-egseq-85dcfb678c" has successfully progressed.
+      message: ReplicaSet "defi-xlayer-rpc-5996d57bb5" has successfully progressed.
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.okcoin.com/name: defi-xlayer-egseq
+      app.okcoin.com/name: defi-xlayer-rpc
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app.okcoin.com/name: defi-xlayer-egseq
-      annotations:
-        kubectl.kubernetes.io/restartedAt: '2025-02-10T06:50:35Z'
+        app.okcoin.com/name: defi-xlayer-rpc
     spec:
       volumes:
         - name: data
           persistentVolumeClaim:
-            claimName: defi-xlayer-egseq-pvc
+            claimName: defi-xlayer-rpc-pvc
         - name: shared-memory
           emptyDir:
             medium: Memory
@@ -66,15 +64,15 @@ spec:
         - name: shared-tools
           emptyDir: {}
       containers:
-        - name: defi-xlayer-egseq
+        - name: defi-xlayer-rpc
           image: >-
-            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon@sha256:7bb40f0b83bfdd6a2afa0cb33d62ecf62744a83167126866295b35e159c3bc10
+            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon:dev-86fc53f3-20250207223106
           command:
             - /bin/sh
             - '-c'
             - >-
               mkdir -p /home/erigon/config && curl -s
-              http://dev-xlayer:8080/erigon/erigon_seq.yaml -o
+              http://dev-xlayer:8080/erigon/erigon_rpc.yaml -o
               /home/erigon/config/config.yaml && curl -s
               http://dev-xlayer:8080/erigon/alloc.json -o
               /home/erigon/config/dynamic-mynetwork-allocs.json && curl -s
@@ -85,20 +83,17 @@ spec:
               --http.vhosts=* --http.corsdomain=* --ws
               --config=/home/erigon/config/config.yaml
           ports:
-            - name: 7001tcp
-              containerPort: 7001
-              protocol: TCP
-            - name: 6060tcp
+            - name: pprof
               containerPort: 6060
               protocol: TCP
-            - name: 8545tcp
+            - name: metrics
+              containerPort: 7001
+              protocol: TCP
+            - name: blockchain
               containerPort: 8545
               protocol: TCP
-            - name: 6900tcp
+            - name: datastream
               containerPort: 6900
-              protocol: TCP
-            - name: 7006tcp
-              containerPort: 7006
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -106,10 +101,8 @@ spec:
             - configMapRef:
                 name: nacos-config
           env:
-            - name: CDK_ERIGON_SEQUENCER
-              value: '1'
             - name: MY_APPLICATION_NAME
-              value: defi-xlayer-egseq
+              value: defi-xlayer-rpc
             - name: MY_POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -152,35 +145,23 @@ spec:
               value: >-
                 -agentlib:jdwp=transport=dt_socket,address=*:7006,server=y,suspend=n
             - name: JAVA_OPTIONS
-              value: >-
-                --add-reads java.base=ALL-UNNAMED
-                -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/dumps
-                -XX:MaxRAMFraction=1 -Dfile.encoding=UTF8
-                -DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector
-                -Dspring.devtools.restart.enabled=false -Xdebug -Xnoagent
-                -Djava.compiler=NONE $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)
+              value: '@{javaOptions} $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)'
             - name: JDK17_OPTIONS
-              value: >-
-                --add-reads java.base=ALL-UNNAMED
-                -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/app/dumps
-                -XX:MaxRAMFraction=1 -Dfile.encoding=UTF8
-                -DLog4jContextSelector=org.apache.logging.log4j.core.selector.ClassLoaderContextSelector
-                -Dspring.devtools.restart.enabled=false -Xdebug -Xnoagent
-                -Djava.compiler=NONE $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq
+              value: '@{javaOptions} $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)'
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc
               value: plugin
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq_ttl
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc_ttl
               value: '1'
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-egseq_detail
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc_detail
               value: >-
-                {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-egseq":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
+                {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-rpc":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
           resources:
             limits:
-              cpu: '4'
-              memory: 8Gi
-            requests:
               cpu: '2'
               memory: 4Gi
+            requests:
+              cpu: '1'
+              memory: 2Gi
           volumeMounts:
             - name: data
               mountPath: /home/erigon
@@ -191,13 +172,13 @@ spec:
             - name: java-gc
               mountPath: /app/gc
               subPathExpr: >-
-                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-egseq/$(MY_POD_NAME)/gc
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-rpc/$(MY_POD_NAME)/gc
             - name: tools
               mountPath: /tools
             - name: java-gc
               mountPath: /app/dumps
               subPathExpr: >-
-                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-egseq/$(MY_POD_NAME)/dumps
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-rpc/$(MY_POD_NAME)/dumps
             - name: shared-tools
               mountPath: /app/skywalking
           terminationMessagePath: /dev/termination-log

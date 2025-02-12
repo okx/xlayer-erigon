@@ -379,41 +379,39 @@ func sequencingBatchStep(
 						return err
 					}
 
-					hashResults := make([]common.Hash, len(newTransactions))
-					var wg sync.WaitGroup
-
-					for idx, tx := range newTransactions {
-						wg.Add(1)
-						go func(idx int, tx types.Transaction) {
-							defer wg.Done()
-							hashResults[idx] = tx.Hash()
-						}(idx, tx)
-					}
-
-					wg.Wait()
-
-					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
-					for idx, hash := range hashResults {
-						batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
-					}
-
-					if len(batchState.blockState.transactionsForInclusion) == 0 {
+					if len(newTransactions) == 0 {
 						if allConditionsOK {
+							log.Info(fmt.Sprintf("[%s] Sleep for %v ms", logPrefix, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds()))
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
+
 						} else {
+							log.Info(fmt.Sprintf("[%s] Sleep for %v ms", logPrefix, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds()/5))
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
 						}
 					} else {
-						log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
+						hashResults := make([]common.Hash, len(newTransactions))
+						var wg sync.WaitGroup
+
+						for idx, tx := range newTransactions {
+							wg.Add(1)
+							go func(idx int, tx types.Transaction) {
+								defer wg.Done()
+								hashResults[idx] = tx.Hash()
+							}(idx, tx)
+						}
+
+						wg.Wait()
+
+						batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+						for idx, hash := range hashResults {
+							batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+						}
+
+						log.Info(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 					}
 				}
 
 				start := time.Now()
-				if len(batchState.blockState.transactionsForInclusion) == 0 {
-					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
-				} else {
-					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
-				}
 
 				badTxHashes := make([]common.Hash, 0)
 				minedTxHashes := make([]common.Hash, 0)

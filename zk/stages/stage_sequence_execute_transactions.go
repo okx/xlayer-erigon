@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ledgerwatch/erigon-lib/common"
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -102,48 +101,57 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 	}
 
 	results := make([]*result, len(slot.Txs))
-	var wg sync.WaitGroup
 
+	// we do this in sequnce to avoid concurrent map writes
 	for idx, txBytes := range slot.Txs {
-		wg.Add(1)
-		go func(idx int, txBytes []byte) {
-			defer wg.Done()
+		cryptoContext := secp256k1.ContextForThread(1)
 
-			cryptoContext := secp256k1.ContextForThread(1)
+		res := &result{index: idx}
 
-			res := &result{index: idx}
-
-			transaction, err := types.DecodeTransaction(txBytes)
+		var err error = nil
+		var transaction types.Transaction
+		txPtr, found := cfg.txCache[slot.TxIds[idx]]
+		if !found {
+			transaction, err = types.DecodeTransaction(txBytes)
 			if err == io.EOF {
 				res.toRemove = true
 				results[idx] = res
-				return
+				continue
 			}
-			if err != nil {
-				res.toRemove = true
-				res.id = slot.TxIds[idx]
-				res.err = err
-				results[idx] = res
-				return
-			}
-
-			sender, err := signer.SenderWithContext(cryptoContext, transaction)
-			if err != nil {
-				res.toRemove = true
-				res.id = slot.TxIds[idx]
-				res.err = err
-				results[idx] = res
-				return
-			}
-
-			transaction.SetSender(sender)
-			res.transaction = transaction
+			cfg.txCache[slot.TxIds[idx]] = &transaction
+		} else {
+			transaction = *txPtr
+		}
+		if err != nil {
+			res.toRemove = true
 			res.id = slot.TxIds[idx]
+			res.err = err
 			results[idx] = res
-		}(idx, txBytes)
-	}
+			continue
+		}
 
-	wg.Wait()
+		err = nil
+		var sender common.Address
+		senderPtr, found := cfg.senderCache[slot.TxIds[idx]]
+		if !found {
+			sender, err = signer.SenderWithContext(cryptoContext, transaction)
+			if err != nil {
+				res.toRemove = true
+				res.id = slot.TxIds[idx]
+				res.err = err
+				results[idx] = res
+				continue
+			}
+			cfg.senderCache[slot.TxIds[idx]] = &sender
+		} else {
+			sender = *senderPtr
+		}
+
+		transaction.SetSender(sender)
+		res.transaction = transaction
+		res.id = slot.TxIds[idx]
+		results[idx] = res
+	}
 
 	for _, res := range results {
 		if res.toRemove {

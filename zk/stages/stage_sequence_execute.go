@@ -397,7 +397,9 @@ func sequencingBatchStep(
 				}
 
 				if len(batchState.blockState.transactionsForInclusion) == 0 {
+					pauseTime := time.Now()
 					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
+					metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingPauseTiming, time.Since(pauseTime))
 				} else {
 					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 				}

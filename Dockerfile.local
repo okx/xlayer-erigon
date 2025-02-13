@@ -15,7 +15,7 @@ RUN apk --no-cache add \
     bzip2
 
 
-RUN git clone -b 9.8.fb https://github.com/facebook/rocksdb.git /rocksdb \
+RUN git clone --depth 1 -b 9.8.fb https://github.com/facebook/rocksdb.git /rocksdb \
     && cd /rocksdb \
     && make -j$(nproc) shared_lib \
     && cp librocksdb.* /usr/lib/ \

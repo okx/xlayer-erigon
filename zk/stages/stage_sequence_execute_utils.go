@@ -81,6 +81,8 @@ type SequenceBlockCfg struct {
 	yieldSize      uint16
 
 	infoTreeUpdater *l1infotree.Updater
+
+	txCache map[common.Hash]*types.Transaction
 }
 
 func StageSequenceBlocksCfg(
@@ -137,6 +139,7 @@ func StageSequenceBlocksCfg(
 		legacyVerifier:   legacyVerifier,
 		yieldSize:        yieldSize,
 		infoTreeUpdater:  infoTreeUpdater,
+		txCache:          make(map[common.Hash]*types.Transaction),
 	}
 }
 

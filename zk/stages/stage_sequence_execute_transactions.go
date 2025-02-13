@@ -85,9 +85,17 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 	toRemove := make([]common.Hash, 0)
 
 	for idx, txBytes := range slot.Txs {
-		transaction, err := types.DecodeTransaction(txBytes)
-		if err == io.EOF {
-			continue
+		var err error = nil
+		var transaction types.Transaction
+		txPtr, found := cfg.txCache[slot.TxIds[idx]]
+		if !found {
+			transaction, err = types.DecodeTransaction(txBytes)
+			if err == io.EOF {				
+				continue
+			}
+			cfg.txCache[slot.TxIds[idx]] = &transaction
+		} else {
+			transaction = *txPtr
 		}
 		if err != nil {
 			// we have a transaction that cannot be decoded or a similar issue.  We don't want to handle

@@ -31,6 +31,7 @@ zkevm.witness-full: false
 zkevm.sequencer-block-seal-time: "3s"
 zkevm.sequencer-batch-seal-time: "10s"
 zkevm.sequencer-batch-sleep-duration: "0s"
+zkevm.sequencer-timeout-on-empty-tx-pool: "50ms"
 
 zkevm.data-stream-host: "localhost"
 zkevm.data-stream-port: 6900

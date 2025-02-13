@@ -7,6 +7,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/linxGnu/grocksdb"
 	"regexp"
+	"strconv"
 )
 
 type RocksIterator struct {
@@ -18,6 +19,7 @@ type RocksIterator struct {
 }
 
 var DUP_REGEX = regexp.MustCompile(`:\d{4}$`)
+var KEY_ESTIMATE_PROP = "rocksdb.estimate-num-keys"
 
 func (r *RocksIterator) Seek(key []byte) (k []byte, v []byte, err error) {
 	if r.tableCfg.AutoDupSortKeysConversion {
@@ -40,11 +42,6 @@ func (r *RocksIterator) SeekExact(key []byte) ([]byte, []byte, error) {
 
 	//TODO implement me
 	panic("implement me - SeekExact")
-}
-
-func (r *RocksIterator) Next() ([]byte, []byte, error) {
-	//TODO implement me
-	panic("implement me - Next")
 }
 
 func (r *RocksIterator) Last() ([]byte, []byte, error) {
@@ -246,7 +243,31 @@ func (r *RocksIterator) First() ([]byte, []byte, error) {
 }
 
 func (r *RocksIterator) Count() (uint64, error) {
-	//TODO implement me
-	//Not sure if LSM Trees have a COUNT to show the exact number of records present in the database
-	panic("implement me - Count")
+	return strconv.ParseUint(r.tx.kv.db.GetPropertyCF(KEY_ESTIMATE_PROP, r.cfHandle), 10, 64)
+}
+
+func (r *RocksIterator) Next() ([]byte, []byte, error) {
+	k, v, err := r.next()
+	if err != nil {
+		return []byte{}, nil, fmt.Errorf("failed RocksDB Iterator.Next(): %w", err)
+	}
+	if v == nil {
+		return nil, nil, nil
+	}
+
+	cfg := r.tableCfg
+
+	if (r.tableCfg.Flags&mdbx.DupSort) == 1 && len(k) > 5 && DUP_REGEX.Match(k) {
+		k = k[:len(k)-5]
+	}
+
+	if cfg.AutoDupSortKeysConversion && len(k) == cfg.DupToLen {
+		keyPart := cfg.DupFromLen - cfg.DupToLen
+		if len(v) == 0 {
+			return nil, nil, fmt.Errorf("key with empty value: k=%x, len(k)=%d, v=%x", k, len(k), v)
+		}
+		k = append(k, v[:keyPart]...)
+		v = v[keyPart:]
+	}
+	return k, v, nil
 }

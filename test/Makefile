@@ -207,6 +207,8 @@ lrp-mainnet: build-docker configure-lrp
 	$(RUN_DOCKER_MAINNET_LRP_UNWIND)
 	docker wait $(DOCKER_MAINNET_LRP_UNWIND)
 	docker logs $(DOCKER_MAINNET_LRP_UNWIND) > $(UNWIND_LOG_FILE) 2>&1
+	# $(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	# sleep 3
 	$(RUN_DOCKER_MAINNET_LRP_RESEQUENCE)
 
 .PHONY: lrp-mainnet-unwind
@@ -217,6 +219,8 @@ lrp-mainnet-unwind: build-docker configure-lrp
 
 .PHONY: lrp-mainnet-post-unwind
 lrp-mainnet-post-unwind: build-docker
+	# $(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	# sleep 3
 	$(RUN_DOCKER_MAINNET_LRP_RESEQUENCE)
 
 .PHONY: lrp-mainnet-check

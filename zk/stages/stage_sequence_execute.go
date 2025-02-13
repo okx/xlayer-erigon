@@ -325,7 +325,7 @@ func sequencingBatchStep(
 
 		innerBreak := false
 		emptyBlockOverflow := false
-
+		start := time.Now()
 	OuterLoopTransactions:
 		for {
 			if innerBreak {
@@ -385,8 +385,10 @@ func sequencingBatchStep(
 
 					if len(batchState.blockState.transactionsForInclusion) == 0 {
 						if allConditionsOK {
+							metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 						} else {
+							metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool/5)
 							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
 						}
 					} else {
@@ -394,7 +396,6 @@ func sequencingBatchStep(
 					}
 				}
 
-				start := time.Now()
 				if len(batchState.blockState.transactionsForInclusion) == 0 {
 					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 				} else {
@@ -559,10 +560,6 @@ func sequencingBatchStep(
 					}
 				}
 
-				// For X Layer
-				metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
-				metrics.SeqTxDuration.Observe(float64(time.Since(start).Milliseconds()))
-
 				// remove bad and mined transactions from the list for inclusion
 				for i := len(batchState.blockState.transactionsForInclusion) - 1; i >= 0; i-- {
 					tx := batchState.blockState.transactionsForInclusion[i]
@@ -599,7 +596,9 @@ func sequencingBatchStep(
 				}
 			}
 		}
-
+		// For X Layer
+		metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(start))
+		metrics.SeqTxDuration.Observe(float64(time.Since(start).Milliseconds()))
 		// we do not want to commit this block if it has no transactions and we detected an overflow - essentially the batch is too
 		// full to get any more transactions in it and we don't want to commit an empty block
 		if emptyBlockOverflow {
@@ -646,7 +645,7 @@ func sequencingBatchStep(
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
-		start := time.Now()
+		start = time.Now()
 		if !batchState.isL1Recovery() {
 			// commit block data here so it is accessible in other threads
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {

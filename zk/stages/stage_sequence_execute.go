@@ -369,26 +369,15 @@ func sequencingBatchStep(
 						return err
 					}
 				} else if !batchState.isL1Recovery() {
-
-					var allConditionsOK bool
 					var newTransactions []types.Transaction
 					var newIds []common.Hash
 
-					newTransactions, newIds, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
+					newTransactions, newIds, _, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
 					if err != nil {
 						return err
 					}
 
-					if len(newTransactions) == 0 {
-						if allConditionsOK {
-							log.Info(fmt.Sprintf("[%s] Sleep for %v ms", logPrefix, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds()))
-							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
-
-						} else {
-							log.Info(fmt.Sprintf("[%s] Sleep for %v ms", logPrefix, batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds()/5))
-							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
-						}
-					} else {
+					if len(newTransactions) > 0 {
 						hashResults := make([]common.Hash, len(newTransactions))
 						var wg sync.WaitGroup
 
@@ -412,7 +401,12 @@ func sequencingBatchStep(
 				}
 
 				start := time.Now()
-
+				if len(batchState.blockState.transactionsForInclusion) == 0 {
+					log.Trace(fmt.Sprintf("[%s] Sleep on SequencerTimeoutOnEmptyTxPool", logPrefix), "time in ms", batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds())
+					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
+				} else {
+					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
+				}
 				badTxHashes := make([]common.Hash, 0)
 				minedTxHashes := make([]common.Hash, 0)
 
@@ -432,6 +426,22 @@ func sequencingBatchStep(
 					}
 
 					txHash := transaction.Hash()
+
+					if _, ok := transaction.GetSender(); !ok {
+						signer := types.MakeSigner(cfg.chainConfig, executionAt, 0)
+						sender, err := signer.Sender(transaction)
+						if err != nil {
+							log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
+								"error", err,
+								"hash", transaction.Hash())
+							badTxHashes = append(badTxHashes, txHash)
+							batchState.blockState.transactionsToDiscard = append(batchState.blockState.transactionsToDiscard, batchState.blockState.transactionHashesToSlots[txHash])
+							continue
+						}
+
+						transaction.SetSender(sender)
+					}
+
 					effectiveGas := batchState.blockState.getL1EffectiveGases(cfg, i)
 
 					// The copying of this structure is intentional

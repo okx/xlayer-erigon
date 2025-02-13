@@ -17,7 +17,6 @@ import (
 	"github.com/ledgerwatch/erigon/core/vm/evmtypes"
 	"github.com/ledgerwatch/erigon/zk/utils"
 	"github.com/ledgerwatch/log/v3"
-	"github.com/ledgerwatch/secp256k1"
 )
 
 func getNextPoolTransactions(ctx context.Context, cfg SequenceBlockCfg, executionAt, forkId uint64, alreadyYielded mapset.Set[[32]byte]) ([]types.Transaction, []common.Hash, bool, error) {
@@ -90,8 +89,6 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 	transactions := make([]types.Transaction, 0, len(slot.Txs))
 	toRemove := make([]common.Hash, 0)
 
-	signer := types.MakeSigner(cfg.chainConfig, currentHeight, 0)
-
 	type result struct {
 		index       int
 		transaction types.Transaction
@@ -104,8 +101,6 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 
 	// we do this in sequnce to avoid concurrent map writes
 	for idx, txBytes := range slot.Txs {
-		cryptoContext := secp256k1.ContextForThread(1)
-
 		res := &result{index: idx}
 
 		var err error = nil
@@ -130,24 +125,7 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 			continue
 		}
 
-		err = nil
-		var sender common.Address
-		senderPtr, found := cfg.senderCache[slot.TxIds[idx]]
-		if !found {
-			sender, err = signer.SenderWithContext(cryptoContext, transaction)
-			if err != nil {
-				res.toRemove = true
-				res.id = slot.TxIds[idx]
-				res.err = err
-				results[idx] = res
-				continue
-			}
-			cfg.senderCache[slot.TxIds[idx]] = &sender
-		} else {
-			sender = *senderPtr
-		}
-
-		transaction.SetSender(sender)
+		// Recover sender later only for those transactions that are included in the block
 		res.transaction = transaction
 		res.id = slot.TxIds[idx]
 		results[idx] = res

@@ -1,17 +1,17 @@
 package rocksdb
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"fmt"
+	"github.com/erigontech/mdbx-go/mdbx"
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/iter"
 	"github.com/ledgerwatch/erigon-lib/kv/order"
 	"github.com/linxGnu/grocksdb"
 	"unsafe"
 )
-
-/*Not actually using RocksDB Tx just implementing interface*/
 
 type RocksTx struct {
 	id       uint64
@@ -25,17 +25,15 @@ type RocksTx struct {
 }
 
 func (rtx *RocksTx) Has(table string, key []byte) (bool, error) {
-	if cfHandle, exists := rtx.kv.cfHandles[table]; exists {
-		psh, err := rtx.kv.db.GetPinnedCF(rtx.ro, cfHandle, key)
-		defer psh.Destroy()
-		//sh, err := r.kv.db.GetCF(r.ro, cfHandle, key)
-		if err != nil {
-			return false, err
-		}
-		return psh.Exists(), nil
-	} else {
-		return false, fmt.Errorf("table/cf %s not found", table)
+	c, err := rtx.stdCursor(table)
+	if err != nil {
+		return false, err
 	}
+	k, _, err := c.Seek(key)
+	if err != nil {
+		return false, err
+	}
+	return bytes.Equal(key, k), nil
 }
 
 func (rtx *RocksTx) GetOne(table string, key []byte) (val []byte, err error) {
@@ -240,8 +238,18 @@ func (rtx *RocksTx) Append(table string, k, v []byte) error {
 }
 
 func (rtx *RocksTx) AppendDup(table string, k, v []byte) error {
-	//TODO implement me
-	panic("implement me - AppendDup")
+	if rtx.readOnly {
+		return fmt.Errorf("append dup in read-only transaction")
+	}
+	if rtx.complete {
+		return fmt.Errorf("append dup in complete transaction")
+	}
+
+	iterator, err := rtx.stdCursor(table)
+	if err != nil {
+		return err
+	}
+	return iterator.(*RocksDupSortIterator).AppendDup(k, v)
 }
 
 func (rtx *RocksTx) DropBucket(s string) error {
@@ -293,16 +301,28 @@ func (rtx *RocksTx) RwCursor(table string) (kv.RwCursor, error) {
 func (rtx *RocksTx) stdCursor(table string) (kv.RwCursor, error) {
 	cfHandle, exists := rtx.kv.cfHandles[table]
 	if !exists {
-		return nil, fmt.Errorf("cfHandle not found for table: %s", table)
+		return nil, fmt.Errorf("RocksIterator Creation Failed - cfHandle not found for table: %s", table)
 	}
 	it := rtx.kv.db.NewIteratorCF(rtx.ro, cfHandle)
 
-	c := &RocksCursor{
-		tx: rtx,
-		id: rtx.id,
-		it: it,
+	var tableCfgItem kv.TableCfgItem
+	if tableCfgItem, exists = rtx.kv.tableCfg[table]; !exists {
+		return nil, fmt.Errorf("RocksIterator Creation Failed - tableCfgItem not found for table: %s", table)
 	}
 
+	c := &RocksIterator{
+		tx:       rtx,
+		id:       rtx.id,
+		it:       it,
+		tableCfg: tableCfgItem,
+		cfHandle: cfHandle,
+	}
+
+	if tableCfgItem.Flags&mdbx.DupSort != 0 {
+		return &RocksDupSortIterator{
+			RocksIterator: c,
+		}, nil
+	}
 	return c, nil
 }
 

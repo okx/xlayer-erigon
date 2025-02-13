@@ -64,14 +64,14 @@ func (opts RocksDBOpts) Open(ctx context.Context) (kv.RwDB, error) {
 		txsCountMutex:         txsCountMutex,
 		txsAllDoneOnCloseCond: sync.NewCond(txsCountMutex),
 		leakDetector:          dbg.NewLeakDetector("db."+opts.label.String(), dbg.SlowTx()),
-		cf:                    kv.TableCfg{},
+		tableCfg:              kv.TableCfg{},
 	}
 
 	customCf := opts.cfConfig(kv.ChaindataTablesCfg)
 	for name, cfg := range customCf {
-		kvStore.cf[name] = cfg
+		kvStore.tableCfg[name] = cfg
 	}
-	cf := cfSlice(kvStore.cf)
+	cf := cfSlice(kvStore.tableCfg)
 
 	if err := kvStore.OpenDbColumnFamilies(cf, opts.path); err != nil {
 		return nil, err

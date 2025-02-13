@@ -34,26 +34,14 @@ type RocksKV struct {
 
 	leakDetector *dbg.LeakDetector
 
-	// MaxBatchSize is the maximum size of a batch. Default value is
-	// copied from DefaultMaxBatchSize in Open.
-	//
-	// If <=0, disables batching.
-	//
-	// Do not change concurrently with calls to Batch.
 	MaxBatchSize int
 
-	// MaxBatchDelay is the maximum delay before a batch starts.
-	// Default value is copied from DefaultMaxBatchDelay in Open.
-	//
-	// If <=0, effectively disables batching.
-	//
-	// Do not change concurrently with calls to Batch.
 	MaxBatchDelay time.Duration
 
 	batchMu sync.Mutex
 
 	cfHandles map[string]*grocksdb.ColumnFamilyHandle
-	cf        kv.TableCfg
+	tableCfg  kv.TableCfg
 }
 
 func (kv *RocksKV) Close() {

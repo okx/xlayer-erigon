@@ -1410,14 +1410,6 @@ func (c *MdbxCursor) lastDup() ([]byte, error) {
 	return v, err
 }
 
-func (c *MdbxCursor) Count() (uint64, error) {
-	st, err := c.tx.tx.StatDBI(c.dbi)
-	if err != nil {
-		return 0, err
-	}
-	return st.Entries, nil
-}
-
 func (c *MdbxCursor) First() ([]byte, []byte, error) {
 	return c.Seek(nil)
 }

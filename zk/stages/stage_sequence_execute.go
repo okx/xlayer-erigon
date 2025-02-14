@@ -637,6 +637,14 @@ func sequencingBatchStep(
 			return err
 		}
 
+		// remove the decoded transactions from the cache
+		for _, txHash := range batchState.blockState.builtBlockElements.txSlots {
+			cfg.decodedTxCache.Remove(txHash)
+		}
+		for _, txHash := range batchState.blockState.transactionsToDiscard {
+			cfg.decodedTxCache.Remove(txHash)
+		}
+
 		if err := cfg.txPool.RemoveMinedTransactions(ctx, sdb.tx, header.GasLimit, batchState.blockState.builtBlockElements.txSlots); err != nil {
 			return err
 		}

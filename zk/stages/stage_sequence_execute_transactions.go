@@ -105,7 +105,7 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 
 		var err error = nil
 		var transaction types.Transaction
-		txPtr, found := cfg.txCache[slot.TxIds[idx]]
+		txPtr, found := cfg.decodedTxCache.Get(slot.TxIds[idx])
 		if !found {
 			transaction, err = types.DecodeTransaction(txBytes)
 			if err == io.EOF {
@@ -113,7 +113,7 @@ func extractTransactionsFromSlot(slot *types2.TxsRlp, currentHeight uint64, cfg 
 				results[idx] = res
 				continue
 			}
-			cfg.txCache[slot.TxIds[idx]] = &transaction
+			cfg.decodedTxCache.Add(slot.TxIds[idx], &transaction)
 		} else {
 			transaction = *txPtr
 		}

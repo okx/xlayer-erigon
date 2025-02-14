@@ -395,8 +395,6 @@ func sequencingBatchStep(
 						for idx, hash := range hashResults {
 							batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
 						}
-
-						log.Info(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 					}
 				}
 

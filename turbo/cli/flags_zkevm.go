@@ -231,6 +231,8 @@ func ApplyFlagsForZkConfig(ctx *cli.Context, cfg *ethconfig.Config) {
 		WitnessContractInclusion:               witnessInclusion,
 	}
 
+	ethconfig.ApplyOptimizationModeConfig(cfg.Zk, ctx.String(utils.OptimizationModeFlag.Name))
+
 	// For X Layer
 	ApplyFlagsForEthXLayerConfig(ctx, cfg)
 	utils2.EnableTimer(cfg.DebugTimers)

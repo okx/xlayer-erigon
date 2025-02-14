@@ -1456,6 +1456,12 @@ var (
 		Usage: "transaction count fetched from txpool each time",
 		Value: 1000,
 	}
+
+	OptimizationModeFlag = cli.StringFlag{
+		Name:  "optmode",
+		Usage: "Optimization mode of erigon",
+		Value: "default",
+	}
 )
 
 var MetricFlags = []cli.Flag{&MetricsEnabledFlag, &MetricsHTTPFlag, &MetricsPortFlag, &DiagDisabledFlag, &DiagEndpointAddrFlag, &DiagEndpointPortFlag, &DiagSpeedTestFlag}
@@ -1945,7 +1951,7 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 
 	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
-	
+
 	purgeEvery := ctx.Duration(TxpoolPurgeEveryFlag.Name)
 	purgeDistance := ctx.Duration(TxpoolPurgeDistanceFlag.Name)
 

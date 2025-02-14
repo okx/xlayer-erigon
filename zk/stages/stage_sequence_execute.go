@@ -69,6 +69,7 @@ func sequencingBatchStep(
 	historyCfg stagedsync.HistoryCfg,
 	resequenceBatchJob *ResequenceBatchJob,
 ) (err error) {
+
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
 	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))

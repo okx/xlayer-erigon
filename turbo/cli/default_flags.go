@@ -213,6 +213,8 @@ var DefaultFlags = []cli.Flag{
 	&utils.SequencerResequence,
 	&utils.SequencerResequenceStrict,
 	&utils.SequencerResequenceReuseL1InfoIndex,
+	&utils.SequencerDecodedTxCacheSize,
+	&utils.SequencerDecodedTxCacheTTL,
 	&utils.ExecutorUrls,
 	&utils.ExecutorStrictMode,
 	&utils.ExecutorRequestTimeout,
@@ -287,7 +289,6 @@ var DefaultFlags = []cli.Flag{
 	&utils.BadBatches,
 	&utils.InitialBatchCfgFile,
 
-
 	// X Layer Flags
 	&utils.AllowInternalTransactions,
 	&utils.TxPoolPackBatchSpecialList,
@@ -326,7 +327,7 @@ var DefaultFlags = []cli.Flag{
 	&utils.TxPoolFreeGasLimit,
 	&utils.HTTPApiKeysFlag,
 	&utils.MethodRateLimitFlag,
-	
+
 	&utils.ACLPrintHistory,
 	&utils.InfoTreeUpdateInterval,
 	&utils.SealBatchImmediatelyOnOverflow,

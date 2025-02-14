@@ -45,8 +45,6 @@ import (
 const (
 	logInterval         = 20 * time.Second
 	transactionGasLimit = 30000000
-	decodedTxCacheSize  = 4096              // based on https://erigon.gitbook.io/erigon/advanced-usage/txpool
-	decodedTxCacheTTL   = 600 * time.Second // 10 minutes
 )
 
 var (
@@ -121,7 +119,7 @@ func StageSequenceBlocksCfg(
 	infoTreeUpdater *l1infotree.Updater,
 ) SequenceBlockCfg {
 
-	decodedTxCache := expirable.NewLRU[common.Hash, *types.Transaction](decodedTxCacheSize, nil, decodedTxCacheTTL)
+	decodedTxCache := expirable.NewLRU[common.Hash, *types.Transaction](zk.SequencerDecodedTxCacheSize, nil, zk.SequencerDecodedTxCacheTTL)
 
 	return SequenceBlockCfg{
 		db:               db,

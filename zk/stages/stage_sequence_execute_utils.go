@@ -11,6 +11,7 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	libstate "github.com/ledgerwatch/erigon-lib/state"
 
+	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/ledgerwatch/erigon-lib/chain"
 	"github.com/ledgerwatch/erigon/common/math"
 	"github.com/ledgerwatch/erigon/consensus"
@@ -82,7 +83,7 @@ type SequenceBlockCfg struct {
 
 	infoTreeUpdater *l1infotree.Updater
 
-	txCache map[common.Hash]*types.Transaction
+	decodedTxCache *expirable.LRU[common.Hash, *types.Transaction]
 }
 
 func StageSequenceBlocksCfg(
@@ -114,6 +115,8 @@ func StageSequenceBlocksCfg(
 	infoTreeUpdater *l1infotree.Updater,
 ) SequenceBlockCfg {
 
+	decodedTxCache := expirable.NewLRU[common.Hash, *types.Transaction](zk.SequencerDecodedTxCacheSize, nil, zk.SequencerDecodedTxCacheTTL)
+
 	return SequenceBlockCfg{
 		db:               db,
 		prune:            pm,
@@ -139,7 +142,7 @@ func StageSequenceBlocksCfg(
 		legacyVerifier:   legacyVerifier,
 		yieldSize:        yieldSize,
 		infoTreeUpdater:  infoTreeUpdater,
-		txCache:          make(map[common.Hash]*types.Transaction),
+		decodedTxCache:   decodedTxCache,
 	}
 }
 

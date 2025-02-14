@@ -420,7 +420,7 @@ func sequencingBatchStep(
 				batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
 				for idx, tx := range newTransactions {
 					batchState.blockState.transactionHashesToSlots[tx.Hash()] = newIds[idx]
-				}				
+				}
 			}
 
 			if len(batchState.blockState.transactionsForInclusion) == 0 {
@@ -707,6 +707,14 @@ func sequencingBatchStep(
 		toRemove := append(batchState.blockState.builtBlockElements.txSlots, batchState.blockState.transactionsToDiscard...)
 		if err := cfg.txPool.RemoveMinedTransactions(ctx, sdb.tx, header.GasLimit, toRemove); err != nil {
 			return err
+		}
+
+		// remove the decoded transactions from the cache
+		for _, txHash := range batchState.blockState.builtBlockElements.txSlots {
+			cfg.decodedTxCache.Remove(txHash)
+		}
+		for _, txHash := range batchState.blockState.transactionsToDiscard {
+			cfg.decodedTxCache.Remove(txHash)
 		}
 
 		// now trigger sender state changes in the pool where we encountered nonce issues during execution

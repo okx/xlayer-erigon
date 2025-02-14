@@ -172,6 +172,7 @@ STOP_LRP := $(DOCKER_COMPOSE_LRP) down --remove-orphans; sleep 3; rm -rf data
 UNWIND_LOG_FILE := unwind.log
 RESEQUENCE_LOG_FILE := resequence.log
 RESEQUENCE_FILTERED_LOG_FILE := resequence_filtered.log
+BLOCKHASHES_LOG_FILE := blockhashes.log
 
 .PHONY: configure-lrp
 configure-lrp:
@@ -232,7 +233,7 @@ lrp-mainnet-check: ## Filter logs for LRP & Compute TPS & Check stateroots (conf
 
 .PHONY: watch-blockhashes
 watch-blockhashes:
-	watch -n 300 go run ../zk/debug_tools/rpc-blockhashes-compare/main.go
+	watch -n 300 'echo "\n[$(shell date "+%Y-%m-%d %H:%M:%S")]" >> $(BLOCKHASHES_LOG_FILE) && go run ../zk/debug_tools/rpc-blockhashes-compare/main.go | tee -a $(BLOCKHASHES_LOG_FILE)'
 
 .PHONY: lrp-stop
 lrp-stop:

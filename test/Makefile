@@ -230,6 +230,10 @@ lrp-mainnet-check: ## Filter logs for LRP & Compute TPS & Check stateroots (conf
 	python process_log.py $(RESEQUENCE_FILTERED_LOG_FILE)
 	go run ../zk/debug_tools/rpc-blockhashes-compare/main.go
 
+.PHONY: watch-blockhashes
+watch-blockhashes:
+	watch -n 300 go run ../zk/debug_tools/rpc-blockhashes-compare/main.go
+
 .PHONY: lrp-stop
 lrp-stop:
 	$(STOP_LRP)

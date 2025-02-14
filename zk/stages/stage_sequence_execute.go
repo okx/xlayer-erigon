@@ -369,52 +369,42 @@ func sequencingBatchStep(
 						return err
 					}
 				} else if !batchState.isL1Recovery() {
-
-					var allConditionsOK bool
 					var newTransactions []types.Transaction
 					var newIds []common.Hash
 
-					newTransactions, newIds, allConditionsOK, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
+					newTransactions, newIds, _, err = getNextPoolTransactions(ctx, cfg, executionAt, batchState.forkId, batchState.yieldedTransactions)
 					if err != nil {
 						return err
 					}
 
-					hashResults := make([]common.Hash, len(newTransactions))
-					var wg sync.WaitGroup
+					if len(newTransactions) > 0 {
+						hashResults := make([]common.Hash, len(newTransactions))
+						var wg sync.WaitGroup
 
-					for idx, tx := range newTransactions {
-						wg.Add(1)
-						go func(idx int, tx types.Transaction) {
-							defer wg.Done()
-							hashResults[idx] = tx.Hash()
-						}(idx, tx)
-					}
-
-					wg.Wait()
-
-					batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
-					for idx, hash := range hashResults {
-						batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
-					}
-
-					if len(batchState.blockState.transactionsForInclusion) == 0 {
-						if allConditionsOK {
-							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
-						} else {
-							time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
+						for idx, tx := range newTransactions {
+							wg.Add(1)
+							go func(idx int, tx types.Transaction) {
+								defer wg.Done()
+								hashResults[idx] = tx.Hash()
+							}(idx, tx)
 						}
-					} else {
-						log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
+
+						wg.Wait()
+
+						batchState.blockState.transactionsForInclusion = append(batchState.blockState.transactionsForInclusion, newTransactions...)
+						for idx, hash := range hashResults {
+							batchState.blockState.transactionHashesToSlots[hash] = newIds[idx]
+						}
 					}
 				}
 
 				start := time.Now()
 				if len(batchState.blockState.transactionsForInclusion) == 0 {
+					log.Trace(fmt.Sprintf("[%s] Sleep on SequencerTimeoutOnEmptyTxPool", logPrefix), "time in ms", batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool.Milliseconds())
 					time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 				} else {
 					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 				}
-
 				badTxHashes := make([]common.Hash, 0)
 				minedTxHashes := make([]common.Hash, 0)
 
@@ -434,6 +424,22 @@ func sequencingBatchStep(
 					}
 
 					txHash := transaction.Hash()
+
+					if _, ok := transaction.GetSender(); !ok {
+						signer := types.MakeSigner(cfg.chainConfig, executionAt, 0)
+						sender, err := signer.Sender(transaction)
+						if err != nil {
+							log.Warn("[extractTransaction] Failed to recover sender from transaction, skipping and removing from pool",
+								"error", err,
+								"hash", transaction.Hash())
+							badTxHashes = append(badTxHashes, txHash)
+							batchState.blockState.transactionsToDiscard = append(batchState.blockState.transactionsToDiscard, batchState.blockState.transactionHashesToSlots[txHash])
+							continue
+						}
+
+						transaction.SetSender(sender)
+					}
+
 					effectiveGas := batchState.blockState.getL1EffectiveGases(cfg, i)
 
 					// The copying of this structure is intentional
@@ -627,6 +633,14 @@ func sequencingBatchStep(
 
 		if block, err = doFinishBlockAndUpdateState(batchContext, ibs, header, parentBlock, batchState, ger, l1BlockHash, l1TreeUpdateIndex, infoTreeIndexProgress, batchCounters); err != nil {
 			return err
+		}
+
+		// remove the decoded transactions from the cache
+		for _, txHash := range batchState.blockState.builtBlockElements.txSlots {
+			cfg.decodedTxCache.Remove(txHash)
+		}
+		for _, txHash := range batchState.blockState.transactionsToDiscard {
+			cfg.decodedTxCache.Remove(txHash)
 		}
 
 		if err := cfg.txPool.RemoveMinedTransactions(ctx, sdb.tx, header.GasLimit, batchState.blockState.builtBlockElements.txSlots); err != nil {

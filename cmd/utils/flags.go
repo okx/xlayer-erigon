@@ -586,6 +586,16 @@ var (
 		Usage: "Reuse the L1 info index for resequencing",
 		Value: true,
 	}
+	SequencerDecodedTxCacheSize = cli.IntFlag{
+		Name:  "zkevm.sequencer-decoded-tx-cache-size",
+		Usage: "Sequencer decoded transaction cache size",
+		Value: 4096,
+	}
+	SequencerDecodedTxCacheTTL = cli.DurationFlag{
+		Name:  "zkevm.sequencer-decoded-tx-cache-ttl",
+		Usage: "Sequencer decoded transaction cache time-to-live",
+		Value: 600 * time.Second,
+	}
 	ExecutorUrls = cli.StringFlag{
 		Name:  "zkevm.executor-urls",
 		Usage: "A comma separated list of grpc addresses that host executors",
@@ -1945,7 +1955,7 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 
 	// For X Layer
 	setTxPoolXLayer(ctx, cfg)
-	
+
 	purgeEvery := ctx.Duration(TxpoolPurgeEveryFlag.Name)
 	purgeDistance := ctx.Duration(TxpoolPurgeDistanceFlag.Name)
 

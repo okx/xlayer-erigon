@@ -1,56 +1,48 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: defi-xlayer-rpc
+  name: defi-xlayer-plmgr
   namespace: forked-test2-xgon
-  uid: 8be99a0c-af8c-419e-9bb0-374b08b70d41
-  resourceVersion: '618409379'
-  generation: 5
-  creationTimestamp: '2025-02-11T08:14:11Z'
+  uid: f8511256-87e9-45d7-b0d9-a7b9ee692fb0
+  resourceVersion: '614294512'
+  generation: 1
+  creationTimestamp: '2025-01-24T09:33:18Z'
   labels:
     app.okg.com/owner: efficiency-platform
-    k8slens-edit-resource-version: v1
   annotations:
     app.okg.com/app-category: UNKNOWN
-    deployment.kubernetes.io/revision: '5'
-  selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-rpc
+    deployment.kubernetes.io/revision: '1'
+  selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-plmgr
 status:
-  observedGeneration: 5
+  observedGeneration: 1
   replicas: 1
   updatedReplicas: 1
-  readyReplicas: 1
-  availableReplicas: 1
+  unavailableReplicas: 1
   conditions:
-    - type: Available
-      status: 'True'
-      lastUpdateTime: '2025-02-12T03:52:20Z'
-      lastTransitionTime: '2025-02-12T03:52:20Z'
-      reason: MinimumReplicasAvailable
-      message: Deployment has minimum availability.
     - type: Progressing
       status: 'True'
-      lastUpdateTime: '2025-02-12T03:52:20Z'
-      lastTransitionTime: '2025-02-11T08:14:11Z'
+      lastUpdateTime: '2025-01-24T09:34:11Z'
+      lastTransitionTime: '2025-01-24T09:33:18Z'
       reason: NewReplicaSetAvailable
-      message: ReplicaSet "defi-xlayer-rpc-5996d57bb5" has successfully progressed.
+      message: ReplicaSet "defi-xlayer-plmgr-59c79dfd85" has successfully progressed.
+    - type: Available
+      status: 'False'
+      lastUpdateTime: '2025-02-10T07:26:46Z'
+      lastTransitionTime: '2025-02-10T07:26:46Z'
+      reason: MinimumReplicasUnavailable
+      message: Deployment does not have minimum availability.
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.okcoin.com/name: defi-xlayer-rpc
+      app.okcoin.com/name: defi-xlayer-plmgr
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app.okcoin.com/name: defi-xlayer-rpc
+        app.okcoin.com/name: defi-xlayer-plmgr
     spec:
       volumes:
-        - name: config
-          configMap:
-            name: dev-xlayer
-        - name: data
-          persistentVolumeClaim:
-            claimName: defi-xlayer-rpc-pvc
         - name: shared-memory
           emptyDir:
             medium: Memory
@@ -67,27 +59,18 @@ spec:
         - name: shared-tools
           emptyDir: {}
       containers:
-        - name: defi-xlayer-rpc
+        - name: defi-xlayer-plmgr
           image: >-
-            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon:dev-86fc53f3-20250207223106
+            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/github-xlayer-pool-manager:dev-99cb3076-20250124141415
           command:
             - /bin/sh
             - '-c'
-            - cdk-erigon
-              --http.vhosts=* --http.corsdomain=* --ws
-              --config=/config/erigon/erigon_rpc.yaml
+            - >-
+                wget -q http://dev-xlayer:8080/erigon/poolmgr.toml -O /app/poolmanager.toml &&
+                /app/zkevm-pool-manager run --cfg /app/poolmanager.toml
           ports:
-            - name: pprof
-              containerPort: 6060
-              protocol: TCP
-            - name: metrics
-              containerPort: 7001
-              protocol: TCP
-            - name: blockchain
+            - name: 8545tcp
               containerPort: 8545
-              protocol: TCP
-            - name: datastream
-              containerPort: 6900
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -96,7 +79,7 @@ spec:
                 name: nacos-config
           env:
             - name: MY_APPLICATION_NAME
-              value: defi-xlayer-rpc
+              value: defi-xlayer-plmgr
             - name: MY_POD_NAMESPACE
               valueFrom:
                 fieldRef:
@@ -127,28 +110,13 @@ spec:
               value: $(MY_POD_NAME)
             - name: OKTS_APP_NAME
               value: $(MY_APPLICATION_NAME)
-            - name: MONITOR_OPTIONS
-              value: >-
-                -javaagent:/app/skywalking/agent/skywalking-agent.jar
-                -Dskywalking.agent.service_name=$(MY_APPLICATION_NAME)
-                -Dskywalking.agent.instance_name=$(MY_POD_IP)
-                -Dskywalking.agent.namespace=$(MY_POD_NAMESPACE)
-                -Dskywalking.collector.backend_service=test-apmswapi.okg.com:10000
-                -Dskywalking.collector.backend_http_service=test-apmswapi.okg.com:12800
-            - name: DEBUG_OPTIONS
-              value: >-
-                -agentlib:jdwp=transport=dt_socket,address=*:7006,server=y,suspend=n
-            - name: JAVA_OPTIONS
-              value: '@{javaOptions} $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)'
-            - name: JDK17_OPTIONS
-              value: '@{javaOptions} $(DEBUG_OPTIONS) $(MONITOR_OPTIONS)'
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-plmgr
               value: plugin
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc_ttl
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-plmgr_ttl
               value: '1'
-            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-rpc_detail
+            - name: aliyun_logs_forked-test2-xgon--defi-xlayer-plmgr_detail
               value: >-
-                {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-rpc":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
+                {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-plmgr":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
           resources:
             limits:
               cpu: '2'
@@ -157,10 +125,6 @@ spec:
               cpu: '1'
               memory: 2Gi
           volumeMounts:
-            - name: config
-              mountPath: /config
-            - name: data
-              mountPath: /home/erigon
             - name: shared-memory
               mountPath: /dev/shm
             - name: prestop
@@ -168,13 +132,13 @@ spec:
             - name: java-gc
               mountPath: /app/gc
               subPathExpr: >-
-                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-rpc/$(MY_POD_NAME)/gc
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-plmgr/$(MY_POD_NAME)/gc
             - name: tools
               mountPath: /tools
             - name: java-gc
               mountPath: /app/dumps
               subPathExpr: >-
-                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-rpc/$(MY_POD_NAME)/dumps
+                office-test2-cluster/$(MY_POD_NAMESPACE)/defi-xlayer-plmgr/$(MY_POD_NAME)/dumps
             - name: shared-tools
               mountPath: /app/skywalking
           terminationMessagePath: /dev/termination-log
@@ -183,8 +147,7 @@ spec:
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
       dnsPolicy: ClusterFirst
-      securityContext:
-        fsGroup: 2000
+      securityContext: {}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:

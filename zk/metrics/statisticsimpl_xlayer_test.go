@@ -28,6 +28,7 @@ func TestStatisticsInstanceSummary(t *testing.T) {
 				FailTxResourceOverCounter:     1,
 				ZKOverflowBlockCounter:        1,
 				ProcessingInvalidTxCounter:    2,
+				SequencingBatchTiming:         time.Second.Milliseconds() * 20,
 				ProcessingTxTiming:            time.Second.Milliseconds() * 30,
 				ProcessingPauseTiming:         time.Second.Milliseconds() * 10,
 				BatchCommitDBTiming:           time.Second.Milliseconds() * 10,

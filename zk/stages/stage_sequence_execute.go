@@ -70,9 +70,13 @@ func sequencingBatchStep(
 	historyCfg stagedsync.HistoryCfg,
 	resequenceBatchJob *ResequenceBatchJob,
 ) (err error) {
+	startSequenceTime := time.Now()
 	logPrefix := s.LogPrefix()
 	log.Info(fmt.Sprintf("[%s] Starting sequencing stage", logPrefix))
-	defer log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
+	defer func() {
+		metrics.GetLogStatistics().CumulativeTiming(metrics.SequencingBatchTiming, time.Since(startSequenceTime))
+		log.Info(fmt.Sprintf("[%s] Finished sequencing stage", logPrefix))
+	}()
 
 	// For X Layer metrics
 	log.Info("[PoolTxCount] Starting Getting Pending Tx Count")
@@ -336,7 +340,7 @@ func sequencingBatchStep(
 		innerBreak := false
 		emptyBlockOverflow := false
 		sendersToTriggerStatechanges := make(map[common.Address]struct{})
-
+		processingTxTime := time.Now()
 	OuterLoopTransactions:
 		for {
 			if innerBreak {
@@ -409,18 +413,24 @@ func sequencingBatchStep(
 				}
 
 				if len(batchState.blockState.transactionsForInclusion) == 0 {
+					pauseTime := time.Now()
 					if allConditionsOK {
 						time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
 					} else {
 						time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool / 5) // we do not need to sleep too long for txpool not ready
 					}
+					metrics.GetLogStatistics().CumulativeCounting(metrics.GetTxPauseCounter)
+					metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingPauseTiming, time.Since(pauseTime))
 				} else {
 					log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 				}
 			}
 
 			if len(batchState.blockState.transactionsForInclusion) == 0 {
+				pauseTime := time.Now()
 				time.Sleep(batchContext.cfg.zk.SequencerTimeoutOnEmptyTxPool)
+				metrics.GetLogStatistics().CumulativeCounting(metrics.GetTxPauseCounter)
+				metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingPauseTiming, time.Since(pauseTime))
 			} else {
 				log.Trace(fmt.Sprintf("[%s] Yielded transactions from the pool", logPrefix), "txCount", len(batchState.blockState.transactionsForInclusion))
 			}
@@ -561,6 +571,7 @@ func sequencingBatchStep(
 							batchState.newOverflowTransaction()
 							transactionNotAddedText := fmt.Sprintf("[%s] transaction %s was not included in this batch because it overflowed.", logPrefix, txHash)
 							ocs, _ := batchCounters.CounterStats(l1TreeUpdateIndex != 0)
+							metrics.GetLogStatistics().CumulativeCounting(metrics.ZKOverflowBlockCounter)
 							log.Info(transactionNotAddedText, "Counters context:", ocs, "overflow transactions", batchState.overflowTransactions)
 							if batchState.reachedOverflowTransactionLimit() || cfg.zk.SealBatchImmediatelyOnOverflow {
 								log.Info(fmt.Sprintf("[%s] closing batch due to overflow counters", logPrefix), "counters: ", batchState.overflowTransactions, "immediate", cfg.zk.SealBatchImmediatelyOnOverflow)
@@ -593,6 +604,7 @@ func sequencingBatchStep(
 				}
 
 				if err == nil {
+					metrics.GetLogStatistics().CumulativeValue(metrics.BatchGas, int64(execResult.UsedGas))
 					blockDataSizeChecker = &backupDataSizeChecker
 					batchState.onAddedTransaction(transaction, receipt, execResult, effectiveGas)
 					minedTxHashes = append(minedTxHashes, txHash)
@@ -656,6 +668,10 @@ func sequencingBatchStep(
 			}
 		}
 
+		// For X Layer
+		metrics.GetLogStatistics().CumulativeTiming(metrics.ProcessingTxTiming, time.Since(processingTxTime))
+		metrics.SeqTxDuration.Observe(float64(time.Since(processingTxTime).Milliseconds()))
+
 		// we do not want to commit this block if it has no transactions and we detected an overflow - essentially the batch is too
 		// full to get any more transactions in it and we don't want to commit an empty block
 		if emptyBlockOverflow {
@@ -676,6 +692,11 @@ func sequencingBatchStep(
 			return err
 		}
 
+		// For X Layer
+		// Count successful transactions
+		metrics.SeqTxCount.Add(float64(len(batchState.blockState.builtBlockElements.transactions)))
+		metrics.GetLogStatistics().CumulativeValue(metrics.TxCounter, int64(len(batchState.blockState.builtBlockElements.transactions)))
+
 		// add a check to the verifier and also check for responses
 		batchState.onBuiltBlock(blockNumber)
 
@@ -688,11 +709,13 @@ func sequencingBatchStep(
 		}
 
 		if !batchState.isL1Recovery() {
+			commitTime := time.Now()
 			// commit block data here so it is accessible in other threads
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
+			metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(commitTime))
 		}
 
 		// remove mined transactions from the pool
@@ -735,14 +758,14 @@ func sequencingBatchStep(
 		// lets commit everything after updateStreamAndCheckRollback no matter of its result unless
 		// we're in L1 recovery where losing some blocks on restart doesn't matter
 
-		start := time.Now()
 		if !batchState.isL1Recovery() {
+			commitTime := time.Now()
 			if errCommitAndStart := sdb.CommitAndStart(); errCommitAndStart != nil {
 				return errCommitAndStart
 			}
 			defer sdb.tx.Rollback()
+			metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(commitTime))
 		}
-		metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
 
 		// check the return values of updateStreamAndCheckRollback
 		if err != nil || needsUnwind {
@@ -772,9 +795,9 @@ func sequencingBatchStep(
 	metrics.GetLogStatistics().SetTag(metrics.BatchCloseReason, string(batchCloseReason))
 	metrics.GetLogStatistics().SetTag(metrics.FinalizeBatchNumber, strconv.Itoa(int(batchState.batchNumber)))
 	tryToSleepSequencer(cfg.zk.XLayer.SequencerBatchSleepDuration, logPrefix)
-	start := time.Now()
+	startCommitTime := time.Now()
 	err = sdb.tx.Commit()
-	metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(start))
+	metrics.GetLogStatistics().CumulativeTiming(metrics.BatchCommitDBTiming, time.Since(startCommitTime))
 
 	batchTime := time.Since(batchStart)
 	metrics.BatchExecuteTime(string(batchCloseReason), batchTime)

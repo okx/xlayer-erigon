@@ -17,6 +17,7 @@ const (
 	ZKOverflowBlockCounter        logTag = "ZKOverflowBlockCounter"
 	FailTxResourceOverCounter     logTag = "FailTxResourceOverCounter"
 	BatchGas                      logTag = "BatchGas"
+	SequencingBatchTiming         logTag = "SequencingBatchTiming"
 	ProcessingTxTiming            logTag = "ProcessingTxTiming"
 	ProcessingPauseTiming         logTag = "ProcessingPauseTiming"
 	ProcessingInvalidTxCounter    logTag = "ProcessingInvalidTxCounter"

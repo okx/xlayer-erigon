@@ -1920,10 +1920,9 @@ func setTxPool(ctx *cli.Context, fullCfg *ethconfig.Config) {
 			if !libcommon.IsHexAddress(account) {
 				Fatalf("Invalid account in --txpool.locals: %s", account)
 			} else {
-				cfg.Locals.Add(libcommon.HexToAddress(account))
+				cfg.Locals = append(cfg.Locals, libcommon.HexToAddress(account))
 			}
 		}
-		cfg.Locals.Sort()
 	}
 	if ctx.IsSet(TxPoolNoLocalsFlag.Name) {
 		cfg.NoLocals = ctx.Bool(TxPoolNoLocalsFlag.Name)

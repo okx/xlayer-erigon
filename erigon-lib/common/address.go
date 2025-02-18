@@ -182,6 +182,7 @@ func (a Address) Value() (driver.Value, error) {
 	return a[:], nil
 }
 
+// For X Layer
 func CompareAddressess(a, b Address) int {
 	for i := 0; i < len(a); i++ {
 		if a[i] < b[i] {
@@ -209,3 +210,5 @@ func ToListOfString(list *OrderedList[Address]) []string {
 	}
 	return strs
 }
+
+// End for X Layer

@@ -24,7 +24,7 @@ var (
 //
 // We regard two types of accounts as local miner account: etherbase
 // and accounts specified via `txpool.locals` flag.
-func IsLocalBlock(engine consensus.Engine, etherbase libcommon.Address, txPoolLocals libcommon.OrderedList[libcommon.Address], header *types.Header) bool {
+func IsLocalBlock(engine consensus.Engine, etherbase libcommon.Address, txPoolLocals []libcommon.Address, header *types.Header) bool {
 	author, err := engine.Author(header)
 	if err != nil {
 		log.Warn("Failed to retrieve block author", "number", header.Number, "header_hash", header.Hash(), "err", err)
@@ -36,7 +36,12 @@ func IsLocalBlock(engine consensus.Engine, etherbase libcommon.Address, txPoolLo
 	}
 	// Check whether the given address is specified by `txpool.local`
 	// CLI flag.
-	return txPoolLocals.Contains(author)
+	for _, account := range txPoolLocals {
+		if account == author {
+			return true
+		}
+	}
+	return false
 }
 
 func ValidateBlobs(blobGasUsed, maxBlobsGas, maxBlobsPerBlock uint64, expectedBlobHashes []libcommon.Hash, transactions *[]types.Transaction) error {

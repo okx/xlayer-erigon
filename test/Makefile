@@ -151,9 +151,13 @@ test-1: stop all ## Runs group 1 e2e tests checking race conditions
 
 mainnet: build-docker
 	# base services
-	echo "Starting to vmtouch the chaindata file"
-	$(RUN_DOCKER_MAINNET_VMTOUCH)
 	$(RUN_DOCKER_MAINNET_SEQ)
 	# monitoring services
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
+
+vmtouch:
+	docker exec -it xlayer-seq sh -c "vmtouch -t /home/erigon/data/chaindata/mdbx.dat"
+
+vmtouch-check:
+	docker exec -it xlayer-seq sh -c "vmtouch /home/erigon/data/chaindata/mdbx.dat"

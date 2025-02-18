@@ -4,18 +4,18 @@ metadata:
   name: defi-xlayer-egseq
   namespace: forked-test2-xgon
   uid: e66e14aa-fd1a-4b26-9199-51937da9fae6
-  resourceVersion: '618412921'
-  generation: 23
+  resourceVersion: '630977527'
+  generation: 44
   creationTimestamp: '2025-01-24T09:41:57Z'
   labels:
     app.okg.com/owner: efficiency-platform
     k8slens-edit-resource-version: v1
   annotations:
     app.okg.com/app-category: UNKNOWN
-    deployment.kubernetes.io/revision: '21'
+    deployment.kubernetes.io/revision: '36'
   selfLink: /apis/apps/v1/namespaces/forked-test2-xgon/deployments/defi-xlayer-egseq
 status:
-  observedGeneration: 23
+  observedGeneration: 44
   replicas: 1
   updatedReplicas: 1
   readyReplicas: 1
@@ -29,10 +29,10 @@ status:
       message: Deployment has minimum availability.
     - type: Progressing
       status: 'True'
-      lastUpdateTime: '2025-02-12T03:54:46Z'
-      lastTransitionTime: '2025-02-11T06:58:41Z'
+      lastUpdateTime: '2025-02-18T03:35:12Z'
+      lastTransitionTime: '2025-02-12T10:01:03Z'
       reason: NewReplicaSetAvailable
-      message: ReplicaSet "defi-xlayer-egseq-85dcfb678c" has successfully progressed.
+      message: ReplicaSet "defi-xlayer-egseq-b6456d7c" has successfully progressed.
 spec:
   replicas: 1
   selector:
@@ -44,12 +44,18 @@ spec:
       labels:
         app.okcoin.com/name: defi-xlayer-egseq
       annotations:
-        kubectl.kubernetes.io/restartedAt: '2025-02-10T06:50:35Z'
+        kubectl.kubernetes.io/restartedAt: '2025-02-12T10:29:22Z'
+        prometheus.io/path: /debug/metrics/prometheus
+        prometheus.io/port: '7001'
+        prometheus.io/scrape: 'true'
     spec:
       volumes:
         - name: data
           persistentVolumeClaim:
             claimName: defi-xlayer-egseq-pvc
+        - name: config
+          persistentVolumeClaim:
+            claimName: dev-xlayer
         - name: shared-memory
           emptyDir:
             medium: Memory
@@ -68,22 +74,13 @@ spec:
       containers:
         - name: defi-xlayer-egseq
           image: >-
-            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon@sha256:7bb40f0b83bfdd6a2afa0cb33d62ecf62744a83167126866295b35e159c3bc10
+            office-registry-vpc.cn-hongkong.cr.aliyuncs.com/defi/okchain-cdk-erigon:zjg-batch-commit-492a53a3-20250218101408
           command:
             - /bin/sh
             - '-c'
             - >-
-              mkdir -p /home/erigon/config && curl -s
-              http://dev-xlayer:8080/erigon/erigon_seq.yaml -o
-              /home/erigon/config/config.yaml && curl -s
-              http://dev-xlayer:8080/erigon/alloc.json -o
-              /home/erigon/config/dynamic-mynetwork-allocs.json && curl -s
-              http://dev-xlayer:8080/erigon/chainspec.json -o
-              /home/erigon/config/dynamic-mynetwork-chainspec.json && curl -s
-              http://dev-xlayer:8080/erigon/conf.json -o
-              /home/erigon/config/dynamic-mynetwork-conf.json && cdk-erigon
-              --http.vhosts=* --http.corsdomain=* --ws
-              --config=/home/erigon/config/config.yaml
+              cdk-erigon --http.vhosts=* --http.corsdomain=* --ws
+              --config=/data/mainnet/xlayerconfig-mainnet.yaml
           ports:
             - name: 7001tcp
               containerPort: 7001
@@ -96,9 +93,6 @@ spec:
               protocol: TCP
             - name: 6900tcp
               containerPort: 6900
-              protocol: TCP
-            - name: 7006tcp
-              containerPort: 7006
               protocol: TCP
           envFrom:
             - configMapRef:
@@ -176,14 +170,16 @@ spec:
                 {"plugin":{"inputs":[{"type":"service_docker_stdout","detail":{"Stdout":true,"Stderr":true,"IncludeEnv":{"aliyun_logs_forked-test2-xgon--defi-xlayer-egseq":"plugin"},"BeginLineRegex":"\\d+-\\d+-\\d+.*"}}],"global":{"AlwaysOnline":true}}}
           resources:
             limits:
-              cpu: '4'
-              memory: 8Gi
+              cpu: '8'
+              memory: 32Gi
             requests:
-              cpu: '2'
-              memory: 4Gi
+              cpu: '4'
+              memory: 16Gi
           volumeMounts:
             - name: data
-              mountPath: /home/erigon
+              mountPath: /data
+            - name: config
+              mountPath: /config
             - name: shared-memory
               mountPath: /dev/shm
             - name: prestop
@@ -221,7 +217,7 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
   revisionHistoryLimit: 10
   progressDeadlineSeconds: 300

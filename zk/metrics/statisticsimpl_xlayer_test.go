@@ -23,7 +23,6 @@ func TestStatisticsInstanceSummary(t *testing.T) {
 				TxCounter:                     10,
 				GetTx:                         time.Second.Milliseconds(),
 				GetTxPauseCounter:             2,
-				GetTxPauseTiming:              time.Second.Milliseconds() * 30,
 				ReprocessingTxCounter:         3,
 				FailTxResourceOverCounter:     1,
 				ZKOverflowBlockCounter:        1,

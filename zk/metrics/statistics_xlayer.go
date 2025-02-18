@@ -11,7 +11,6 @@ const (
 	TxCounter                     logTag = "TxCounter"
 	GetTx                         logTag = "GetTx"
 	GetTxPauseCounter             logTag = "GetTxPauseCounter"
-	GetTxPauseTiming              logTag = "GetTxPauseTiming"
 	BatchCloseReason              logTag = "BatchCloseReason"
 	ReprocessingTxCounter         logTag = "ReProcessingTxCounter"
 	ZKOverflowBlockCounter        logTag = "ZKOverflowBlockCounter"

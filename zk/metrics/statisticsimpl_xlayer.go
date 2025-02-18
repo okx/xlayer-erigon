@@ -60,7 +60,6 @@ func (l *statisticsInstance) Summary() string {
 	zkOverflowBlock := "ZKOverflowBlock<" + strconv.Itoa(int(l.statistics[ZKOverflowBlockCounter])) + ">, "
 	invalidTx := "InvalidTx<" + strconv.Itoa(int(l.statistics[ProcessingInvalidTxCounter])) + ">, "
 	sequencingBatchTiming := "SequencingBatchTiming<" + strconv.Itoa(int(l.statistics[SequencingBatchTiming])) + "ms>, "
-	getTxPauseTiming := "GetTxPauseTiming<" + strconv.Itoa(int(l.statistics[GetTxPauseTiming])) + "ms>, "
 	processTxTiming := "ProcessTx<" + strconv.Itoa(int(l.statistics[ProcessingTxTiming])) + "ms>, "
 	processTxPauseTiming := "ProcessTxPauseTiming<" + strconv.Itoa(int(l.statistics[ProcessingPauseTiming])) + "ms>, "
 	batchCommitDBTiming := "BatchCommitDBTiming<" + strconv.Itoa(int(l.statistics[BatchCommitDBTiming])) + "ms>, "
@@ -69,7 +68,7 @@ func (l *statisticsInstance) Summary() string {
 	finaliseBlockWriteTiming := "FinaliseBlockWriteTiming<" + strconv.Itoa(int(l.statistics[FinaliseBlockWriteTiming])) + "ms>, "
 	batchCloseReason := "BatchCloseReason<" + l.tags[BatchCloseReason] + ">"
 
-	result := batch + totalDuration + gasUsed + blockCount + tx + getTx + getTxPause + getTxPauseTiming +
+	result := batch + totalDuration + gasUsed + blockCount + tx + getTx + getTxPause +
 		reprocessTx + resourceOverTx + zkOverflowBlock + invalidTx + sequencingBatchTiming + processTxTiming + processTxPauseTiming + pbStateTiming +
 		zkIncIntermediateHashesTiming + finaliseBlockWriteTiming + batchCommitDBTiming +
 		batchCloseReason

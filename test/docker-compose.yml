@@ -395,3 +395,14 @@ services:
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
+  xlayer-mainnet-rpc:
+    container_name: xlayer-rpc
+    image: cdk-erigon
+    ports:
+      - 6061:6060
+      - 8545:8545
+    volumes:
+      - ./mainnet/rpc:/home/erigon/data/
+      - ./config/xlayerconfig-mainnet-rpc.yaml:/usr/src/app/config.yaml
+    command: >
+      cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml

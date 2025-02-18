@@ -23,7 +23,7 @@ DOCKER_DS := xlayer-ds
 DOCKER_PROMETHEUS := prometheus
 DOCKER_GRAFANA := grafana
 DOCKER_MAINNET_SEQ := xlayer-mainnet-seq
-DOCKER_MAINNET_RLY := xlayer-ds
+DOCKER_MAINNET_RLY := xlayer-mainnet-rly
 DOCKER_MAINNET_RPC := xlayer-mainnet-rpc
 
 RUN_DOCKER_STATELESS_EXECUTOR := $(DOCKER_COMPOSE) up -d $(DOCKER_STATELESS_EXECUTOR)

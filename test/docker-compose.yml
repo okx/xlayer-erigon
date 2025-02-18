@@ -395,6 +395,23 @@ services:
     command: >
       cdk-erigon --http.vhosts=* --http.corsdomain=* --ws --config=/usr/src/app/config.yaml
 
+  xlayer-mainnet-rly:
+    container_name: xlayer-rly
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    image: zjg555543/xlayer-ds:basedev-merge-upstream-v0.2.7
+    ports:
+      - 7900:7900
+    volumes:
+      - ./data/ds/:/home/dsrelay/
+      - ./config/ds-config.toml:/app/config.toml
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/dsrelay --cfg /app/config.toml"
+
   xlayer-mainnet-rpc:
     container_name: xlayer-rpc
     image: cdk-erigon

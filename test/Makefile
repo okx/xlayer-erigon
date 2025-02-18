@@ -153,3 +153,88 @@ mainnet: build-docker
 	# monitoring services
 	$(RUN_DOCKER_PROMETHEUS)
 	$(RUN_DOCKER_GRAFANA)
+
+DOCKER_COMPOSE_LRP := docker compose -f docker-compose-lrp.yml
+DOCKER_LRP_UNWIND := xlayer-lrp-unwind
+DOCKER_LRP_RESEQUENCE := xlayer-lrp-resequence
+DOCKER_MAINNET_LRP_UNWIND := xlayer-mainnet-lrp-unwind
+DOCKER_MAINNET_LRP_RESEQUENCE := xlayer-mainnet-lrp-resequence
+
+RUN_DOCKER_LRP_STATELESS_EXECUTOR := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_STATELESS_EXECUTOR)
+RUN_DOCKER_LRP_L1_NETWORK := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_L1_NETWORK)
+RUN_DOCKER_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_UNWIND)
+RUN_DOCKER_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_LRP_RESEQUENCE)
+RUN_DOCKER_MAINNET_LRP_UNWIND := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_MAINNET_LRP_UNWIND)
+RUN_DOCKER_MAINNET_LRP_RESEQUENCE := $(DOCKER_COMPOSE_LRP) up -d $(DOCKER_MAINNET_LRP_RESEQUENCE)
+
+STOP_LRP := $(DOCKER_COMPOSE_LRP) down --remove-orphans; sleep 3; rm -rf data
+
+UNWIND_LOG_FILE := unwind.log
+RESEQUENCE_LOG_FILE := resequence.log
+RESEQUENCE_FILTERED_LOG_FILE := resequence_filtered.log
+BLOCKHASHES_LOG_FILE := blockhashes.log
+
+.PHONY: configure-lrp
+configure-lrp:
+	@read -p "Enter fromBatchNumber: " FROM_BATCH_NO; \
+	read -p "Enter toBatchNumber: " TO_BATCH_NO; \
+	UNWIND_BATCH_NO=$$((FROM_BATCH_NO - 1)); \
+	if [ "$(shell uname)" = "Darwin" ]; then \
+		sed -i '' "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i '' "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$TO_BATCH_NO/" docker-compose-lrp.yml; \
+	else \
+		sed -i "s/--unwind-batch-no=[0-9]*/--unwind-batch-no=$$UNWIND_BATCH_NO/" docker-compose-lrp.yml; \
+		sed -i "s/--zkevm.sequencer-resequence-halt-on-batch-number=[0-9]*/--zkevm.sequencer-resequence-halt-on-batch-number=$$TO_BATCH_NO/" docker-compose-lrp.yml; \
+	fi
+
+.PHONY: lrp-run
+lrp-run: build-docker configure-lrp
+	$(RUN_DOCKER_LRP_L1_NETWORK)
+	sleep 3
+	$(RUN_DOCKER_LRP_UNWIND)
+	docker wait $(DOCKER_LRP_UNWIND)
+	docker logs $(DOCKER_LRP_UNWIND) > $(UNWIND_LOG_FILE) 2>&1
+	$(RUN_DOCKER_LRP_RESEQUENCE)
+
+.PHONY: lrp-check
+lrp-check: ## Filter logs for LRP & Compute TPS & Check stateroots (configure debugToolsConfig.yaml)
+	docker logs $(DOCKER_LRP_RESEQUENCE) > $(RESEQUENCE_LOG_FILE) 2>&1
+	docker logs $(DOCKER_LRP_RESEQUENCE) 2>&1 | grep "\[5/13 Execution\]" > $(RESEQUENCE_FILTERED_LOG_FILE)
+	python process_log.py $(RESEQUENCE_FILTERED_LOG_FILE)
+	go run ../zk/debug_tools/rpc-blockhashes-compare/main.go
+
+.PHONY: lrp-mainnet
+lrp-mainnet: build-docker configure-lrp
+	$(RUN_DOCKER_MAINNET_LRP_UNWIND)
+	docker wait $(DOCKER_MAINNET_LRP_UNWIND)
+	docker logs $(DOCKER_MAINNET_LRP_UNWIND) > $(UNWIND_LOG_FILE) 2>&1
+	# $(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	# sleep 3
+	$(RUN_DOCKER_MAINNET_LRP_RESEQUENCE)
+
+.PHONY: lrp-mainnet-unwind
+lrp-mainnet-unwind: build-docker configure-lrp
+	$(RUN_DOCKER_MAINNET_LRP_UNWIND)
+	docker wait $(DOCKER_MAINNET_LRP_UNWIND)
+	docker logs $(DOCKER_MAINNET_LRP_UNWIND) > $(UNWIND_LOG_FILE) 2>&1
+
+.PHONY: lrp-mainnet-post-unwind
+lrp-mainnet-post-unwind: build-docker
+	# $(RUN_DOCKER_LRP_STATELESS_EXECUTOR)
+	# sleep 3
+	$(RUN_DOCKER_MAINNET_LRP_RESEQUENCE)
+
+.PHONY: lrp-mainnet-check
+lrp-mainnet-check: ## Filter logs for LRP & Compute TPS & Check stateroots (configure debugToolsConfig.yaml)
+	docker logs $(DOCKER_MAINNET_LRP_RESEQUENCE) > $(RESEQUENCE_LOG_FILE) 2>&1
+	docker logs $(DOCKER_MAINNET_LRP_RESEQUENCE) 2>&1 | grep "\[5/13 Execution\]" > $(RESEQUENCE_FILTERED_LOG_FILE)
+	python process_log.py $(RESEQUENCE_FILTERED_LOG_FILE)
+	go run ../zk/debug_tools/rpc-blockhashes-compare/main.go
+
+.PHONY: watch-blockhashes
+watch-blockhashes:
+	watch -n 300 'echo "\n[$(shell date "+%Y-%m-%d %H:%M:%S")]" >> $(BLOCKHASHES_LOG_FILE) && go run ../zk/debug_tools/rpc-blockhashes-compare/main.go | tee -a $(BLOCKHASHES_LOG_FILE)'
+
+.PHONY: lrp-stop
+lrp-stop:
+	$(STOP_LRP)

@@ -5,7 +5,7 @@ global:
 
 scrape_configs:
   - job_name: xlayer-test # used in test/docker-compose.yml
-    metrics_path: /debug/metrics/prometheus
+    metrics_path: /metrics
     scheme: http
     static_configs:
       - targets:
@@ -14,7 +14,7 @@ scrape_configs:
           - xlayer-mainnet-seq:9095
 
   - job_name: erigon
-    metrics_path: /debug/metrics/prometheus
+    metrics_path: /metrics
     scheme: http
     static_configs:
       - targets:

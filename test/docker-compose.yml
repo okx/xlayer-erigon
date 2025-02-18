@@ -379,6 +379,14 @@ services:
       - ${XDG_DATA_HOME:-~/.local/share}/erigon-grafana:/var/lib/grafana
     restart: unless-stopped
 
+  xlayer-mainnet-vmtouch:
+    container_name: xlayer-vmtouch
+    image: cdk-erigon
+    volumes:
+      - ./mainnet/seq:/home/erigon/data/
+    command: >
+      vmtouch -t /home/erigon/data/mainnet/seq/chaindata/mdbx.dat
+
   xlayer-mainnet-seq:
     container_name: xlayer-seq
     image: cdk-erigon
